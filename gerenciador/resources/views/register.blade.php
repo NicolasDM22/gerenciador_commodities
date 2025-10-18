@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
+    <title>Cadastro</title>
     <style>
         :root {
             --gray-100: #f5f5f5;
@@ -29,49 +29,39 @@
             color: var(--gray-800);
         }
 
-        .login-card {
-            width: min(420px, 90vw);
+        .card {
+            width: min(440px, 92vw);
             padding: 2.5rem;
             background-color: #ffffff;
             border-radius: 18px;
             box-shadow: 0 25px 50px -20px rgba(0, 0, 0, 0.45);
         }
 
-        .login-card h1 {
+        .card h1 {
             margin: 0 0 1rem;
             font-size: 2rem;
-            color: var(--gray-800);
             text-align: center;
         }
 
-        .login-card p {
+        .card p {
             margin: 0 0 2rem;
             font-size: 0.95rem;
             text-align: center;
             color: var(--gray-600);
         }
 
-        .status,
         .alert {
             margin-bottom: 1rem;
             padding: 0.85rem 1rem;
             border-radius: 12px;
             font-size: 0.9rem;
-        }
-
-        .status {
-            background-color: #d1f2d8;
-            color: #0b5520;
-        }
-
-        .alert {
             background-color: #fcdada;
             color: #7a1f1f;
         }
 
         label {
             display: block;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.4rem;
             font-weight: 600;
             color: var(--gray-700);
         }
@@ -96,19 +86,18 @@
         }
 
         .form-group {
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.4rem;
         }
 
         button {
             width: 100%;
-            padding: 0.9rem 1rem;
+            padding: 0.95rem 1rem;
             border: none;
             border-radius: 12px;
             background: linear-gradient(135deg, var(--gray-700), var(--gray-800));
             color: #ffffff;
             font-size: 1rem;
             font-weight: 600;
-            letter-spacing: 0.5px;
             cursor: pointer;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
@@ -118,43 +107,24 @@
             box-shadow: 0 12px 24px -12px rgba(0, 0, 0, 0.5);
         }
 
-        .session-details {
-            margin-top: 1.5rem;
-            padding: 0.75rem 1rem;
-            background-color: var(--gray-100);
-            border-radius: 12px;
-            font-size: 0.85rem;
-            color: var(--gray-600);
-        }
-
         .footer-link {
             margin-top: 1.5rem;
-            font-size: 0.9rem;
             text-align: center;
+            font-size: 0.9rem;
             color: var(--gray-600);
         }
 
         .footer-link a {
             color: var(--gray-700);
-            font-weight: 600;
             text-decoration: none;
-        }
-
-        @media (max-width: 480px) {
-            .login-card {
-                padding: 2rem 1.5rem;
-            }
+            font-weight: 600;
         }
     </style>
 </head>
 <body>
-    <div class="login-card">
-        <h1>Entrar</h1>
-        <p>Informe seu usuario e senha cadastrados.</p>
-
-        @if (session('status'))
-            <div class="status">{{ session('status') }}</div>
-        @endif
+    <div class="card">
+        <h1>Novo cadastro</h1>
+        <p>Crie sua conta informando usuario e senha.</p>
 
         @if ($errors->any())
             <div class="alert">
@@ -164,7 +134,7 @@
             </div>
         @endif
 
-        <form action="{{ route('login.authenticate') }}" method="POST">
+        <form action="{{ route('register.store') }}" method="POST">
             @csrf
 
             <div class="form-group">
@@ -185,24 +155,29 @@
                     type="password"
                     id="senha"
                     name="senha"
-                    autocomplete="current-password"
+                    autocomplete="new-password"
                     required
                 >
             </div>
 
-            <button type="submit">Acessar</button>
+            <div class="form-group">
+                <label for="senha_confirmation">Confirmar senha</label>
+                <input
+                    type="password"
+                    id="senha_confirmation"
+                    name="senha_confirmation"
+                    autocomplete="new-password"
+                    required
+                >
+            </div>
+
+            <button type="submit">Cadastrar</button>
         </form>
 
         <div class="footer-link">
-            Ainda nao possui cadastro?
-            <a href="{{ route('register') }}">Criar conta</a>
+            Ja possui uma conta?
+            <a href="{{ route('login') }}">Acesse aqui</a>
         </div>
-
-        @if (session()->has('auth_usuario'))
-            <div class="session-details">
-                Usuario autenticado: <strong>{{ session('auth_usuario') }}</strong>
-            </div>
-        @endif
     </div>
 </body>
 </html>
