@@ -86,8 +86,6 @@ php artisan key:generate
 
 ### 6. Publicar assets e links
 
-- Gere os assets em modo desenvolvimento: `npm run dev`.
-- Para build de producao: `npm run build`.
 - Se precisar servir arquivos enviados (fotos de perfil), crie o link simbolico: `php artisan storage:link`.
 
 ### 7. Executar servidores de desenvolvimento
@@ -131,12 +129,6 @@ O script `composer run dev` foi configurado para iniciar simultaneamente `php ar
 - `config/database.php`: configuracoes de conexao e nomes de tabelas utilizados.
 - `public/`: raiz HTTP; hospeda `index.php` e assets gerados pelo Vite.
 - `storage/`: logs (`storage/logs/laravel.log`) e uploads (ex.: avatar do usuario em `storage/app`).
-
-## Scripts uteis
-
-- `composer run setup` roda `composer install`, copia `.env`, gera a `APP_KEY`, executa migracoes e gera o build front-end (util para provisionamento limpo).
-- `composer run dev` inicia simultaneamente servidor HTTP, listener de fila e Vite.
-- `npm run build` gera assets minificados para deploy.
 
 ## Deploy em producao (resumo)
 

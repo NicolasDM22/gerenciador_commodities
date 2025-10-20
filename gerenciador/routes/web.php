@@ -3,6 +3,7 @@
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\SupportChatController;
+use App\Http\Controllers\PrevisoesController;
 use App\Http\Controllers\AdminNotificationController;
 use Illuminate\Support\Facades\Route;
 
@@ -25,3 +26,4 @@ Route::post('/support-chat/message', [SupportChatController::class, 'send'])->na
 Route::post('/support-chat/close', [SupportChatController::class, 'close'])->name('support-chat.close');
 Route::get('/admin/notificacoes', [AdminNotificationController::class, 'index'])->name('admin.notifications');
 Route::post('/admin/notificacoes/{notificationId}/lida', [AdminNotificationController::class, 'markAsRead'])->name('admin.notifications.read');
+Route::get('/previsoes', [PrevisoesController::class, 'index'])->name('forecasts');

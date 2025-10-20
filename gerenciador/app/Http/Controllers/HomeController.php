@@ -227,15 +227,6 @@ class HomeController extends Controller
             ->with('status', 'Perfil atualizado com sucesso!');
     }
 
-    private function resolveAvatarUrl(object $user): string
-    {
-        if (!empty($user->foto_blob) && !empty($user->foto_mime)) {
-            return 'data:' . $user->foto_mime . ';base64,' . $user->foto_blob;
-        }
-
-        return 'https://ui-avatars.com/api/?name=' . urlencode($user->nome ?? $user->usuario) . '&background=d4d4d4&color=2b2b2b';
-    }
-
     private function resolveSupportChat(int $userId): array
     {
         $chat = DB::table('support_chats')
