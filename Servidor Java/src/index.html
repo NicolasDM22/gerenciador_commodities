@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Cliente WebSocket para Servidor Java</title>
+</head>
+<body>
+<h1>Cliente para Servidor Java WebSocket</h1>
+<p>Status: <span id="status">Desconectado</span></p>
+<button id="btnConectar">Conectar</button>
+<button id="btnSair" disabled>Sair (PedidoDeSair)</button>
+
+<h2>Log do Servidor:</h2>
+<pre id="log"></pre>
+
+<script>
+    // Elementos da página
+    const statusEl = document.getElementById('status');
+    const logEl = document.getElementById('log');
+    const btnConectar = document.getElementById('btnConectar');
+    const btnSair = document.getElementById('btnSair');
+
+    let socket = null;
+
+    // Função para adicionar ao log
+    function log(mensagem) {
+        logEl.textContent += `[${new Date().toLocaleTimeString()}] ${mensagem}\n`;
+    }
+
+    // Função para conectar
+    function conectar() {
+        // Conecta ao servidor WebSocket.
+        // 'ws' é o protocolo (como 'http')
+        // 'localhost:3000' é o endereço e porta do seu ServidorWebSocket.java
+        socket = new WebSocket("ws://localhost:3000");
+
+        // Evento: Chamado quando a conexão é estabelecida
+        socket.onopen = function(e) {
+            statusEl.textContent = "Conectado!";
+            log("Conectado com sucesso ao servidor Java!");
+            btnConectar.disabled = true;
+            btnSair.disabled = false;
+        };
+
+        // Evento: Chamado quando o servidor Java envia uma mensagem
+        // Substitui a sua 'TratadoraDeComunicadoDeDesligamento'
+        socket.onmessage = function(event) {
+            log("Mensagem recebida do servidor: " + event.data);
+
+            // Analisa o JSON recebido do servidor
+            const dados = JSON.parse(event.data);
+
+            // Verifica o 'tipo' da mensagem (nosso novo protocolo)
+            if (dados.tipo === "desligamento") {
+                // Este é o seu 'ComunicadoDeDesligamento'
+                alert("O servidor foi desligado pelo administrador!");
+                statusEl.textContent = "Servidor Desligado";
+            }
+
+            // if (dados.tipo === "bemvindo") {
+            //     log("Mensagem de boas-vindas: " + dados.msg);
+            // }
+        };
+
+        // Evento: Chamado quando a conexão é fechada
+        socket.onclose = function(event) {
+            statusEl.textContent = "Desconectado";
+            log("Desconectado do servidor.");
+            btnConectar.disabled = false;
+            btnSair.disabled = true;
+            socket = null;
+        };
+
+        // Evento: Chamado se der um erro
+        socket.onerror = function(error) {
+            log("Erro no WebSocket: " + error.message);
+        };
+    }
+
+    // Função para enviar o 'PedidoDeSair'
+    // Substitui o 'servidor.receba(new PedidoDeSair())' do Cliente.java
+    function enviarPedidoDeSair() {
+        if (!socket) return;
+
+        // Cria um objeto JavaScript
+        const mensagem = {
+            tipo: "pedidoDeSair"
+        };
+
+        // Converte o objeto em uma String JSON e envia
+        const msgJSON = JSON.stringify(mensagem);
+        log("Enviando PedidoDeSair: " + msgJSON);
+        socket.send(msgJSON);
+
+        // O onMessage do servidor vai receber isso, ver o tipo e fechar a conexão.
+        // O onClose() do cliente será chamado automaticamente.
+    }
+
+    // Liga os botões às funções
+    btnConectar.onclick = conectar;
+    btnSair.onclick = enviarPedidoDeSair;
+
+</script>
+</body>
+</html>
