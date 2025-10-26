@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Previsão de Commodities</title>
+    <title>Gráficos - Previsão de Commodities</title> {{-- <--- Título Alterado --}}
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
-    <style>
+<style>
         :root {
             --gray-50: #f9fafb;
             --gray-100: #f3f4f6;
@@ -278,7 +278,7 @@
             }
         }
     </style>
-    </head>
+</head>
 <body>
 <div class="page">
     <header class="top-bar">
@@ -298,123 +298,28 @@
     </header>
 
     <main class="content">
+        {{-- Alertas (opcional, pode copiar se quiser) --}}
         @if (session('status'))
             <div class="alert alert-success">{{ session('status') }}</div>
         @endif
-
         @if ($errors->any())
-            <div class="alert alert-danger">
-                <strong>Ops! Algo precisa de atenção.</strong>
-                <ul>
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
+            {{-- ... alerta de erro ... --}}
         @endif
 
+        {{-- [CONTEÚDO ESPECÍFICO DESTA PÁGINA] --}}
         <section class="card">
-            
             <div class="analysis-header">
                 <div class="nav-buttons">
-                    <button class="button button-secondary button-icon" disabled type="button">&larr;</button>
-                    <a href="{{ route('previsoes.graficos') }}" class="button button-secondary button-icon" title="Ir para Gráficos">&rarr;</a>
+                    <a href="{{ route('forecasts') }}" class="button button-secondary button-icon" title="Voltar para Análise">&larr;</a>
+                    <a href="{{ route('previsoes.conclusao') }}" class="button button-secondary button-icon" title="Ir para Conclusão">&rarr;</a>
                 </div>
-                <h2>Análise descritiva</h2>
+                <h2>Gráficos de previsão</h2>
                 <a href="{{ route('home') }}" class="button button-secondary button-icon" title="Voltar para Home">&times;</a>
             </div>
-            
             <div class="analysis-body">
-                
-                <div class="analysis-section">
-                    <div class="descriptive-grid">
-                        @php
-                            $variacao = $descriptiveData->preco_medio_brasil - $descriptiveData->preco_alvo;
-                        @endphp
-                        <div>
-                            <p><strong>Matéria prima:</strong> {{ $descriptiveData->materia_prima }}</p>
-                            <p><strong>Volume de compra:</strong> {{ $descriptiveData->volume_compra_ton }} Toneladas</p>
-                            <p><strong>Preço médio atual (global):</strong> R${{ number_format($descriptiveData->preco_medio_global, 2, ',', '.') }}/kg</p>
-                        </div>
-                        <div>
-                            <p><strong>Preço médio atual (Brasil):</strong> R${{ number_format($descriptiveData->preco_medio_brasil, 2, ',', '.') }}/kg</p>
-                            <p><strong>Preço-alvo definido:</strong> R${{ number_format($descriptiveData->preco_alvo, 2, ',', '.') }}/kg</p>
-                            <p><strong>Variação:</strong> <span class="{{ $variacao > 0 ? 'text-danger' : 'text-success' }}">R${{ number_format($variacao, 2, ',', '.') }}/kg</span></p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="analysis-section">
-                    <h2>Tendência do mercado nacional (próximos meses)</h2>
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Mês/Ano</th>
-                                    <th>Preço Médio no Brasil (R$/kg)</th>
-                                    <th>Variação (%)</th>
-                                    <th class="text-center">Tendência</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse ($nationalForecasts as $forecast)
-                                    <tr>
-                                        <td>{{ $forecast->mes_ano }}</td>
-                                        <td>{{ number_format($forecast->preco_medio, 2, ',', '.') }}</td>
-                                        <td class="{{ $forecast->variacao_perc >= 0 ? 'text-success' : 'text-danger' }}">
-                                            {{ $forecast->variacao_perc >= 0 ? '+' : '' }}{{ number_format($forecast->variacao_perc, 2, ',', '.') }}%
-                                        </td>
-                                        <td class="text-center {{ $forecast->variacao_perc >= 0 ? 'text-success' : 'text-danger' }}">
-                                            {!! $forecast->variacao_perc >= 0 ? '&uarr;' : '&darr;' !!}
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="4" class="text-center">Nenhuma previsão disponível.</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="analysis-section">
-                    <h2>Comparativo de regiões (últimos 3 meses)</h2>
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>País/Região</th>
-                                    <th>Preço médio (R$/kg)</th>
-                                    <th>Logística (%)</th>
-                                    <th>Risco climático</th>
-                                    <th>Estabilidade Econômica</th>
-                                    <th>Ranking</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse ($regionalComparisons as $region)
-                                    <tr>
-                                        <td>{{ $region->pais }}</td>
-                                        <td>{{ number_format($region->preco_medio, 2, ',', '.') }}</td>
-                                        <td>{{ $region->logistica_perc }}%</td>
-                                        <td>{{ $region->risco }}</td>
-                                        <td>{{ $region->estabilidade }}</td>
-                                        <td>{{ $region->ranking }}</td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="6" class="text-center">Nenhum comparativo disponível.</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
+                <p>Aqui estarão os gráficos de estabilidade política e climática</p>
             </div>
         </section>
-
     </main>
 </div>
 </body>

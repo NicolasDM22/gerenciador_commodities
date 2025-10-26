@@ -27,3 +27,5 @@ Route::post('/support-chat/close', [SupportChatController::class, 'close'])->nam
 Route::get('/admin/notificacoes', [AdminNotificationController::class, 'index'])->name('admin.notifications');
 Route::post('/admin/notificacoes/{notificationId}/lida', [AdminNotificationController::class, 'markAsRead'])->name('admin.notifications.read');
 Route::get('/previsoes', [PrevisoesController::class, 'index'])->name('forecasts');
+Route::get('/previsoes/graficos', [PrevisoesController::class, 'graficos'])->name('previsoes.graficos');
+Route::get('/previsoes/conclusao', [PrevisoesController::class, 'conclusao'])->name('previsoes.conclusao');

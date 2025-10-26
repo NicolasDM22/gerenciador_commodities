@@ -66,4 +66,43 @@ class PrevisoesController extends Controller
             'regionalComparisons' => $regionalComparisons,
         ]);
     }
+
+    public function graficos(Request $request)
+    {
+        $userId = $request->session()->get('auth_user_id');
+        if (!$userId) return redirect()->route('login');
+
+        $user = DB::table('users')
+            ->select('id', 'usuario', 'nome', 'email', 'foto_blob', 'foto_mime', 'is_admin', 'created_at', 'updated_at')
+            ->where('id', $userId)->first();
+        if (!$user) return redirect()->route('login');
+
+        $avatarUrl = $this->resolveAvatarUrl($user);
+
+        // TODO: Adicionar aqui a lógica para buscar os dados específicos para os gráficos
+        return view('graficos', [
+            'user' => $user,
+            'avatarUrl' => $avatarUrl,
+        ]);
+    }
+
+    public function conclusao(Request $request)
+    {
+        $userId = $request->session()->get('auth_user_id');
+        if (!$userId) return redirect()->route('login');
+
+        $user = DB::table('users')
+            ->select('id', 'usuario', 'nome', 'email', 'foto_blob', 'foto_mime', 'is_admin', 'created_at', 'updated_at')
+            ->where('id', $userId)->first();
+        if (!$user) return redirect()->route('login');
+
+        $avatarUrl = $this->resolveAvatarUrl($user);
+
+        // TODO: Adicionar aqui a lógica para buscar os dados específicos para a conclusão
+
+        return view('conclusao', [
+            'user' => $user,
+            'avatarUrl' => $avatarUrl,
+        ]);
+    }
 }
