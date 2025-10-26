@@ -121,6 +121,18 @@
             cursor: not-allowed;
             transform: none;
             box-shadow: none;
+            background: var(--gray-100);
+        }
+        
+        .button-icon {
+            padding: 0.6rem 0.8rem;
+            line-height: 1;
+        }
+        
+        .button-secondary:hover {
+             background: var(--gray-50);
+             box-shadow: none;
+             transform: none;
         }
 
         main.content {
@@ -153,12 +165,6 @@
             padding: 0;
         }
 
-        .stats-grid {
-            display: grid;
-            gap: 1rem;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        }
-
         .card {
             background: var(--white);
             border-radius: 22px;
@@ -169,44 +175,6 @@
         .card h2 {
             margin: 0;
             font-size: 1.25rem;
-        }
-
-        .card p {
-            margin: 0.35rem 0 0;
-            color: var(--gray-500);
-        }
-
-        .stat-card strong {
-            font-size: 1.6rem;
-            display: block;
-            margin-top: 0.5rem;
-        }
-
-        .stat-card small {
-            color: var(--gray-500);
-            display: block;
-            margin-top: 0.35rem;
-        }
-
-        .label {
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: var(--gray-500);
-        }
-
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .section-header p {
-            margin: 0;
-            color: var(--gray-500);
-            font-size: 0.95rem;
         }
 
         .table-wrapper {
@@ -239,256 +207,63 @@
             border-bottom: none;
         }
 
-        .empty-state {
-            color: var(--gray-500);
-            font-size: 0.95rem;
-            padding: 0.75rem 0;
-        }
-
-        .filter-group {
+        .analysis-header {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 0.75rem;
+            gap: 1rem;
+            padding-bottom: 1.25rem;
+            border-bottom: 1px solid var(--gray-200);
+            margin-bottom: 1.5rem;
+        }
+        
+        .analysis-header .nav-buttons {
+            display: flex;
+            gap: 0.5rem;
         }
 
-        .filter-group label {
-            font-size: 0.9rem;
-            color: var(--gray-500);
+        .analysis-body {
+            display: grid;
+            gap: 2.5rem; 
         }
-
-        select {
-            padding: 0.6rem 1rem;
-            border-radius: 12px;
-            border: 1px solid var(--gray-300);
+        
+        .analysis-section h2 {
+             margin-bottom: 1.25rem;
+             font-size: 1.15rem;
+             font-weight: 600;
+             color: var(--gray-700);
+        }
+        
+        .descriptive-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem 2rem;
+        }
+        
+        .descriptive-grid p {
+            margin: 0.6rem 0;
             font-size: 0.95rem;
             color: var(--gray-700);
-            background: var(--white);
+            line-height: 1.5;
         }
-
-        .chart-wrapper {
-            position: relative;
-            min-height: 320px;
-        }
-
-        canvas {
-            width: 100%;
-            height: 320px;
-        }
-
-        .location-details {
-            margin-top: 1.5rem;
-            display: grid;
-            gap: 1rem;
-        }
-
-        .location-header {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
-
-        .location-header strong {
-            font-size: 1.1rem;
-        }
-
-        .location-header span {
-            font-size: 0.9rem;
-            color: var(--gray-500);
-        }
-
-        .location-items {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            display: grid;
-            gap: 0.75rem;
-        }
-
-        .location-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 1rem;
-            padding: 0.85rem 1rem;
-            border-radius: 14px;
-            background: var(--gray-50);
-            border: 1px solid var(--gray-200);
-        }
-
-        .location-item .name {
+        
+        .descriptive-grid strong {
             font-weight: 600;
-        }
-
-        .location-item .meta {
-            color: var(--gray-500);
-            font-size: 0.85rem;
-            margin-top: 0.25rem;
-        }
-
-        .location-item .price {
-            font-weight: 700;
-            font-size: 1rem;
-        }
-
-        .support-section {
-            display: grid;
-            gap: 1rem;
-        }
-
-        .support-body {
-            border: 1px solid var(--gray-200);
-            border-radius: 16px;
-            background: var(--gray-50);
-            padding: 1rem;
-            max-height: 320px;
-            overflow-y: auto;
-            display: grid;
-            gap: 0.75rem;
-        }
-
-        #supportMessages {
-            display: grid;
-            gap: 0.75rem;
-        }
-
-        .support-message {
-            display: grid;
-            gap: 0.25rem;
-            max-width: 420px;
-            padding: 0.75rem 1rem;
-            border-radius: 16px;
-        }
-
-        .support-message.user {
-            margin-left: auto;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: var(--white);
-        }
-
-        .support-message.admin {
-            margin-right: auto;
-            background: var(--white);
-            border: 1px solid rgba(37, 99, 235, 0.2);
-        }
-
-        .support-message p {
-            margin: 0;
-        }
-
-        .support-message span {
-            font-size: 0.8rem;
-            color: inherit;
-            opacity: 0.8;
-        }
-
-        .support-form {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-
-        .support-form textarea {
-            resize: vertical;
-            min-height: 90px;
-            border-radius: 14px;
-            border: 1px solid var(--gray-300);
-            padding: 0.85rem 1rem;
-            font-family: inherit;
-            font-size: 0.95rem;
-        }
-
-        .support-actions {
-            display: flex;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-        }
-
-        .support-meta {
-            color: var(--gray-500);
-            font-size: 0.9rem;
-            margin: 0;
-        }
-
-        .admin-list {
-            display: grid;
-            gap: 0.75rem;
-            margin-top: 1rem;
-        }
-
-        .admin-item {
-            padding: 0.9rem 1rem;
-            border-radius: 14px;
-            border: 1px solid var(--gray-200);
-            background: var(--gray-50);
-        }
-
-        .admin-item strong {
-            display: block;
-            margin-bottom: 0.35rem;
-        }
-
-        .modal {
-            position: fixed;
-            inset: 0;
-            background: rgba(17, 24, 39, 0.4);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 1.5rem;
-            z-index: 10;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-dialog {
-            background: var(--white);
-            border-radius: 22px;
-            width: min(480px, 100%);
-            padding: 1.5rem;
-            display: grid;
-            gap: 1rem;
-            box-shadow: 0 30px 65px -28px rgba(15, 23, 42, 0.45);
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .modal-header h3 {
-            margin: 0;
-            font-size: 1.2rem;
-        }
-
-        .form-grid {
-            display: grid;
-            gap: 1rem;
-        }
-
-        .form-group {
-            display: grid;
-            gap: 0.4rem;
-        }
-
-        .form-group label {
-            font-size: 0.9rem;
             color: var(--gray-600);
+            display: inline-block;
+            min-width: 180px; 
         }
-
-        .form-group input {
-            padding: 0.7rem 1rem;
-            border-radius: 12px;
-            border: 1px solid var(--gray-300);
-            font-size: 0.95rem;
+        
+        .text-center {
+            text-align: center;
         }
-
-        .modal-footer {
-            display: flex;
-            justify-content: flex-end;
-            gap: 0.75rem;
+        
+        .text-success {
+            color: var(--success);
+        }
+        
+        .text-danger {
+            color: var(--danger);
         }
 
         @media (max-width: 820px) {
@@ -501,23 +276,9 @@
                 width: 100%;
                 justify-content: flex-start;
             }
-
-            .section-header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .filter-group {
-                width: 100%;
-            }
-
-            select {
-                width: 100%;
-            }
         }
     </style>
-    </style>
-</head>
+    </head>
 <body>
 <div class="page">
     <header class="top-bar">
@@ -529,7 +290,6 @@
             </div>
         </div>
         <div class="top-actions">
-            <button class="button button-outline" id="openProfileModal" type="button">Atualizar perfil</button>
             <form action="{{ route('logout') }}" method="POST">
                 @csrf
                 <button class="button button-primary" type="submit">Sair</button>
@@ -553,62 +313,109 @@
             </div>
         @endif
 
-        <section class="stats-grid">
-            <div class="card stat-card">
-                <span class="label">Membro desde</span>
-                <strong>{{ $stats['member_since'] }}</strong>
-                <small>{{ $stats['account_age'] }}</small>
+        <section class="card">
+            
+            <div class="analysis-header">
+                <div class="nav-buttons">
+                    <button class="button button-secondary button-icon" disabled type="button">&larr;</button>
+                    <button class="button button-secondary button-icon" disabled type="button">&rarr;</button>
+                </div>
+                <h2>Análise descritiva</h2>
+                <a href="{{ route('home') }}" class="button button-secondary button-icon" title="Voltar para Home">&times;</a>
             </div>
-            <div class="card stat-card">
-                <span class="label">Última atualização</span>
-                <strong>{{ $stats['last_update'] }}</strong>
-                <small>Perfil sincronizado</small>
-            </div>
-            <div class="card stat-card">
-                <span class="label">Status da conta</span>
-                <strong>{{ $isAdmin ? 'Administrador' : 'Usuário' }}</strong>
-                <small>Acesso ao painel de commodities</small>
+            
+            <div class="analysis-body">
+                
+                <div class="analysis-section">
+                    <div class="descriptive-grid">
+                        @php
+                            $variacao = $descriptiveData->preco_medio_brasil - $descriptiveData->preco_alvo;
+                        @endphp
+                        <div>
+                            <p><strong>Matéria prima:</strong> {{ $descriptiveData->materia_prima }}</p>
+                            <p><strong>Volume de compra:</strong> {{ $descriptiveData->volume_compra_ton }} Toneladas</p>
+                            <p><strong>Preço médio atual (global):</strong> R${{ number_format($descriptiveData->preco_medio_global, 2, ',', '.') }}/kg</p>
+                        </div>
+                        <div>
+                            <p><strong>Preço médio atual (Brasil):</strong> R${{ number_format($descriptiveData->preco_medio_brasil, 2, ',', '.') }}/kg</p>
+                            <p><strong>Preço-alvo definido:</strong> R${{ number_format($descriptiveData->preco_alvo, 2, ',', '.') }}/kg</p>
+                            <p><strong>Variação:</strong> <span class="{{ $variacao > 0 ? 'text-danger' : 'text-success' }}">R${{ number_format($variacao, 2, ',', '.') }}/kg</span></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="analysis-section">
+                    <h2>Tendência do mercado nacional (próximos meses)</h2>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Mês/Ano</th>
+                                    <th>Preço Médio no Brasil (R$/kg)</th>
+                                    <th>Variação (%)</th>
+                                    <th class="text-center">Tendência</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse ($nationalForecasts as $forecast)
+                                    <tr>
+                                        <td>{{ $forecast->mes_ano }}</td>
+                                        <td>{{ number_format($forecast->preco_medio, 2, ',', '.') }}</td>
+                                        <td class="{{ $forecast->variacao_perc >= 0 ? 'text-success' : 'text-danger' }}">
+                                            {{ $forecast->variacao_perc >= 0 ? '+' : '' }}{{ number_format($forecast->variacao_perc, 2, ',', '.') }}%
+                                        </td>
+                                        <td class="text-center {{ $forecast->variacao_perc >= 0 ? 'text-success' : 'text-danger' }}">
+                                            {!! $forecast->variacao_perc >= 0 ? '&uarr;' : '&darr;' !!}
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="4" class="text-center">Nenhuma previsão disponível.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="analysis-section">
+                    <h2>Comparativo de regiões (últimos 3 meses)</h2>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>País/Região</th>
+                                    <th>Preço médio (R$/kg)</th>
+                                    <th>Logística (%)</th>
+                                    <th>Risco climático</th>
+                                    <th>Estabilidade Econômica</th>
+                                    <th>Ranking</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse ($regionalComparisons as $region)
+                                    <tr>
+                                        <td>{{ $region->pais }}</td>
+                                        <td>{{ number_format($region->preco_medio, 2, ',', '.') }}</td>
+                                        <td>{{ $region->logistica_perc }}%</td>
+                                        <td>{{ $region->risco }}</td>
+                                        <td>{{ $region->estabilidade }}</td>
+                                        <td>{{ $region->ranking }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="6" class="text-center">Nenhum comparativo disponível.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
             </div>
         </section>
 
-     <div class="analitics-section">
-         <!-- Conteúdo da seção de análises -->
-        <section class="card market-section">
-            <div class="section-header">
-                <div>
-                    <h2>Previsão de melhores oportunidades</h2>
-                    <p>Resumo com a localidade mais barata cadastrada para cada item alimentício.</p>
-                </div>
-            </div>
-            @if (empty($marketOverview))
-                <p class="empty-state">Cadastre preços de commodities para visualizar o panorama geral.</p>
-            @else
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Commodity</th>
-                                <th>Categoria</th>
-                                <th>Localidade</th>
-                                <th>Preço</th>
-                                <th>Atualização</th>
-                                <th>Fonte</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($marketOverview as $item)
-                                <tr>
-                                    <td>{{ $item['commodity'] }}</td>
-                                    <td>{{ $item['categoria'] ?? 'Não informado' }}</td>
-                                    <td>{{ $item['location'] }}</td>
-                                    <td>{{ $item['currency'] ?? 'BRL' }} {{ number_format($item['price'], 2, ',', '.') }}</td>
-                                    <td>{{ $item['last_updated'] ?? 'Sem data' }}</td>
-                                    <td>{{ $item['source'] ?? 'Não informado' }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @endif
-        </section>
-    </div>
+    </main>
+</div>
+</body>
+</html>
