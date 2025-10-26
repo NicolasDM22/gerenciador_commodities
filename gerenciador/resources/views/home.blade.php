@@ -135,6 +135,9 @@
             </div>
         </div>
         <div class="top-actions">
+            @if($isAdmin)
+                <a href="{{ route('forecasts') }}" class="button button-secondary">Debug Previsões</a>
+            @endif
             <button class="button button-outline" id="openProfileModal" type="button">Atualizar perfil</button>
             <form action="{{ route('logout') }}" method="POST">
                 @csrf
