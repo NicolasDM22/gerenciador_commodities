@@ -189,6 +189,14 @@
             min-width: 640px;
         }
 
+        table th {
+        font-weight: 700;
+        }
+
+        table td {
+        font-weight: 600;
+        }
+
         th,
         td {
             padding: 0.85rem 1rem;
@@ -214,7 +222,7 @@
             gap: 1rem;
             padding-bottom: 1.25rem;
             border-bottom: 1px solid var(--gray-200);
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
         }
         
         .analysis-header .nav-buttons {
@@ -224,7 +232,7 @@
 
         .analysis-body {
             display: grid;
-            gap: 2.5rem; 
+            gap: 1rem; 
         }
         
         .analysis-section h2 {
@@ -238,21 +246,38 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 1rem 2rem;
-        }
-        
-        .descriptive-grid p {
+            }
+
+            .descriptive-grid p {
             margin: 0.6rem 0;
             font-size: 0.95rem;
             color: var(--gray-700);
             line-height: 1.5;
-        }
-        
-        .descriptive-grid strong {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            }
+
+            .descriptive-grid strong {
             font-weight: 600;
             color: var(--gray-600);
-            display: inline-block;
-            min-width: 180px; 
-        }
+            padding-right: 1rem;
+            }
+
+            .descriptive-grid p > span {
+            font-weight: 500;
+            text-align: right;
+            color: var(--gray-900);
+            }
+
+            .descriptive-grid p > span.text-success {
+            color: var(--success);
+            }
+
+            .descriptive-grid p > span.text-danger {
+            color: var(--danger);
+            }
+
         
         .text-center {
             text-align: center;
@@ -332,13 +357,13 @@
                             $variacao = $descriptiveData->preco_medio_brasil - $descriptiveData->preco_alvo;
                         @endphp
                         <div>
-                            <p><strong>Matéria prima:</strong> {{ $descriptiveData->materia_prima }}</p>
-                            <p><strong>Volume de compra:</strong> {{ $descriptiveData->volume_compra_ton }} Toneladas</p>
-                            <p><strong>Preço médio atual (global):</strong> R${{ number_format($descriptiveData->preco_medio_global, 2, ',', '.') }}/kg</p>
+                            <p><strong>Matéria prima:</strong> <span>{{ $descriptiveData->materia_prima }}</span></p>
+                            <p><strong>Volume de compra:</strong> <span>{{ $descriptiveData->volume_compra_ton }} Toneladas</span></p>
+                            <p><strong>Preço médio atual (global):</strong> <span>R${{ number_format($descriptiveData->preco_medio_global, 2, ',', '.') }}/kg</span></p>
                         </div>
                         <div>
-                            <p><strong>Preço médio atual (Brasil):</strong> R${{ number_format($descriptiveData->preco_medio_brasil, 2, ',', '.') }}/kg</p>
-                            <p><strong>Preço-alvo definido:</strong> R${{ number_format($descriptiveData->preco_alvo, 2, ',', '.') }}/kg</p>
+                            <p><strong>Preço médio atual (Brasil):</strong> <span>R${{ number_format($descriptiveData->preco_medio_brasil, 2, ',', '.') }}/kg</span></p>
+                            <p><strong>Preço-alvo definido:</strong> <span>R${{ number_format($descriptiveData->preco_alvo, 2, ',', '.') }}/kg</span></p>
                             <p><strong>Variação:</strong> <span class="{{ $variacao > 0 ? 'text-danger' : 'text-success' }}">R${{ number_format($variacao, 2, ',', '.') }}/kg</span></p>
                         </div>
                     </div>
@@ -360,7 +385,7 @@
                                 @forelse ($nationalForecasts as $forecast)
                                     <tr>
                                         <td>{{ $forecast->mes_ano }}</td>
-                                        <td>{{ number_format($forecast->preco_medio, 2, ',', '.') }}</td>
+                                        <td>R${{ number_format($forecast->preco_medio, 2, ',', '.') }}</td>
                                         <td class="{{ $forecast->variacao_perc >= 0 ? 'text-success' : 'text-danger' }}">
                                             {{ $forecast->variacao_perc >= 0 ? '+' : '' }}{{ number_format($forecast->variacao_perc, 2, ',', '.') }}%
                                         </td>
@@ -396,11 +421,11 @@
                                 @forelse ($regionalComparisons as $region)
                                     <tr>
                                         <td>{{ $region->pais }}</td>
-                                        <td>{{ number_format($region->preco_medio, 2, ',', '.') }}</td>
+                                        <td>R${{ number_format($region->preco_medio, 2, ',', '.') }}</td>
                                         <td>{{ $region->logistica_perc }}%</td>
                                         <td>{{ $region->risco }}</td>
                                         <td>{{ $region->estabilidade }}</td>
-                                        <td>{{ $region->ranking }}</td>
+                                        <td>{{ $region->ranking }}º</td>
                                     </tr>
                                 @empty
                                     <tr>

@@ -214,7 +214,7 @@
             gap: 1rem;
             padding-bottom: 1.25rem;
             border-bottom: 1px solid var(--gray-200);
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
         }
         
         .analysis-header .nav-buttons {
