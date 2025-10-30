@@ -8,9 +8,6 @@ use Illuminate\Support\Facades\DB;
 
 class PrevisoesController extends Controller
 {
-    /**
-     * Display the forecasts page.
-     */
     public function index(Request $request)
     {
         $userId = $request->session()->get('auth_user_id');
@@ -28,65 +25,84 @@ class PrevisoesController extends Controller
             return redirect()->route('login');
         }
 
-        $memberSince = $user->created_at ? Carbon::parse($user->created_at) : null;
-        $lastUpdate = $user->updated_at ? Carbon::parse($user->updated_at) : null;
+        $avatarUrl = $this->resolveAvatarUrl($user);
 
-        $stats = [
-            'member_since' => $memberSince ? $memberSince->format('d/m/Y') : 'Nao informado',
-            'account_age' => $memberSince ? $memberSince->locale('pt_BR')->diffForHumans() : 'Nao informado',
-            'last_update' => $lastUpdate ? $lastUpdate->format('d/m/Y H:i') : 'Nao informado',
+        
+        // TODO: Temos que substituir os dados simulados abaixo por suas consultas reais.
+
+        // Dados para a "Análise Descritiva" (Simulados), depois devem ser reais)
+        $descriptiveData = (object) [
+            'materia_prima' => 'Cacau (Tipo Forasteiro)',
+            'volume_compra_ton' => 10,
+            'preco_medio_global' => 60.00,
+            'preco_medio_brasil' => 43.50,
+            'preco_alvo' => 35.00,
+        ];
+        
+        // Dados para a "Tendência do mercado nacional" (Simulados, depois devem ser reais)
+        $nationalForecasts = [
+            (object) ['mes_ano' => 'Janeiro/2026', 'preco_medio' => 60, 'variacao_perc' => -10.00],
+            (object) ['mes_ano' => 'Fevereiro/2026', 'preco_medio' => 63, 'variacao_perc' => 5.00],
+            (object) ['mes_ano' => 'Março/2026', 'preco_medio' => 56, 'variacao_perc' => -11.11],
+            (object) ['mes_ano' => 'Abril/2026', 'preco_medio' => 52, 'variacao_perc' => -7.14],
+        ];
+        
+        // Dados para o "Comparativo de regiões" (Simulados, depois devem ser reais)
+        $regionalComparisons = [
+            (object) ['pais' => 'Brasil', 'preco_medio' => 17.80, 'logistica_perc' => 6, 'risco' => 'Médio (Chuvas)', 'estabilidade' => 'Alta', 'ranking' => 1],
+            (object) ['pais' => 'Indonésia', 'preco_medio' => 15.40, 'logistica_perc' => 18, 'risco' => 'Alto (Alta umidade)', 'estabilidade' => 'Média', 'ranking' => 3],
+            (object) ['pais' => 'Costa do Marfim', 'preco_medio' => 14.90, 'logistica_perc' => 12, 'risco' => 'Alto (Instabilidade)', 'estabilidade' => 'Baixa', 'ranking' => 2],
         ];
 
-        $priceRows = DB::table('commodity_prices as cp')
-            ->join('commodities as c', 'c.id', '=', 'cp.commodity_id')
-            ->join('locations as l', 'l.id', '=', 'cp.location_id')
-            ->select(
-                'cp.id',
-                'cp.price',
-                'cp.currency',
-                'cp.source',
-                'cp.last_updated',
-                'c.id as commodity_id',
-                'c.nome as commodity_nome',
-                'c.categoria',
-                'l.id as location_id',
-                'l.nome as location_nome',
-                'l.estado',
-                'l.regiao'
-            )
-            ->orderBy('cp.price')
-            ->get();
+        //    A lógica de $stats, $priceRows e $marketOverview foi removida
+        //    pois o novo layout não usa esses dados.
 
-        $marketOverview = $priceRows->groupBy('commodity_id')
-            ->map(function ($entries) {
-                $best = $entries->sortBy('price')->first();
-
-                if (!$best) {
-                    return null;
-                }
-
-                $lastUpdated = $best->last_updated ? Carbon::parse($best->last_updated) : null;
-
-                return [
-                    'commodity' => $best->commodity_nome,
-                    'categoria' => $best->categoria,
-                    'location' => $best->location_nome,
-                    'price' => (float) $best->price,
-                    'currency' => $best->currency,
-                    'last_updated' => $lastUpdated ? $lastUpdated->format('d/m/Y') : null,
-                    'source' => $best->source,
-                ];
-            })
-            ->filter()
-            ->values()
-            ->all();
-
+        // Retorna a view com as NOVAS variáveis
         return view('previ', [
             'user' => $user,
-            'stats' => $stats,
-            'avatarUrl' => $this->resolveAvatarUrl($user),
-            'isAdmin' => (bool) ($user->is_admin ?? false),
-            'marketOverview' => $marketOverview,
+            'avatarUrl' => $avatarUrl,
+            'descriptiveData' => $descriptiveData,
+            'nationalForecasts' => $nationalForecasts,
+            'regionalComparisons' => $regionalComparisons,
+        ]);
+    }
+
+    public function graficos(Request $request)
+    {
+        $userId = $request->session()->get('auth_user_id');
+        if (!$userId) return redirect()->route('login');
+
+        $user = DB::table('users')
+            ->select('id', 'usuario', 'nome', 'email', 'foto_blob', 'foto_mime', 'is_admin', 'created_at', 'updated_at')
+            ->where('id', $userId)->first();
+        if (!$user) return redirect()->route('login');
+
+        $avatarUrl = $this->resolveAvatarUrl($user);
+
+        // TODO: Adicionar aqui a lógica para buscar os dados específicos para os gráficos
+        return view('graficos', [
+            'user' => $user,
+            'avatarUrl' => $avatarUrl,
+        ]);
+    }
+
+    public function conclusao(Request $request)
+    {
+        $userId = $request->session()->get('auth_user_id');
+        if (!$userId) return redirect()->route('login');
+
+        $user = DB::table('users')
+            ->select('id', 'usuario', 'nome', 'email', 'foto_blob', 'foto_mime', 'is_admin', 'created_at', 'updated_at')
+            ->where('id', $userId)->first();
+        if (!$user) return redirect()->route('login');
+
+        $avatarUrl = $this->resolveAvatarUrl($user);
+
+        // TODO: Adicionar aqui a lógica para buscar os dados específicos para a conclusão
+
+        return view('conclusao', [
+            'user' => $user,
+            'avatarUrl' => $avatarUrl,
         ]);
     }
 }
