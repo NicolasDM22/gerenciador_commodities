@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class PrevisoesController extends Controller
 {
@@ -27,59 +28,124 @@ class PrevisoesController extends Controller
 
         $avatarUrl = $this->resolveAvatarUrl($user);
 
-        
-        // TODO: Temos que substituir os dados simulados abaixo por suas consultas reais.
+        $commodityId = $request->query('commodity_id');
 
-        // Dados para a "Análise Descritiva" (Simulados), depois devem ser reais)
-        $descriptiveData = (object) [
-            'materia_prima' => 'Cacau (Tipo Forasteiro)',
-            'volume_compra_ton' => 10,
-            'preco_medio_global' => 60.00,
-            'preco_medio_brasil' => 43.50,
-            'preco_alvo' => 35.00,
-        ];
-        
-        // Dados para a "Tendência do mercado nacional" (Simulados, depois devem ser reais)
-        $nationalForecasts = [
-            (object) ['mes_ano' => 'Janeiro/2026', 'preco_medio' => 60, 'variacao_perc' => -10.00],
-            (object) ['mes_ano' => 'Fevereiro/2026', 'preco_medio' => 63, 'variacao_perc' => 5.00],
-            (object) ['mes_ano' => 'Março/2026', 'preco_medio' => 56, 'variacao_perc' => -11.11],
-            (object) ['mes_ano' => 'Abril/2026', 'preco_medio' => 52, 'variacao_perc' => -7.14],
-        ];
-        
-        // Dados para o "Comparativo de regiões" (Simulados, depois devem ser reais)
-        $regionalComparisons = [
-            (object) ['pais' => 'Brasil', 'preco_medio' => 17.80, 'logistica_perc' => 6, 'risco' => 'Médio (Chuvas)', 'estabilidade' => 'Alta', 'ranking' => 1],
-            (object) ['pais' => 'Indonésia', 'preco_medio' => 15.40, 'logistica_perc' => 18, 'risco' => 'Alto (Alta umidade)', 'estabilidade' => 'Média', 'ranking' => 3],
-            (object) ['pais' => 'Costa do Marfim', 'preco_medio' => 14.90, 'logistica_perc' => 12, 'risco' => 'Alto (Instabilidade)', 'estabilidade' => 'Baixa', 'ranking' => 2],
-        ];
+        $commodity = null;
 
-        //    A lógica de $stats, $priceRows e $marketOverview foi removida
-        //    pois o novo layout não usa esses dados.
+        if ($commodityId) {
+            $commodity = DB::table('commodities')
+                ->select('id', 'nome', 'categoria', 'unidade')
+                ->where('id', $commodityId)
+                ->first();
+        }
 
-        // Retorna a view com as NOVAS variáveis
+        if (!$commodity) {
+            $latestMetrics = DB::table('commodity_descriptive_metrics as metrics')
+                ->select('metrics.commodity_id')
+                ->orderByDesc('metrics.referencia_mes')
+                ->orderByDesc('metrics.updated_at')
+                ->orderByDesc('metrics.created_at')
+                ->first();
+
+            if ($latestMetrics) {
+                $commodity = DB::table('commodities')
+                    ->select('id', 'nome', 'categoria', 'unidade')
+                    ->where('id', $latestMetrics->commodity_id)
+                    ->first();
+            }
+        }
+
+        if (!$commodity) {
+            $commodity = DB::table('commodities')
+                ->select('id', 'nome', 'categoria', 'unidade')
+                ->orderBy('nome')
+                ->first();
+        }
+
+        if (!$commodity) {
+            return redirect()->route('home')->withErrors('Nenhuma commodity cadastrada para exibir.');
+        }
+
+        $descriptiveData = DB::table('commodity_descriptive_metrics as metrics')
+            ->select(
+                'metrics.volume_compra_ton',
+                'metrics.preco_medio_global',
+                'metrics.preco_medio_brasil',
+                'metrics.preco_alvo',
+                'metrics.referencia_mes',
+                'commodities.nome as materia_prima'
+            )
+            ->join('commodities', 'commodities.id', '=', 'metrics.commodity_id')
+            ->where('metrics.commodity_id', $commodity->id)
+            ->orderByDesc('metrics.referencia_mes')
+            ->orderByDesc('metrics.updated_at')
+            ->orderByDesc('metrics.created_at')
+            ->first();
+
+        if (!$descriptiveData) {
+            $descriptiveData = (object) [
+                'materia_prima' => $commodity->nome,
+                'volume_compra_ton' => 0,
+                'preco_medio_global' => 0,
+                'preco_medio_brasil' => 0,
+                'preco_alvo' => 0,
+                'referencia_mes' => null,
+            ];
+        }
+
+        $nationalForecasts = DB::table('commodity_national_forecasts')
+            ->select('referencia_mes', 'preco_medio', 'variacao_perc')
+            ->where('commodity_id', $commodity->id)
+            ->orderBy('referencia_mes')
+            ->get()
+            ->map(function ($forecast) {
+                if ($forecast->referencia_mes) {
+                    $forecast->mes_ano = Str::ucfirst(
+                        Carbon::parse($forecast->referencia_mes)
+                            ->locale('pt_BR')
+                            ->translatedFormat('F/Y')
+                    );
+                } else {
+                    $forecast->mes_ano = null;
+                }
+
+                return $forecast;
+            });
+
+        $regionalComparisons = DB::table('commodity_regional_comparisons')
+            ->select('pais', 'preco_medio', 'logistica_perc', 'risco', 'estabilidade', 'ranking')
+            ->where('commodity_id', $commodity->id)
+            ->orderBy('ranking')
+            ->get();
+
         return view('previ', [
             'user' => $user,
             'avatarUrl' => $avatarUrl,
             'descriptiveData' => $descriptiveData,
             'nationalForecasts' => $nationalForecasts,
             'regionalComparisons' => $regionalComparisons,
+            'selectedCommodity' => $commodity,
         ]);
     }
 
     public function graficos(Request $request)
     {
         $userId = $request->session()->get('auth_user_id');
-        if (!$userId) return redirect()->route('login');
+        if (!$userId) {
+            return redirect()->route('login');
+        }
 
         $user = DB::table('users')
             ->select('id', 'usuario', 'nome', 'email', 'foto_blob', 'foto_mime', 'is_admin', 'created_at', 'updated_at')
-            ->where('id', $userId)->first();
-        if (!$user) return redirect()->route('login');
+            ->where('id', $userId)
+            ->first();
+        if (!$user) {
+            return redirect()->route('login');
+        }
 
         $avatarUrl = $this->resolveAvatarUrl($user);
 
-        // TODO: Adicionar aqui a lógica para buscar os dados específicos para os gráficos
+        // TODO: Adicionar aqui a logica para buscar os dados especificos para os graficos
         return view('graficos', [
             'user' => $user,
             'avatarUrl' => $avatarUrl,
@@ -89,16 +155,21 @@ class PrevisoesController extends Controller
     public function conclusao(Request $request)
     {
         $userId = $request->session()->get('auth_user_id');
-        if (!$userId) return redirect()->route('login');
+        if (!$userId) {
+            return redirect()->route('login');
+        }
 
         $user = DB::table('users')
             ->select('id', 'usuario', 'nome', 'email', 'foto_blob', 'foto_mime', 'is_admin', 'created_at', 'updated_at')
-            ->where('id', $userId)->first();
-        if (!$user) return redirect()->route('login');
+            ->where('id', $userId)
+            ->first();
+        if (!$user) {
+            return redirect()->route('login');
+        }
 
         $avatarUrl = $this->resolveAvatarUrl($user);
 
-        // TODO: Adicionar aqui a lógica para buscar os dados específicos para a conclusão
+        // TODO: Adicionar aqui a logica para buscar os dados especificos para a conclusao
 
         return view('conclusao', [
             'user' => $user,
@@ -106,3 +177,4 @@ class PrevisoesController extends Controller
         ]);
     }
 }
+
