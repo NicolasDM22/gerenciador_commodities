@@ -29,3 +29,4 @@ Route::post('/admin/notificacoes/{notificationId}/lida', [AdminNotificationContr
 Route::get('/previsoes', [PrevisoesController::class, 'index'])->name('forecasts');
 Route::get('/previsoes/graficos', [PrevisoesController::class, 'graficos'])->name('previsoes.graficos');
 Route::get('/previsoes/conclusao', [PrevisoesController::class, 'conclusao'])->name('previsoes.conclusao');
+Route::get('/forms', [FormsController::class, 'index'])->name('forecasts');
