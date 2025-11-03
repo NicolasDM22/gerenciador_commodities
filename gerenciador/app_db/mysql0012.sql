@@ -1,4 +1,6 @@
-
+drop TABLE IF EXISTS `commodity_descriptive_metrics`;
+drop TABLE IF EXISTS `commodity_national_forecasts`;
+drop TABLE IF EXISTS `commodity_regional_comparisons`;
 CREATE TABLE IF NOT EXISTS `commodity_descriptive_metrics` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `commodity_id` bigint unsigned NOT NULL,
@@ -42,3 +44,4 @@ CREATE TABLE IF NOT EXISTS `commodity_regional_comparisons` (
   UNIQUE KEY `uniq_regional_country` (`commodity_id`,`pais`),
   CONSTRAINT `fk_regional_commodity` FOREIGN KEY (`commodity_id`) REFERENCES `commodities` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
