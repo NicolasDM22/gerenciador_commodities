@@ -29,21 +29,12 @@ class LoginController extends Controller
         $credentials = $request->validate(
             [
                 'email' => ['required', 'email', 'max:191'],
-                'telefone' => ['required', 'string', 'regex:/^[0-9\\-\\s\\(\\)\\+]{10,20}$/'],
-                'endereco' => ['required', 'string', 'min:5', 'max:255'],
                 'senha' => ['required', 'string'],
             ],
             [
                 'telefone.regex' => 'Informe um telefone valido (apenas numeros, +, () e -).',
             ]
         );
-
-        $normalizedPhone = $this->normalizePhone($credentials['telefone']);
-        if (strlen($normalizedPhone) < 10 || strlen($normalizedPhone) > 15) {
-            return back()
-                ->withErrors(['telefone' => 'O telefone deve conter entre 10 e 15 digitos.'])
-                ->withInput($request->except('senha'));
-        }
 
         $user = DB::table('users')
             ->select('id', 'usuario', 'senha', 'is_admin', 'email', 'telefone', 'endereco')

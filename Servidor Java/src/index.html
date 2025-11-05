@@ -31,8 +31,8 @@
     function conectar() {
         // Conecta ao servidor WebSocket.
         // 'ws' é o protocolo (como 'http')
-        // 'localhost:3000' é o endereço e porta do seu ServidorWebSocket.java
-        socket = new WebSocket("ws://localhost:3000");
+        // '/ws' passa pelo proxy compartilhado com o Laravel
+        socket = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`);
 
         // Evento: Chamado quando a conexão é estabelecida
         socket.onopen = function(e) {

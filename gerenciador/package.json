@@ -4,12 +4,15 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "proxy": "node ./proxy/server.mjs",
+        "dev:full": "concurrently \"php artisan serve --host=127.0.0.1 --port=8001\" \"npm run dev\" \"npm run proxy\""
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",
         "axios": "^1.11.0",
         "concurrently": "^9.0.1",
+        "http-proxy": "^1.18.1",
         "laravel-vite-plugin": "^2.0.0",
         "tailwindcss": "^4.0.0",
         "vite": "^7.0.7"

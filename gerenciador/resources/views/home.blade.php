@@ -100,6 +100,35 @@
         .analysis-list span { color: var(--gray-500); margin-left: 0.75rem; font-size: 0.85rem; }
         .chart-wrapper { position: relative; min-height: 350px; padding-top: 1rem; }
         canvas { width: 100%; height: 350px; }
+        .ws-controls { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 1rem 0; }
+        .ws-field { display: flex; flex: 1; gap: 0.5rem; align-items: center; }
+        .ws-field input { flex: 1; padding: 0.6rem 0.8rem; border-radius: 10px; border: 1px solid var(--gray-300); }
+        .ws-log {
+            background: var(--gray-50);
+            border-radius: 12px;
+            padding: 1rem;
+            font-family: monospace;
+            font-size: 0.85rem;
+            max-height: 220px;
+            overflow-y: auto;
+            border: 1px solid var(--gray-200);
+            white-space: pre-wrap;
+        }
+        .ws-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            color: var(--gray-600);
+        }
+        .ws-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            background: var(--danger);
+            transition: background 0.2s ease;
+        }
+        .ws-indicator.active { background: var(--success); }
         .modal {
              position: fixed; inset: 0; background: rgba(17, 24, 39, 0.4);
              display: none; align-items: center; justify-content: center;
@@ -186,6 +215,24 @@
             <div class="chart-wrapper">
                 <canvas id="priceHistoryChart"></canvas>
             </div>
+        </div>
+
+        <div class="card" id="javaWsCard">
+            <h2>Servidor Java (WebSocket)</h2>
+            <p class="ws-status">
+                <span class="ws-indicator" id="javaWsIndicator"></span>
+                <span id="javaWsStatus">Desconectado</span>
+            </p>
+            <div class="ws-controls">
+                <button class="button button-secondary" type="button" id="javaWsConnect">Conectar</button>
+                <button class="button button-outline" type="button" id="javaWsDisconnect" disabled>Desconectar</button>
+                <button class="button button-outline" type="button" id="javaWsSendExit" disabled>Enviar pedido de sair</button>
+            </div>
+            <div class="ws-field">
+                <input type="text" id="javaWsMessage" placeholder='Mensagem JSON, ex: {"tipo":"echo","payload":"teste"}' disabled>
+                <button class="button button-primary" type="button" id="javaWsSend" disabled>Enviar</button>
+            </div>
+            <div class="ws-log" id="javaWsLog"></div>
         </div>
 
     </main>
@@ -332,6 +379,122 @@
                 }
             });
         }
+
+        const wsIndicator = document.getElementById('javaWsIndicator');
+        const wsStatus = document.getElementById('javaWsStatus');
+        const wsConnectBtn = document.getElementById('javaWsConnect');
+        const wsDisconnectBtn = document.getElementById('javaWsDisconnect');
+        const wsSendExitBtn = document.getElementById('javaWsSendExit');
+        const wsSendBtn = document.getElementById('javaWsSend');
+        const wsMessageInput = document.getElementById('javaWsMessage');
+        const wsLog = document.getElementById('javaWsLog');
+
+        const appendLog = (message) => {
+            if (!wsLog) return;
+            const time = new Date().toLocaleTimeString();
+            wsLog.textContent += `[${time}] ${message}\n`;
+            wsLog.scrollTop = wsLog.scrollHeight;
+        };
+
+        const toggleWsControls = (isConnected) => {
+            wsIndicator?.classList.toggle('active', isConnected);
+            if (wsStatus) wsStatus.textContent = isConnected ? 'Conectado' : 'Desconectado';
+            if (wsConnectBtn) wsConnectBtn.disabled = isConnected;
+            if (wsDisconnectBtn) wsDisconnectBtn.disabled = !isConnected;
+            if (wsSendExitBtn) wsSendExitBtn.disabled = !isConnected;
+            if (wsSendBtn) wsSendBtn.disabled = !isConnected;
+            if (wsMessageInput) {
+                wsMessageInput.disabled = !isConnected;
+                if (!isConnected) wsMessageInput.value = '';
+            }
+        };
+
+        const resolveWsUrl = () => {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            return `${protocol}//${window.location.host}/ws`;
+        };
+
+        let javaWs = null;
+
+        wsConnectBtn?.addEventListener('click', () => {
+            if (javaWs && javaWs.readyState === WebSocket.OPEN) return;
+
+            const url = resolveWsUrl();
+            appendLog(`Tentando conectar em ${url}`);
+
+            try {
+                javaWs = new WebSocket(url);
+            } catch (error) {
+                appendLog(`Erro ao criar WebSocket: ${error.message}`);
+                return;
+            }
+
+            javaWs.addEventListener('open', () => {
+                appendLog('Conexao estabelecida com sucesso.');
+                toggleWsControls(true);
+            });
+
+            javaWs.addEventListener('message', (event) => {
+                appendLog(`Mensagem recebida: ${event.data}`);
+            });
+
+            javaWs.addEventListener('close', (event) => {
+                appendLog(`Conexao finalizada (code=${event.code}, reason=${event.reason || 'n/a'}).`);
+                toggleWsControls(false);
+                javaWs = null;
+            });
+
+            javaWs.addEventListener('error', () => {
+                appendLog('Erro no WebSocket.');
+            });
+        });
+
+        wsDisconnectBtn?.addEventListener('click', () => {
+            if (!javaWs || javaWs.readyState !== WebSocket.OPEN) return;
+            appendLog('Encerrando conexao a pedido do usuario.');
+            javaWs.close(1000, 'Cliente encerrou a conexao');
+        });
+
+        wsSendExitBtn?.addEventListener('click', () => {
+            if (!javaWs || javaWs.readyState !== WebSocket.OPEN) {
+                appendLog('Nao ha conexao ativa para enviar mensagem.');
+                return;
+            }
+            const payload = JSON.stringify({ tipo: 'pedidoDeSair' });
+            appendLog(`Enviando pedido de sair: ${payload}`);
+            javaWs.send(payload);
+        });
+
+        wsSendBtn?.addEventListener('click', () => {
+            if (!javaWs || javaWs.readyState !== WebSocket.OPEN) {
+                appendLog('Nao ha conexao ativa para enviar mensagem.');
+                return;
+            }
+
+            const raw = wsMessageInput?.value.trim();
+            if (!raw) {
+                appendLog('Mensagem vazia. Informe um JSON valido.');
+                return;
+            }
+
+            let toSend = raw;
+            try {
+                toSend = JSON.stringify(JSON.parse(raw));
+            } catch (error) {
+                appendLog('JSON invalido. Verifique o formato.');
+                return;
+            }
+
+            appendLog(`Enviando: ${toSend}`);
+            javaWs.send(toSend);
+            if (wsMessageInput) wsMessageInput.value = '';
+        });
+
+        window.addEventListener('beforeunload', () => {
+            if (javaWs && javaWs.readyState === WebSocket.OPEN) {
+                javaWs.close(1001, 'Pagina recarregada ou fechada');
+            }
+        });
     });
 </script>
 

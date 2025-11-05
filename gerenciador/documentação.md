@@ -90,19 +90,42 @@ php artisan key:generate
 
 ### 7. Executar servidores de desenvolvimento
 
-Em dois terminais diferentes:
+Agora o projeto possui um proxy Node que unifica HTTP do Laravel e o WebSocket Java na mesma porta. As opcoes sao:
 
-```powershell
-php artisan serve --host=127.0.0.1 --port=8000
-```
+1. **Fluxo unificado (recomendado)**  
+   Em um terminal dentro de `gerenciador/` execute:
+   ```powershell
+   npm run dev:full
+   ```
+   Esse script inicia:
+   - `php artisan serve` em `127.0.0.1:8001`;
+   - Vite (`npm run dev`) para os assets;
+   - o proxy (`npm run proxy`) expondo tudo em `http://127.0.0.1:8000` e redirecionando upgrades WebSocket para o Java.
 
-```powershell
-npm run dev
-```
+   Antes disso, suba o servidor Java (porta padrao `3000`):
+   ```powershell
+   cd ..\Servidor Java
+   javac -cp ".;lib/*" src/ServidorWebSocket.java
+   java -cp ".;lib/*;src" ServidorWebSocket 3000
+   ```
 
-O endereco padrao ficara disponivel em `http://127.0.0.1:8000/login`.
+2. **Fluxo manual (sem proxy)**  
+   Se preferir manter processos separados, continue usando:
+   ```powershell
+   php artisan serve --host=127.0.0.1 --port=8000
+   npm run dev
+   ```
+   Nesse caso o front-end usara `ws://localhost:3000` diretamente; ajuste a URL nos scripts conforme a necessidade.
 
-O script `composer run dev` foi configurado para iniciar simultaneamente `php artisan serve`, `php artisan queue:listen --tries=1` e `npm run dev` usando `concurrently`. Use-o caso deseje um unico comando (certifique-se de ter o pacote `concurrently` instalado via `npm install`).
+O endereco padrao permanece disponivel em `http://127.0.0.1:8000/login`.
+
+> Variaveis do proxy (`npm run proxy`):  
+> - `HTTP_TARGET` (default `http://127.0.0.1:8001`)  
+> - `WS_TARGET` (default `ws://127.0.0.1:3000`)  
+> - `SHARED_PORT` (porta externa, default `8000`)  
+> - `WS_PATH` (caminho WebSocket, default `/ws`)
+
+O script `composer run dev` continua funcional, mas nao inicia o proxy. Utilize `npm run dev:full` quando precisar da porta compartilhada.
 
 ### 8. Fila e armazenamento
 
