@@ -5,6 +5,7 @@ use App\Http\Controllers\LoginController;
 use App\Http\Controllers\SupportChatController;
 use App\Http\Controllers\PrevisoesController;
 use App\Http\Controllers\AdminNotificationController;
+use App\Http\Controllers\FormsController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/login');
@@ -29,4 +30,5 @@ Route::post('/admin/notificacoes/{notificationId}/lida', [AdminNotificationContr
 Route::get('/previsoes', [PrevisoesController::class, 'index'])->name('forecasts');
 Route::get('/previsoes/graficos', [PrevisoesController::class, 'graficos'])->name('previsoes.graficos');
 Route::get('/previsoes/conclusao', [PrevisoesController::class, 'conclusao'])->name('previsoes.conclusao');
-Route::get('/forms', [FormsController::class, 'index'])->name('forecasts');
+Route::get('/forms', function () {return view('forms');});
+Route::post('/forms/salvar', [FormsController::class, 'salvar'])->name('forms.salvar');

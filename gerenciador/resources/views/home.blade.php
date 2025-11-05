@@ -189,7 +189,7 @@
         <div class="top-cards-grid">
             <div class="card">
                 <h2>Realizar uma nova análise</h2>
-                <a href="#" class="card-link">Análise do zero</a>
+                <a href="#" class="card-link" id="openFormsModal">Análise do zero</a>
                 <a href="#" class="card-link">Usar template antigo</a>
             </div>
 
@@ -513,8 +513,6 @@
         });
     });
 </script>
-
+    @include('forms')
 </body>
 </html>
-
-
