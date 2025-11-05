@@ -131,7 +131,7 @@
             <img class="avatar" src="{{ $avatarUrl }}" alt="Avatar de {{ $user->nome ?? $user->usuario }}">
             <div class="profile-info">
                 <strong>{{ $user->nome ?? $user->usuario }}</strong>
-                <span>{{ $user->email ?? 'E-mail não informado' }}</span>
+                <span>{{ $user->email ?? 'E-mail nao informado' }}</span>
             </div>
         </div>
         <div class="top-actions">
@@ -207,9 +207,31 @@
                  <label for="nome">Nome completo</label>
                  <input id="nome" name="nome" type="text" value="{{ old('nome', $user->nome ?? '') }}">
              </div>
+            <div class="form-group">
+                <label for="email">E-mail</label>
+                 <input id="email" name="email" type="email" value="{{ old('email', $user->email ?? '') }}" required>
+             </div>
              <div class="form-group">
-                 <label for="email">E-mail</label>
-                 <input id="email" name="email" type="email" value="{{ old('email', $user->email ?? '') }}">
+                 <label for="telefone">Telefone</label>
+                 <input
+                     id="telefone"
+                     name="telefone"
+                     type="tel"
+                     value="{{ old('telefone', $user->telefone ?? '') }}"
+                     pattern="[\d\s\-\(\)\+]{10,20}"
+                     required
+                 >
+             </div>
+             <div class="form-group">
+                 <label for="endereco">Endereco</label>
+                 <input
+                     id="endereco"
+                     name="endereco"
+                     type="text"
+                     value="{{ old('endereco', $user->endereco ?? '') }}"
+                     maxlength="255"
+                     required
+                 >
              </div>
              <div class="form-group">
                  <label for="nova_senha">Nova senha</label>
@@ -315,3 +337,9 @@
 
 </body>
 </html>
+
+
+
+
+
+

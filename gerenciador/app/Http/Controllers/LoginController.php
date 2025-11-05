@@ -26,17 +26,36 @@ class LoginController extends Controller
      */
     public function authenticate(Request $request)
     {
-        $credentials = $request->validate([
-            'usuario' => ['required', 'string'],
-            'senha' => ['required', 'string'],
-        ]);
+        $credentials = $request->validate(
+            [
+                'email' => ['required', 'email', 'max:191'],
+                'telefone' => ['required', 'string', 'regex:/^[0-9\\-\\s\\(\\)\\+]{10,20}$/'],
+                'endereco' => ['required', 'string', 'min:5', 'max:255'],
+                'senha' => ['required', 'string'],
+            ],
+            [
+                'telefone.regex' => 'Informe um telefone valido (apenas numeros, +, () e -).',
+            ]
+        );
+
+        $normalizedPhone = $this->normalizePhone($credentials['telefone']);
+        if (strlen($normalizedPhone) < 10 || strlen($normalizedPhone) > 15) {
+            return back()
+                ->withErrors(['telefone' => 'O telefone deve conter entre 10 e 15 digitos.'])
+                ->withInput($request->except('senha'));
+        }
 
         $user = DB::table('users')
-            ->select('id', 'usuario', 'senha', 'is_admin')
-            ->where('usuario', $credentials['usuario'])
+            ->select('id', 'usuario', 'senha', 'is_admin', 'email', 'telefone', 'endereco')
+            ->where('email', $credentials['email'])
             ->first();
 
-        if ($user && ($this->passwordMatches($credentials['senha'], $user->senha))) {
+        if (
+            $user
+            && ($this->passwordMatches($credentials['senha'], $user->senha))
+            && ($normalizedPhone === $this->normalizePhone($user->telefone ?? ''))
+            && (strcasecmp($this->normalizeAddress($credentials['endereco']), $this->normalizeAddress($user->endereco ?? '')) === 0)
+        ) {
             $request->session()->regenerate();
             $request->session()->put('auth_user_id', $user->id);
             $request->session()->put('auth_usuario', $user->usuario);
@@ -49,9 +68,9 @@ class LoginController extends Controller
 
         return back()
             ->withErrors([
-                'usuario' => 'As credenciais fornecidas nao foram encontradas.',
+                'email' => 'As credenciais fornecidas nao foram encontradas.',
             ])
-            ->onlyInput('usuario');
+            ->withInput($request->except('senha'));
     }
 
     /**
@@ -71,20 +90,44 @@ class LoginController extends Controller
      */
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'usuario' => [
-                'required',
-                'string',
-                'max:191',
-                Rule::unique('users', 'usuario'),
+        $data = $request->validate(
+            [
+                'usuario' => [
+                    'required',
+                    'string',
+                    'max:191',
+                    Rule::unique('users', 'usuario'),
+                ],
+                'email' => [
+                    'required',
+                    'email',
+                    'max:191',
+                    Rule::unique('users', 'email'),
+                ],
+                'telefone' => ['required', 'string', 'regex:/^[0-9\\-\\s\\(\\)\\+]{10,20}$/'],
+                'endereco' => ['required', 'string', 'min:5', 'max:255'],
+                'senha' => ['required', 'string', 'min:6', 'confirmed'],
             ],
-            'senha' => ['required', 'string', 'min:6', 'confirmed'],
-        ]);
+            [
+                'telefone.regex' => 'Informe um telefone valido (apenas numeros, +, () e -).',
+            ]
+        );
+
+        $normalizedPhone = $this->normalizePhone($data['telefone']);
+        if (strlen($normalizedPhone) < 10 || strlen($normalizedPhone) > 15) {
+            return back()
+                ->withErrors(['telefone' => 'O telefone deve conter entre 10 e 15 dígitos.'])
+                ->withInput($request->except('senha', 'senha_confirmation'));
+        }
+
+        $normalizedAddress = $this->normalizeAddress($data['endereco']);
 
         $userId = DB::table('users')->insertGetId([
             'usuario' => $data['usuario'],
+            'email' => trim($data['email']),
+            'telefone' => $normalizedPhone,
+            'endereco' => $normalizedAddress,
             'nome' => null,
-            'email' => null,
             'foto_blob' => null,
             'foto_mime' => null,
             'senha' => Hash::make($data['senha']),
