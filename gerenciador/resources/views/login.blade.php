@@ -88,6 +88,17 @@
             transition: border 0.2s ease, box-shadow 0.2s ease;
         }
 
+        input[type="email"]{
+            width: 100%;
+            padding: 0.85rem 1rem;
+            border: 1px solid var(--accent);
+            border-radius: 12px;
+            background-color: var(--gray-100);
+            font-size: 0.95rem;
+            color: var(--gray-800);
+            transition: border 0.2s ease, box-shadow 0.2s ease;
+        }
+
         input[type="text"]:focus,
         input[type="password"]:focus {
             outline: none;
@@ -150,7 +161,7 @@
 <body>
     <div class="login-card">
         <h1>Entrar</h1>
-        <p>Informe seu usuario e senha cadastrados.</p>
+        <p>Informe seu e-mail, telefone, endereco e senha cadastrados.</p>
 
         @if (session('status'))
             <div class="status">{{ session('status') }}</div>
@@ -168,13 +179,13 @@
             @csrf
 
             <div class="form-group">
-                <label for="usuario">Usuario</label>
+                <label for="email">E-mail</label>
                 <input
-                    type="text"
-                    id="usuario"
-                    name="usuario"
-                    value="{{ old('usuario') }}"
-                    autocomplete="username"
+                    type="email"
+                    id="email"
+                    name="email"
+                    value="{{ old('email') }}"
+                    autocomplete="email"
                     required
                 >
             </div>

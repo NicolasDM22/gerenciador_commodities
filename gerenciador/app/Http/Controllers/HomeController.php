@@ -20,7 +20,7 @@ class HomeController extends Controller
         }
 
         $user = DB::table('users')
-            ->select('id', 'usuario', 'nome', 'email', 'foto_blob', 'foto_mime', 'is_admin', 'created_at', 'updated_at')
+            ->select('id', 'usuario', 'nome', 'email', 'telefone', 'endereco', 'foto_blob', 'foto_mime', 'is_admin', 'created_at', 'updated_at')
             ->where('id', $userId)
             ->first();
 
@@ -73,18 +73,36 @@ class HomeController extends Controller
         $user = DB::table('users')->where('id', $userId)->first();
         if (!$user) return redirect()->route('login');
 
-        $data = $request->validate([
-            'usuario' => ['required', 'string', 'max:191', Rule::unique('users', 'usuario')->ignore($userId)],
-            'nome' => ['nullable', 'string', 'max:191'],
-            'email' => ['nullable', 'email', 'max:191', Rule::unique('users', 'email')->ignore($userId)],
-            'nova_senha' => ['nullable', 'string', 'min:6', 'confirmed'],
-            'foto' => ['nullable', 'image', 'max:2048'],
-        ]);
+        $data = $request->validate(
+            [
+                'usuario' => ['required', 'string', 'max:191', Rule::unique('users', 'usuario')->ignore($userId)],
+                'nome' => ['nullable', 'string', 'max:191'],
+                'email' => ['required', 'email', 'max:191', Rule::unique('users', 'email')->ignore($userId)],
+                'telefone' => ['required', 'string', 'regex:/^[0-9\\-\\s\\(\\)\\+]{10,20}$/'],
+                'endereco' => ['required', 'string', 'min:5', 'max:255'],
+                'nova_senha' => ['nullable', 'string', 'min:6', 'confirmed'],
+                'foto' => ['nullable', 'image', 'max:2048'],
+            ],
+            [
+                'telefone.regex' => 'Informe um telefone valido (apenas numeros, +, () e -).',
+            ]
+        );
+
+        $normalizedPhone = $this->normalizePhone($data['telefone']);
+        if (strlen($normalizedPhone) < 10 || strlen($normalizedPhone) > 15) {
+            return back()
+                ->withErrors(['telefone' => 'O telefone deve conter entre 10 e 15 digitos.'])
+                ->withInput($request->except('foto'));
+        }
+
+        $normalizedAddress = $this->normalizeAddress($data['endereco']);
 
         $updatePayload = [
             'usuario' => $data['usuario'],
             'nome' => $data['nome'] ?? null,
-            'email' => $data['email'] ?? null,
+            'email' => $data['email'],
+            'telefone' => $normalizedPhone,
+            'endereco' => $normalizedAddress,
             'updated_at' => now(),
         ];
 

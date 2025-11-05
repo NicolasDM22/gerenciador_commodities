@@ -17,4 +17,20 @@ abstract class Controller
 
         return 'https://ui-avatars.com/api/?name=' . urlencode($displayName) . '&background=d4d4d4&color=2b2b2b';
     }
+
+    /**
+     * Remove caracteres nao numericos do telefone.
+     */
+    protected function normalizePhone(string $value): string
+    {
+        return preg_replace('/\D+/', '', $value) ?? '';
+    }
+
+    /**
+     * Normaliza endereco removendo espacos redundantes.
+     */
+    protected function normalizeAddress(string $value): string
+    {
+        return trim(preg_replace('/\s+/', ' ', $value));
+    }
 }

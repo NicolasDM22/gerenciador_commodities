@@ -67,6 +67,27 @@
         }
 
         input[type="text"],
+        input[type="tel"] {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            border: 1px solid var(--accent);
+            border-radius: 12px;
+            background-color: var(--gray-100);
+            font-size: 0.95rem;
+            color: var(--gray-800);
+            transition: border 0.2s ease, box-shadow 0.2s ease;
+        }
+        input[type="email"]{
+            width: 100%;
+            padding: 0.85rem 1rem;
+            border: 1px solid var(--accent);
+            background-color: var(--gray-100);
+            font-size: 0.95rem;
+            color: var(--gray-800);
+            transition: border 0.2s ease, box-shadow 0.2s ease;
+            border-radius: 12px;
+
+        }
         input[type="password"] {
             width: 100%;
             padding: 0.85rem 1rem;
@@ -124,7 +145,7 @@
 <body>
     <div class="card">
         <h1>Novo cadastro</h1>
-        <p>Crie sua conta informando usuario e senha.</p>
+        <p>Crie sua conta informando usuario, e-mail, telefone, endereco e senha.</p>
 
         @if ($errors->any())
             <div class="alert">
@@ -145,6 +166,44 @@
                     name="usuario"
                     value="{{ old('usuario') }}"
                     autocomplete="username"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="email">E-mail</label>
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value="{{ old('email') }}"
+                    autocomplete="email"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="telefone">Telefone</label>
+                <input
+                    type="tel"
+                    id="telefone"
+                    name="telefone"
+                    value="{{ old('telefone') }}"
+                    pattern="[\d\s\-\(\)\+]{10,20}"
+                    inputmode="tel"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="endereco">Endereco</label>
+                <input
+                    type="text"
+                    id="endereco"
+                    name="endereco"
+                    value="{{ old('endereco') }}"
+                    maxlength="255"
+                    autocomplete="street-address"
                     required
                 >
             </div>
