@@ -44,7 +44,7 @@ copy .env.example .env
 
 Abra `.env` e revise principalmente:
 
-- `APP_URL=http://localhost:8000`
+- `APP_URL=http://localhost:8001`
 - `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`
   - O arquivo atual usa `DB_PORT=8000` e credenciais `nicolas/NICOLAS`. Ajuste para o que voce criar localmente (ex.: porta `3306` e um usuario com permissao total na base).
 - `SESSION_DRIVER=database` (necessario porque o projeto usa sessoes em banco).
@@ -78,6 +78,7 @@ composer install
 npm install
 ```
 
+
 Se for a primeira execucao, gere uma chave de aplicacao:
 
 ```powershell
@@ -90,19 +91,37 @@ php artisan key:generate
 
 ### 7. Executar servidores de desenvolvimento
 
-Em dois terminais diferentes:
+Agora existem duas formas de trabalhar:
 
-```powershell
-php artisan serve --host=127.0.0.1 --port=8000
-```
+1. **Fluxo unificado (Web + WebSocket no mesmo host/porta)**  
+   - Primeiro inicie o servidor Java (`java -cp ".;lib/*;bin" ServidorWebSocket 3000`).  
+   - No diretório `gerenciador/`, rode:
+     ```powershell
+     npm run dev:full
+     ```
+   - Esse script sobe:
+     - `php artisan serve` em `127.0.0.1:8002`;
+     - `npm run dev` (Vite);
+     - o proxy (`npm run proxy`) escutando em `127.0.0.1:8001`, expondo HTTP e WebSocket em `/ws`.
+   - Acesse `http://127.0.0.1:8001/login`. Todo tráfego WebSocket feito pelo navegador usará o mesmo endereço (`ws://127.0.0.1:8001/ws`) e será encaminhado para o Java.
 
-```powershell
-npm run dev
-```
+   > Variáveis úteis do proxy (`npm run proxy`):
+   > - `HTTP_TARGET` (padrão `http://127.0.0.1:8002`)
+   > - `WS_TARGET` (padrão `ws://127.0.0.1:3000`)
+   > - `SHARED_PORT` (porta externa, padrão `8001`)
+   > - `WS_PATH` (caminho WebSocket, padrão `/ws`)
 
-O endereco padrao ficara disponivel em `http://127.0.0.1:8000/login`.
+2. **Fluxo manual (sem proxy)**  
+   - Use dois terminais:
+     ```powershell
+     php artisan serve --host=127.0.0.1 --port=8001
+     ```
+     ```powershell
+     npm run dev
+     ```
+   - O site continua acessível em `http://127.0.0.1:8001/login`, porém o WebSocket do Java só funcionará se você apontar o front-end diretamente para `ws://127.0.0.1:3000` ou se executar o proxy manualmente (`npm run proxy`) enquanto altera o `HTTP_TARGET` para a porta que estiver usando.
 
-O script `composer run dev` foi configurado para iniciar simultaneamente `php artisan serve`, `php artisan queue:listen --tries=1` e `npm run dev` usando `concurrently`. Use-o caso deseje um unico comando (certifique-se de ter o pacote `concurrently` instalado via `npm install`).
+O script `composer run dev` segue disponível e inicia `php artisan serve`, `php artisan queue:listen --tries=1` e `npm run dev`. Se optar por ele, suba o proxy separadamente para manter o WebSocket no mesmo host/porta.
 
 ### 8. Fila e armazenamento
 
@@ -141,7 +160,7 @@ O script `composer run dev` foi configurado para iniciar simultaneamente `php ar
 ## Solucao de problemas comuns
 
 - **Erro "could not find driver":** habilite a extensao `pdo_mysql` no `php.ini`.
-- **Porta 8000 ocupada:** altere `APP_URL` e use `php artisan serve --port=8080`.
+- **Porta 8001 ocupada:** altere `APP_URL` e use `php artisan serve --port=8080`.
 - **Assets sem estilos:** execute `npm run dev` ou `npm run build` e limpe o cache do navegador.
 - **Login falha mesmo apos registro:** verifique se a tabela `users` contem as colunas `usuario` e `senha` esperadas pelo `LoginController`. Ajuste o esquema manualmente ou importe o dump oficial.
 - **Uploads quebrados:** confira permissoes da pasta `storage` e crie o link simbolico com `php artisan storage:link`.
@@ -149,3 +168,22 @@ O script `composer run dev` foi configurado para iniciar simultaneamente `php ar
 ---
 
 Com esses passos o ambiente local estara pronto para evoluir o Gerenciador de Commodities em Windows. Mantenha PHP, Composer e Node atualizados e sempre sincronize as migracoes/tabelas adicionais com a equipe responsavel pelo banco de dados.
+
+
+
+
+## fazer funcionar
+
+npm install
+
+# 1 - Java 8 
+
+# 2 - coloca nas variaveis de ambiente
+
+# 3 - Usa esse cmd de java
+java -cp ".;lib/*;bin" ServidorWebSocket 3000
+
+# 4 - roda o npm run dev
+
+npm run dev:full
+
