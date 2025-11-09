@@ -71,11 +71,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /* Caixa branca */
 .modal-dialog {
+    margin-top: 100px;
     position: relative;
     background: #fff;
     padding: 2.2rem 2.6rem;
     border-radius: 14px;
-    width: 650px;      
+    width: 600px;      
+    height: 400px;
     max-width: 90%;    
     animation: fadeIn .2s ease-in-out;
 }
@@ -83,12 +85,24 @@ document.addEventListener('DOMContentLoaded', () => {
 /* Botão Fechar */
 .close-btn {
     position: absolute;
-    top: 10px;
-    right: 14px;
-    background: none;
+    top: 4px;
+    right: 30px;
+    background: #d9d9d9;       /* cinza claro semelhante ao dos campos */
     border: none;
-    font-size: 22px;
+    font-size: 20px;
     cursor: pointer;
+    border-radius: 8px;        /* bordas arredondadas */
+    width: 32px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); /* leve sombra como os cartões */
+    transition: background 0.2s ease;
+}
+
+.close-btn:hover {
+    background: #d5d5d5;       /* cor um pouco mais escura ao passar o mouse */
 }
 
 /* Grid de inputs */
@@ -100,11 +114,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /* Inputs caixas */
 .grid-inputs input {
-    background: #f4f4f4;
+    height: 70px;
+    width: 250px;
+    background: #d9d9d9;
     padding: .7rem;
     border-radius: 8px;
-    border: 1px solid #ddd;
+    border: 1px solid #ddd; 
     font-size: 0.95rem;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.5);
+}
+
+/* Placeholder estilizado */
+.grid-inputs input::placeholder {
+    font-family: 'Inter', sans-serif;
+    font-size: 18px;
+    font-weight: 800;      /* Extra Bold */
+    color: #878787;
 }
 
 /* Botão principal */
@@ -114,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
 }
 
 .button-primary {
-    background: #3e3e3e;
+    background: #868688;
     color: white;
     padding: .75rem 1.7rem;
     border-radius: 8px;
