@@ -145,7 +145,7 @@
 <body>
     <div class="card">
         <h1>Novo cadastro</h1>
-        <p>Crie sua conta informando usuario, e-mail, telefone, endereco e senha.</p>
+        <p>Crie sua conta informando usuario, e-mail, telefone, endereco (opcional) e senha.</p>
 
         @if ($errors->any())
             <div class="alert">
@@ -196,7 +196,7 @@
             </div>
 
             <div class="form-group">
-                <label for="endereco">Endereco</label>
+                <label for="endereco">Endereco (opcional)</label>
                 <input
                     type="text"
                     id="endereco"
@@ -204,7 +204,6 @@
                     value="{{ old('endereco') }}"
                     maxlength="255"
                     autocomplete="street-address"
-                    required
                 >
             </div>
 

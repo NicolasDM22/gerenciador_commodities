@@ -91,21 +91,33 @@ class LoginController extends Controller
                     Rule::unique('users', 'email'),
                 ],
                 'telefone' => ['required', 'string', 'regex:/^[0-9\\-\\s\\(\\)\\+]{10,20}$/'],
-                'endereco' => ['required', 'string', 'min:5', 'max:255'],
+                'endereco' => ['nullable', 'string', 'max:255'],
                 'senha' => ['required', 'string', 'min:6', 'confirmed'],
             ],
-            
+            [
+                'telefone.regex' => 'Informe um telefone valido (apenas numeros, +, () e -).',
+            ]
         );
 
+        $normalizedPhone = $this->normalizePhone($data['telefone']);
+        if (strlen($normalizedPhone) < 10 || strlen($normalizedPhone) > 15) {
+            return back()
+                ->withErrors(['telefone' => 'O telefone deve conter entre 10 e 15 digitos.'])
+                ->withInput($request->except('senha', 'senha_confirmation'));
+        }
 
+        $normalizedAddress = null;
+        if (!empty($data['endereco'])) {
+            $normalizedAddress = $this->normalizeAddress($data['endereco']);
+        }
 
         $userId = DB::table('users')->insertGetId([
             'usuario' => $data['usuario'],
             'email' => trim($data['email']),
             'foto_blob' => null,
             'foto_mime' => null,
-            'telefone' => $data['telefone'],
-            'endereco' => $data['endereco'],
+            'telefone' => $normalizedPhone,
+            'endereco' => $normalizedAddress ?? '',
             'senha' => Hash::make($data['senha']),
             'created_at' => now(),
             'updated_at' => now(),
