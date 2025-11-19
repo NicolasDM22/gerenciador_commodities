@@ -6,6 +6,7 @@ use App\Http\Controllers\SupportChatController;
 use App\Http\Controllers\PrevisoesController;
 use App\Http\Controllers\AdminNotificationController;
 use App\Http\Controllers\FormsController;
+use App\Http\Controllers\ProfileModalController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/login');
@@ -21,7 +22,6 @@ Route::controller(LoginController::class)->group(function () {
 });
 
 Route::get('/home', [HomeController::class, 'index'])->name('home');
-Route::post('/profile', [HomeController::class, 'update'])->name('profile.update');
 Route::post('/support-chat/open', [SupportChatController::class, 'open'])->name('support-chat.open');
 Route::post('/support-chat/message', [SupportChatController::class, 'send'])->name('support-chat.message');
 Route::post('/support-chat/close', [SupportChatController::class, 'close'])->name('support-chat.close');
@@ -32,3 +32,5 @@ Route::get('/previsoes/graficos', [PrevisoesController::class, 'graficos'])->nam
 Route::get('/previsoes/conclusao', [PrevisoesController::class, 'conclusao'])->name('previsoes.conclusao');
 Route::get('/forms', function () {return view('forms');});
 Route::post('/forms/salvar', [FormsController::class, 'salvar'])->name('forms.salvar');
+Route::get('/profile', function () {return view('profile');});
+Route::post('/profile/update', [ProfileModalController::class, 'update'])->name('profile.update');

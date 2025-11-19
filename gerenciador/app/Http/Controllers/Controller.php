@@ -10,7 +10,7 @@ abstract class Controller
     protected function resolveAvatarUrl(object $user): string
     {
         if (!empty($user->foto_blob) && !empty($user->foto_mime)) {
-            return 'data:' . $user->foto_mime . ';base64,' . $user->foto_blob;
+            return 'data:' . $user->foto_mime . ';base64,' . base64_encode($user->foto_blob); // ADICIONE base64_encode()
         }
 
         $displayName = $user->nome ?? $user->usuario ?? 'User';

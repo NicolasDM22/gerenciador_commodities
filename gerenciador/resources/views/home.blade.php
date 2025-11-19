@@ -129,24 +129,6 @@
             transition: background 0.2s ease;
         }
         .ws-indicator.active { background: var(--success); }
-        .modal {
-             position: fixed; inset: 0; background: rgba(17, 24, 39, 0.4);
-             display: none; align-items: center; justify-content: center;
-             padding: 1.5rem; z-index: 10;
-         }
-        .modal.active { display: flex; }
-        .modal-dialog {
-             background: var(--white); border-radius: 22px; width: min(480px, 100%);
-             padding: 1.5rem; display: grid; gap: 1rem;
-             box-shadow: 0 30px 65px -28px rgba(15, 23, 42, 0.45);
-         }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; }
-        .modal-header h3 { margin: 0; font-size: 1.2rem; }
-        .form-grid { display: grid; gap: 1rem; }
-        .form-group { display: grid; gap: 0.4rem; }
-        .form-group label { font-size: 0.9rem; color: var(--gray-600); }
-        .form-group input { padding: 0.7rem 1rem; border-radius: 12px; border: 1px solid var(--gray-300); font-size: 0.95rem; }
-        .modal-footer { display: flex; justify-content: flex-end; gap: 0.75rem; }
         @media (max-width: 820px) {
             .top-bar { flex-direction: column; align-items: flex-start; }
             .top-actions { width: 100%; justify-content: flex-start; }
@@ -238,88 +220,10 @@
     </main>
 </div>
 
-<div class="modal" id="profileModal">
-    <div class="modal-dialog">
-        <div class="modal-header">
-            <h3>Atualizar perfil</h3>
-            <button class="button button-outline" type="button" id="closeProfileModal">Fechar</button>
-        </div>
-        <form action="{{ route('profile.update') }}" method="POST" enctype="multipart/form-data" class="form-grid">
-             @csrf
-             <div class="form-group">
-                 <label for="usuario">Usuário</label>
-                 <input id="usuario" name="usuario" type="text" value="{{ old('usuario', $user->usuario ?? '') }}" required>
-             </div>
-              <div class="form-group">
-                 <label for="nome">Nome completo</label>
-                 <input id="nome" name="nome" type="text" value="{{ old('nome', $user->nome ?? '') }}">
-             </div>
-            <div class="form-group">
-                <label for="email">E-mail</label>
-                 <input id="email" name="email" type="email" value="{{ old('email', $user->email ?? '') }}" required>
-             </div>
-             <div class="form-group">
-                 <label for="telefone">Telefone</label>
-                 <input
-                     id="telefone"
-                     name="telefone"
-                     type="tel"
-                     value="{{ old('telefone', $user->telefone ?? '') }}"
-                     pattern="[\d\s\-\(\)\+]{10,20}"
-                     required
-                 >
-             </div>
-             <div class="form-group">
-                 <label for="endereco">Endereco</label>
-                 <input
-                     id="endereco"
-                     name="endereco"
-                     type="text"
-                     value="{{ old('endereco', $user->endereco ?? '') }}"
-                     maxlength="255"
-                     required
-                 >
-             </div>
-             <div class="form-group">
-                 <label for="nova_senha">Nova senha</label>
-                 <input id="nova_senha" name="nova_senha" type="password" autocomplete="new-password">
-             </div>
-             <div class="form-group">
-                 <label for="nova_senha_confirmation">Confirmar nova senha</label>
-                 <input id="nova_senha_confirmation" name="nova_senha_confirmation" type="password" autocomplete="new-password">
-             </div>
-             <div class="form-group">
-                 <label for="foto">Foto de perfil</label>
-                 <input id="foto" name="foto" type="file" accept="image/*">
-             </div>
-             <div class="modal-footer">
-                <button class="button button-outline" type="button" id="cancelProfileModal">Cancelar</button>
-                <button class="button button-primary" type="submit">Salvar alterações</button>
-            </div>
-        </form>
-    </div>
-</div>
-
 <script>
     const chartRawData = @json($chartData);
 
     window.addEventListener('DOMContentLoaded', () => {
-        const profileModal = document.getElementById('profileModal');
-        const openProfileModalBtn = document.getElementById('openProfileModal');
-        const closeProfileModalBtn = document.getElementById('closeProfileModal');
-        const cancelProfileModalBtn = document.getElementById('cancelProfileModal');
-
-        const toggleProfileModal = (show) => {
-            profileModal?.classList.toggle('active', show);
-        };
-
-        openProfileModalBtn?.addEventListener('click', () => toggleProfileModal(true));
-        closeProfileModalBtn?.addEventListener('click', () => toggleProfileModal(false));
-        cancelProfileModalBtn?.addEventListener('click', () => toggleProfileModal(false));
-        profileModal?.addEventListener('click', (event) => {
-            if (event.target === profileModal) toggleProfileModal(false);
-        });
-
         const chartCanvas = document.getElementById('priceHistoryChart');
         if (chartCanvas && typeof Chart !== 'undefined' && chartRawData) {
             const ctx = chartCanvas.getContext('2d');
@@ -380,6 +284,7 @@
             });
         }
 
+        // WebSocket
         const wsIndicator = document.getElementById('javaWsIndicator');
         const wsStatus = document.getElementById('javaWsStatus');
         const wsConnectBtn = document.getElementById('javaWsConnect');
@@ -399,14 +304,12 @@
         const toggleWsControls = (isConnected) => {
             wsIndicator?.classList.toggle('active', isConnected);
             if (wsStatus) wsStatus.textContent = isConnected ? 'Conectado' : 'Desconectado';
-            if (wsConnectBtn) wsConnectBtn.disabled = isConnected;
-            if (wsDisconnectBtn) wsDisconnectBtn.disabled = !isConnected;
-            if (wsSendExitBtn) wsSendExitBtn.disabled = !isConnected;
-            if (wsSendBtn) wsSendBtn.disabled = !isConnected;
-            if (wsMessageInput) {
-                wsMessageInput.disabled = !isConnected;
-                if (!isConnected) wsMessageInput.value = '';
-            }
+            wsConnectBtn.disabled = isConnected;
+            wsDisconnectBtn.disabled = !isConnected;
+            wsSendExitBtn.disabled = !isConnected;
+            wsSendBtn.disabled = !isConnected;
+            wsMessageInput.disabled = !isConnected;
+            if (!isConnected) wsMessageInput.value = '';
         };
 
         const resolveWsUrl = () => {
@@ -418,17 +321,13 @@
 
         const notifyHomeView = () => {
             if (!javaWs || javaWs.readyState !== WebSocket.OPEN) return;
-            const payload = JSON.stringify({
-                tipo: 'info',
-                mensagem: 'Usuario abriu a tela home'
-            });
+            const payload = JSON.stringify({ tipo: 'info', mensagem: 'Usuario abriu a tela home' });
             appendLog(`Informando o servidor: ${payload}`);
             javaWs.send(payload);
         };
 
         const connectToJavaWs = () => {
             if (javaWs && javaWs.readyState === WebSocket.OPEN) return;
-
             const url = resolveWsUrl();
             appendLog(`Tentando conectar em ${url}`);
 
@@ -455,55 +354,39 @@
                 javaWs = null;
             });
 
-            javaWs.addEventListener('error', () => {
-                appendLog('Erro no WebSocket.');
-            });
+            javaWs.addEventListener('error', () => appendLog('Erro no WebSocket.'));
         };
 
-        wsConnectBtn?.addEventListener('click', connectToJavaWs);
+        wsConnectBtn.addEventListener('click', connectToJavaWs);
+        connectToJavaWs(); // auto conectar
 
-        // Conecta automaticamente ao carregar a tela
-        connectToJavaWs();
-
-        wsDisconnectBtn?.addEventListener('click', () => {
+        wsDisconnectBtn.addEventListener('click', () => {
             if (!javaWs || javaWs.readyState !== WebSocket.OPEN) return;
             appendLog('Encerrando conexao a pedido do usuario.');
             javaWs.close(1000, 'Cliente encerrou a conexao');
         });
 
-        wsSendExitBtn?.addEventListener('click', () => {
-            if (!javaWs || javaWs.readyState !== WebSocket.OPEN) {
-                appendLog('Nao ha conexao ativa para enviar mensagem.');
-                return;
-            }
+        wsSendExitBtn.addEventListener('click', () => {
+            if (!javaWs || javaWs.readyState !== WebSocket.OPEN) return appendLog('Nao ha conexao ativa.');
             const payload = JSON.stringify({ tipo: 'pedidoDeSair' });
             appendLog(`Enviando pedido de sair: ${payload}`);
             javaWs.send(payload);
         });
 
-        wsSendBtn?.addEventListener('click', () => {
-            if (!javaWs || javaWs.readyState !== WebSocket.OPEN) {
-                appendLog('Nao ha conexao ativa para enviar mensagem.');
-                return;
-            }
-
+        wsSendBtn.addEventListener('click', () => {
+            if (!javaWs || javaWs.readyState !== WebSocket.OPEN) return appendLog('Nao ha conexao ativa.');
             const raw = wsMessageInput?.value.trim();
-            if (!raw) {
-                appendLog('Mensagem vazia. Informe um JSON valido.');
-                return;
-            }
-
+            if (!raw) return appendLog('Mensagem vazia.');
             let toSend = raw;
             try {
                 toSend = JSON.stringify(JSON.parse(raw));
-            } catch (error) {
-                appendLog('JSON invalido. Verifique o formato.');
+            } catch {
+                appendLog('JSON invalido.');
                 return;
             }
-
             appendLog(`Enviando: ${toSend}`);
             javaWs.send(toSend);
-            if (wsMessageInput) wsMessageInput.value = '';
+            wsMessageInput.value = '';
         });
 
         window.addEventListener('beforeunload', () => {
@@ -513,6 +396,7 @@
         });
     });
 </script>
-    @include('forms')
+@include('forms')
+@include('profile')
 </body>
 </html>

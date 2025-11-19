@@ -5,16 +5,14 @@
 
         <button class="close-btn" type="button" id="closeFormsModal">×</button>
 
-        <form action="{{ route('forms.salvar') }}" method="POST" class="form-grid">
+        <form action="{{ route('forms.salvar') }}" method="POST">
             @csrf
 
             <div class="grid-inputs">
                 <input type="text" name="materia_prima" placeholder="Matéria-prima" required>
                 <input type="text" name="volume" placeholder="Volume" required>
-
                 <input type="text" name="preco_atual" placeholder="Preço atual de compra" required>
                 <input type="text" name="unidade" placeholder="Unidade de medida" required>
-
                 <input type="text" name="preco_alvo" placeholder="Preço alvo" required>
                 <input type="text" name="cep" placeholder="CEP de entrega" required>
             </div>
@@ -37,16 +35,13 @@ document.addEventListener('DOMContentLoaded', () => {
         else formsModal.classList.remove('active');
     };
 
-    // Abrir Modal
     openFormsModalBtn?.addEventListener('click', (e) => {
         e.preventDefault();
         toggleFormsModal(true);
     });
 
-    // Fechar pelo X
     closeFormsModalBtn?.addEventListener('click', () => toggleFormsModal(false));
 
-    // Fechar clicando no fundo escuro
     formsModal?.addEventListener('click', (e) => {
         if (e.target === formsModal) toggleFormsModal(false);
     });
@@ -54,7 +49,6 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 <style>
-/* Fundo modal */
 .modal {
     position: fixed;
     inset: 0;
@@ -69,92 +63,67 @@ document.addEventListener('DOMContentLoaded', () => {
     display: flex;
 }
 
-/* Caixa branca */
 .modal-dialog {
-    margin-top: 100px;
     position: relative;
     background: #fff;
-    padding: 2.2rem 2.6rem;
-    border-radius: 14px;
-    width: 600px;      
-    height: 400px;
-    max-width: 90%;    
+    padding: 2rem 2.4rem;
+    border-radius: 16px;
+    width: 560px;      
+    max-width: 90%;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.18);
     animation: fadeIn .2s ease-in-out;
 }
 
-/* Botão Fechar */
 .close-btn {
     position: absolute;
-    top: 4px;
-    right: 30px;
-    background: #d9d9d9;       /* cinza claro semelhante ao dos campos */
+    top: 10px;
+    right: 14px;
+    background: none;
     border: none;
-    font-size: 20px;
+    font-size: 22px;
     cursor: pointer;
-    border-radius: 8px;        /* bordas arredondadas */
-    width: 32px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); /* leve sombra como os cartões */
-    transition: background 0.2s ease;
 }
 
-.close-btn:hover {
-    background: #d5d5d5;       /* cor um pouco mais escura ao passar o mouse */
-}
-
-/* Grid de inputs */
 .grid-inputs {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 14px;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 14px;  /* espaço horizontal */
+    row-gap: 20px;     /* espaço vertical maior */
 }
 
-/* Inputs caixas */
 .grid-inputs input {
-    height: 70px;
-    width: 250px;
-    background: #d9d9d9;
-    padding: .7rem;
-    border-radius: 8px;
-    border: 1px solid #ddd; 
+    background: #f2f2f2;
+    padding: .95rem;   /* inputs um pouco maiores */
+    border-radius: 10px;
+    border: 1px solid #d8d8d8;
     font-size: 0.95rem;
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.5);
+
+    /* sombra leve */
+    box-shadow: 0 2px 3px rgba(0,0,0,0.12);
 }
 
-/* Placeholder estilizado */
-.grid-inputs input::placeholder {
-    font-family: 'Inter', sans-serif;
-    font-size: 18px;
-    font-weight: 800;      /* Extra Bold */
-    color: #878787;
-}
-
-/* Botão principal */
 .center-btn {
     text-align: center;
-    margin-top: 1.4rem;
+    margin-top: 22px;
 }
 
 .button-primary {
-    background: #868688;
+    background: #3e3e3e;
     color: white;
-    padding: .75rem 1.7rem;
+    padding: .7rem 1.5rem;
     border-radius: 8px;
     border: none;
     cursor: pointer;
     font-size: 1rem;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.22);
 }
 
 .button-primary:hover {
     opacity: .9;
 }
 
-/* Animação */
 @keyframes fadeIn {
-    from { opacity: 0; transform: scale(.94); }
+    from { opacity: 0; transform: scale(.96); }
     to { opacity: 1; transform: scale(1); }
 }
 </style>
