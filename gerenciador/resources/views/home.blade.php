@@ -129,9 +129,7 @@
             background: var(--danger); transition: background 0.2s ease;
         }
         .ws-indicator.active { background: var(--success); }
-<<<<<<< HEAD
-=======
-        
+
         .modal {
              position: fixed; inset: 0; background: rgba(17, 24, 39, 0.4);
              display: none; align-items: center; justify-content: center;
@@ -217,7 +215,6 @@
             border-coler: var(--primary);
             background: rgba(37, 99, 235, 0.08);
         }
->>>>>>> origin/matias
         @media (max-width: 820px) {
             .top-bar { flex-direction: column; align-items: flex-start; }
             .top-actions { width: 100%; justify-content: flex-start; }
@@ -323,8 +320,7 @@
     </main>
 </div>
 
-<<<<<<< HEAD
-=======
+
 <div class="modal" id="analysisModal">
     <div class="modal-dialog">
         <div class="modal-header">
@@ -410,13 +406,11 @@
     </div>
 </div>
 
->>>>>>> origin/matias
+
 <script>
     const chartRawData = @json($chartData);
 
     window.addEventListener('DOMContentLoaded', () => {
-<<<<<<< HEAD
-=======
         // --- LÓGICA MODAL PERFIL ---
         const profileModal = document.getElementById('profileModal');
         const openProfileModalBtn = document.getElementById('openProfileModal');
@@ -502,7 +496,6 @@
 
 
         // --- CHART JS ---
->>>>>>> origin/matias
         const chartCanvas = document.getElementById('priceHistoryChart');
         if (chartCanvas && typeof Chart !== 'undefined' && chartRawData) {
             const ctx = chartCanvas.getContext('2d');
@@ -545,10 +538,7 @@
                 }
             });
         }
-<<<<<<< HEAD
 
-        // WebSocket
-=======
         // --- DATA TABLE ---
     const commoditiesTable = document.getElementById('commoditiesTables');
         if(commoditiesTable && window.jQuery && $.fn.DataTable){
@@ -562,7 +552,6 @@
         }
         // --- WEBSOCKET (Lógica protegida pelo isAdmin) ---
         @if($isAdmin)
->>>>>>> origin/matias
         const wsIndicator = document.getElementById('javaWsIndicator');
         const wsStatus = document.getElementById('javaWsStatus');
         const wsConnectBtn = document.getElementById('javaWsConnect');
@@ -577,7 +566,7 @@
             wsLog.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
             wsLog.scrollTop = wsLog.scrollHeight;
         };
-<<<<<<< HEAD
+
 
         const toggleWsControls = (isConnected) => {
             wsIndicator?.classList.toggle('active', isConnected);
@@ -588,7 +577,7 @@
             wsSendBtn.disabled = !isConnected;
             wsMessageInput.disabled = !isConnected;
             if (!isConnected) wsMessageInput.value = '';
-=======
+
         const toggleWsControls = (conn) => {
             wsIndicator?.classList.toggle('active', conn);
             if(wsStatus) wsStatus.textContent = conn ? 'Conectado' : 'Desconectado';
@@ -597,10 +586,10 @@
             if(wsSendExitBtn) wsSendExitBtn.disabled = !conn;
             if(wsSendBtn) wsSendBtn.disabled = !conn;
             if(wsMessageInput) { wsMessageInput.disabled = !conn; if(!conn) wsMessageInput.value = ''; }
->>>>>>> origin/matias
+
         };
         let javaWs = null;
-<<<<<<< HEAD
+
 
         const notifyHomeView = () => {
             if (!javaWs || javaWs.readyState !== WebSocket.OPEN) return;
@@ -614,16 +603,16 @@
             const url = resolveWsUrl();
             appendLog(`Tentando conectar em ${url}`);
 
-=======
+
         const connectToJavaWs = () => {
             if (javaWs && javaWs.readyState === WebSocket.OPEN) return;
->>>>>>> origin/matias
+
             try {
                 javaWs = new WebSocket("ws://localhost:3000");
             } catch (e) { appendLog(`Erro WS: ${e.message}`); return; }
             
             javaWs.addEventListener('open', () => {
-<<<<<<< HEAD
+
                 appendLog('Conexao estabelecida com sucesso.');
                 toggleWsControls(true);
                 notifyHomeView();
@@ -678,7 +667,7 @@
             if (javaWs && javaWs.readyState === WebSocket.OPEN) {
                 javaWs.close(1001, 'Pagina recarregada ou fechada');
             }
-=======
+
                 appendLog('Conectado.'); toggleWsControls(true);
                 javaWs.send(JSON.stringify({ tipo: 'info', mensagem: 'Home aberta' }));
             });
@@ -696,16 +685,15 @@
             if(!val) return;
             try { javaWs?.send(JSON.stringify(JSON.parse(val))); wsMessageInput.value = ''; } 
             catch { appendLog('JSON Inválido'); }
->>>>>>> origin/matias
+
         });
         window.addEventListener('beforeunload', () => javaWs?.close(1001));
         @endif
     });
 </script>
 @include('forms')
-<<<<<<< HEAD
+
 @include('profile')
-=======
->>>>>>> origin/matias
+
 </body>
 </html>
