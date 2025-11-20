@@ -80,6 +80,7 @@
             display: inline-flex;
             align-items: center;
             gap: 0.4rem;
+            text-decoration: none;
         }
 
         .button:hover {
@@ -266,19 +267,19 @@
     document.addEventListener('DOMContentLoaded', function() {
         const ctx = document.getElementById('finalChart').getContext('2d');
 
-        // Dados Mockados para replicar a imagem (Declínio, leve subida, pico, queda brusca)
+        // Dados Mockados para replicar Figma (Declínio, leve subida, pico, queda brusca)
         // Labels aproximados: 09/25 a 04/26
         const data = {
             labels: ['09/25', '10/25', '11/25', '12/25', '01/26', '02/26', '03/26', '04/26'],
             datasets: [{
                 label: 'Preço Médio (R$/kg)',
-                data: [60, 57.8, 56.9, 57.3, 60.0, 62.0, 56.0, 52.0], // Valores visuais aproximados
-                borderColor: '#f97316', // Cor Laranja similar à imagem
+                data: [60, 57.8, 56.9, 57.3, 60.0, 62.0, 56.0, 52.0], 
+                borderColor: '#f97316', 
                 backgroundColor: 'rgba(249, 115, 22, 0.1)',
                 borderWidth: 2,
                 pointBackgroundColor: '#ffffff',
                 pointBorderColor: '#f97316',
-                pointRadius: 0, // Remove os pontos por padrão para ficar igual a imagem (linha limpa)
+                pointRadius: 0, 
                 pointHoverRadius: 4,
             }]
         };
@@ -291,7 +292,7 @@
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        display: false // Oculta a legenda padrão
+                        display: false 
                     },
                     tooltip: {
                         mode: 'index',
@@ -301,7 +302,7 @@
                 scales: {
                     y: {
                         beginAtZero: false,
-                        min: 50, // Ajuste conforme seus dados reais
+                        min: 50, 
                         max: 64,
                         title: {
                             display: true,
@@ -312,7 +313,7 @@
                             }
                         },
                         grid: {
-                            display: false, // Remove linhas de grade horizontais (limpeza visual)
+                            display: false, 
                             drawBorder: true
                         },
                         border: {
@@ -323,7 +324,7 @@
                     },
                     x: {
                         grid: {
-                            display: false, // Remove linhas de grade verticais
+                            display: false, 
                         },
                         ticks: {
                             font: {

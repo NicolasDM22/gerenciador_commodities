@@ -58,77 +58,75 @@
             transition: transform 0.15s ease, box-shadow 0.15s ease;
             display: inline-flex; align-items: center; gap: 0.4rem;
             text-decoration: none;
+            justify-content: center;
         }
         .button:hover { transform: translateY(-1px); box-shadow: 0 12px 25px rgba(37, 99, 235, 0.18); }
         .button-primary { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: var(--white); }
         .button-outline { background: transparent; color: var(--primary); border: 1px solid rgba(37, 99, 235, 0.4); }
         .button-secondary { background: var(--white); border: 1px solid var(--gray-300); color: var(--gray-700); }
         .button[disabled] { opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none; }
+        
         main.content {
             flex: 1; width: min(1180px, 100%); margin: 0 auto;
             padding: 2rem clamp(1rem, 2vw, 2.5rem) 3rem; display: grid; gap: 1.75rem;
         }
+        
         .alert { padding: 1rem 1.25rem; border-radius: 16px; font-size: 0.95rem; }
         .alert-success { background: rgba(5, 150, 105, 0.12); color: var(--success); }
         .alert-danger { background: rgba(220, 38, 38, 0.12); color: var(--danger); }
         .alert-danger ul { margin: 0.75rem 0 0 1.2rem; padding: 0; }
+        
         .card {
             background: var(--white); border-radius: 16px;
             padding: 1.5rem; box-shadow: 0 10px 25px -10px rgba(15, 23, 42, 0.1);
         }
-        .card h2 { margin: 0 0 1rem 0; font-size: 1.15rem; font-weight: 600; color: var(--gray-700); }
+        .card-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 1rem;
+        }
+        .card h2 { margin: 0; font-size: 1.15rem; font-weight: 600; color: var(--gray-700); }
         .card p { margin: 0.5rem 0 0; color: var(--gray-600); line-height: 1.6; }
-        .top-cards-grid {
-            display: grid;
-            gap: 1.75rem;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        }
-        .card-link {
-            display: block;
+        
+        /* Link estilo texto */
+        .link-action {
             color: var(--link-color);
+            font-weight: 600;
             text-decoration: none;
-            font-weight: 500;
-            padding: 0.5rem 0;
-            border-radius: 8px;
-            transition: background-color 0.2s ease;
+            cursor: pointer;
+            font-size: 0.95rem;
         }
-        .card-link:hover { background-color: var(--gray-50); text-decoration: underline; }
+        .link-action:hover { text-decoration: underline; }
+
         .analysis-list { list-style: none; padding: 0; margin: 0; }
-        .analysis-list li { margin-bottom: 0.5rem; font-size: 0.9rem; }
-        .analysis-list a { color: var(--link-color); text-decoration: none; }
+        .analysis-list li { 
+            padding: 0.75rem 0; 
+            border-bottom: 1px solid var(--gray-100); 
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .analysis-list li:last-child { border-bottom: none; }
+        .analysis-list a { color: var(--link-color); text-decoration: none; font-weight: 500; }
         .analysis-list a:hover { text-decoration: underline; }
-        .analysis-list span { color: var(--gray-500); margin-left: 0.75rem; font-size: 0.85rem; }
+        .analysis-list span { color: var(--gray-500); font-size: 0.85rem; }
+
         .chart-wrapper { position: relative; min-height: 350px; padding-top: 1rem; }
         canvas { width: 100%; height: 350px; }
+        
         .ws-controls { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 1rem 0; }
         .ws-field { display: flex; flex: 1; gap: 0.5rem; align-items: center; }
         .ws-field input { flex: 1; padding: 0.6rem 0.8rem; border-radius: 10px; border: 1px solid var(--gray-300); }
         .ws-log {
-            background: var(--gray-50);
-            border-radius: 12px;
-            padding: 1rem;
-            font-family: monospace;
-            font-size: 0.85rem;
-            max-height: 220px;
-            overflow-y: auto;
-            border: 1px solid var(--gray-200);
-            white-space: pre-wrap;
+            background: var(--gray-50); border-radius: 12px; padding: 1rem;
+            font-family: monospace; font-size: 0.85rem;
+            max-height: 220px; overflow-y: auto;
+            border: 1px solid var(--gray-200); white-space: pre-wrap;
         }
-        .ws-status {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-weight: 600;
-            color: var(--gray-600);
-        }
+        .ws-status { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600; color: var(--gray-600); }
         .ws-indicator {
-            width: 10px;
-            height: 10px;
-            border-radius: 999px;
-            background: var(--danger);
-            transition: background 0.2s ease;
+            width: 10px; height: 10px; border-radius: 999px;
+            background: var(--danger); transition: background 0.2s ease;
         }
         .ws-indicator.active { background: var(--success); }
+        
         .modal {
              position: fixed; inset: 0; background: rgba(17, 24, 39, 0.4);
              display: none; align-items: center; justify-content: center;
@@ -136,7 +134,7 @@
          }
         .modal.active { display: flex; }
         .modal-dialog {
-             background: var(--white); border-radius: 22px; width: min(480px, 100%);
+             background: var(--white); border-radius: 22px; width: min(550px, 100%);
              padding: 1.5rem; display: grid; gap: 1rem;
              box-shadow: 0 30px 65px -28px rgba(15, 23, 42, 0.45);
          }
@@ -147,6 +145,31 @@
         .form-group label { font-size: 0.9rem; color: var(--gray-600); }
         .form-group input { padding: 0.7rem 1rem; border-radius: 12px; border: 1px solid var(--gray-300); font-size: 0.95rem; }
         .modal-footer { display: flex; justify-content: flex-end; gap: 0.75rem; }
+
+        /* PAGINAÇÃO NO MODAL */
+        .pagination-container {
+            margin-top: 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--gray-200);
+        }
+        .page-btn {
+            background: var(--white);
+            border: 1px solid var(--gray-300);
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: var(--gray-700);
+            transition: all 0.2s;
+        }
+        .page-btn:hover:not(:disabled) { background: var(--gray-100); border-color: var(--gray-400); }
+        .page-btn:disabled { opacity: 0.5; cursor: default; }
+        .page-info { font-size: 0.85rem; color: var(--gray-600); font-weight: 500; }
+        
         @media (max-width: 820px) {
             .top-bar { flex-direction: column; align-items: flex-start; }
             .top-actions { width: 100%; justify-content: flex-start; }
@@ -186,28 +209,35 @@
             </div>
         @endif
 
-        <div class="top-cards-grid">
-            <div class="card">
-                <h2>Realizar uma nova análise</h2>
-                <a href="#" class="card-link" id="openFormsModal">Análise do zero</a>
-                <a href="#" class="card-link">Usar template antigo</a>
+        <div class="card">
+            <div class="card-header">
+                <h2 href="#" id="openAnalysisManager" class="link-action">
+                    Visualizar análises
+                </h2>
             </div>
 
-            <div class="card">
-                <h2>Visualizar análises anteriores</h2>
-                @if($previousAnalyses->isNotEmpty())
-                    <ul class="analysis-list">
-                        @foreach($previousAnalyses as $analysis)
-                            <li>
-                                <a href="{{ $analysis->url }}">{{ $analysis->commodity }}</a>
-                                <span>{{ $analysis->date }}</span>
-                            </li>
-                        @endforeach
-                    </ul>
-                @else
-                    <p>Nenhuma análise anterior encontrada.</p>
+            @if($previousAnalyses->isNotEmpty())
+                <ul class="analysis-list">
+                    @foreach($previousAnalyses->take(5) as $analysis)
+                        <li>
+                            <a href="{{ $analysis->url }}">{{ $analysis->commodity }}</a>
+                            <span>{{ $analysis->date }}</span>
+                        </li>
+                    @endforeach
+                </ul>
+                @if($previousAnalyses->count() > 5)
+                    <div style="margin-top: 1rem; text-align: center;">
+                        <span style="color: var(--gray-500); font-size: 0.85rem;">
+                            + {{ $previousAnalyses->count() - 5 }} outras análises disponíveis.
+                        </span>
+                    </div>
                 @endif
-            </div>
+            @else
+                <div style="text-align: center; padding: 2rem 0;">
+                    <p>Nenhuma análise anterior encontrada.</p>
+                    <p style="font-size: 0.9rem; color: var(--gray-500);">Crie sua primeira análise.</p>
+                </div>
+            @endif
         </div>
 
         <div class="card">
@@ -217,6 +247,7 @@
             </div>
         </div>
 
+        @if($isAdmin)
         <div class="card" id="javaWsCard">
             <h2>Servidor Java (WebSocket)</h2>
             <p class="ws-status">
@@ -234,8 +265,46 @@
             </div>
             <div class="ws-log" id="javaWsLog"></div>
         </div>
+        @endif
 
     </main>
+</div>
+
+<div class="modal" id="analysisModal">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h3>Histórico de Análises</h3>
+            <button class="button button-outline" type="button" id="closeAnalysisModal">Fechar</button>
+        </div>
+        
+        <div style="margin-top: 0.5rem; margin-bottom: 1rem;">
+            <button class="button button-primary" style="width: 100%;" id="btnCreateNewAnalysis">
+                + Nova Análise
+            </button>
+        </div>
+
+        <div>
+            @if($previousAnalyses->isNotEmpty())
+                <ul class="analysis-list" id="paginatedList">
+                    @foreach($previousAnalyses as $analysis)
+                        <li class="analysis-item">
+                            <a href="{{ $analysis->url }}">{{ $analysis->commodity }}</a>
+                            <span>{{ $analysis->date }}</span>
+                        </li>
+                    @endforeach
+                </ul>
+                <div class="pagination-container" id="paginationControls">
+                    <button class="page-btn" id="btnPrevPage" disabled>Anterior</button>
+                    <span class="page-info" id="pageInfo">Pág 1</span>
+                    <button class="page-btn" id="btnNextPage">Próxima</button>
+                </div>
+            @else
+                <p style="color: var(--gray-500); font-size: 0.9rem; text-align: center; padding: 1rem;">
+                    Nenhum histórico disponível.
+                </p>
+            @endif
+        </div>
+    </div>
 </div>
 
 <div class="modal" id="profileModal">
@@ -260,25 +329,11 @@
              </div>
              <div class="form-group">
                  <label for="telefone">Telefone</label>
-                 <input
-                     id="telefone"
-                     name="telefone"
-                     type="tel"
-                     value="{{ old('telefone', $user->telefone ?? '') }}"
-                     pattern="[\d\s\-\(\)\+]{10,20}"
-                     required
-                 >
+                 <input id="telefone" name="telefone" type="tel" value="{{ old('telefone', $user->telefone ?? '') }}" pattern="[\d\s\-\(\)\+]{10,20}" required>
              </div>
              <div class="form-group">
                  <label for="endereco">Endereco</label>
-                 <input
-                     id="endereco"
-                     name="endereco"
-                     type="text"
-                     value="{{ old('endereco', $user->endereco ?? '') }}"
-                     maxlength="255"
-                     required
-                 >
+                 <input id="endereco" name="endereco" type="text" value="{{ old('endereco', $user->endereco ?? '') }}" maxlength="255" required>
              </div>
              <div class="form-group">
                  <label for="nova_senha">Nova senha</label>
@@ -304,22 +359,91 @@
     const chartRawData = @json($chartData);
 
     window.addEventListener('DOMContentLoaded', () => {
+        // --- LÓGICA MODAL PERFIL ---
         const profileModal = document.getElementById('profileModal');
         const openProfileModalBtn = document.getElementById('openProfileModal');
         const closeProfileModalBtn = document.getElementById('closeProfileModal');
         const cancelProfileModalBtn = document.getElementById('cancelProfileModal');
-
-        const toggleProfileModal = (show) => {
-            profileModal?.classList.toggle('active', show);
-        };
+        const toggleProfileModal = (show) => profileModal?.classList.toggle('active', show);
 
         openProfileModalBtn?.addEventListener('click', () => toggleProfileModal(true));
         closeProfileModalBtn?.addEventListener('click', () => toggleProfileModal(false));
         cancelProfileModalBtn?.addEventListener('click', () => toggleProfileModal(false));
-        profileModal?.addEventListener('click', (event) => {
-            if (event.target === profileModal) toggleProfileModal(false);
+        profileModal?.addEventListener('click', (e) => { if(e.target === profileModal) toggleProfileModal(false); });
+
+        // --- LÓGICA MODAL ANÁLISE + PAGINAÇÃO CLIENT-SIDE ---
+        const analysisModal = document.getElementById('analysisModal');
+        const openAnalysisLink = document.getElementById('openAnalysisManager');
+        const closeAnalysisBtn = document.getElementById('closeAnalysisModal');
+        const btnCreateNewAnalysis = document.getElementById('btnCreateNewAnalysis');
+        const triggerFormsModal = document.getElementById('openFormsModal'); // Botão oculto do include
+
+        const toggleAnalysisModal = (show) => {
+            analysisModal?.classList.toggle('active', show);
+            if(show) renderPage(1); // Reseta para página 1 ao abrir
+        };
+
+        openAnalysisLink?.addEventListener('click', (e) => {
+            e.preventDefault(); // Evita o scroll para o topo padrão do href="#"
+            toggleAnalysisModal(true);
+        });
+        closeAnalysisBtn?.addEventListener('click', () => toggleAnalysisModal(false));
+        analysisModal?.addEventListener('click', (e) => { if(e.target === analysisModal) toggleAnalysisModal(false); });
+
+        // Abrir nova análise (fecha modal atual, abre form)
+        btnCreateNewAnalysis?.addEventListener('click', () => {
+            toggleAnalysisModal(false);
+            if (triggerFormsModal) triggerFormsModal.click();
+            else document.getElementById('formsModal')?.classList.add('active');
         });
 
+        // --- LÓGICA DE PAGINAÇÃO (JavaScript puro) ---
+        const listItems = document.querySelectorAll('#paginatedList .analysis-item');
+        const itemsPerPage = 10;
+        let currentPage = 1;
+        const totalPages = Math.ceil(listItems.length / itemsPerPage);
+        
+        const btnPrevPage = document.getElementById('btnPrevPage');
+        const btnNextPage = document.getElementById('btnNextPage');
+        const pageInfo = document.getElementById('pageInfo');
+        const paginationContainer = document.getElementById('paginationControls');
+
+        // Se tiver menos itens que uma página, esconde a paginação
+        if (paginationContainer && listItems.length <= itemsPerPage) {
+            paginationContainer.style.display = 'none';
+        }
+
+        function renderPage(page) {
+            currentPage = page;
+            const start = (page - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+
+            listItems.forEach((item, index) => {
+                if (index >= start && index < end) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            if(pageInfo) pageInfo.textContent = `Pág ${currentPage} de ${totalPages}`;
+            if(btnPrevPage) btnPrevPage.disabled = (currentPage === 1);
+            if(btnNextPage) btnNextPage.disabled = (currentPage === totalPages || totalPages === 0);
+        }
+
+        btnPrevPage?.addEventListener('click', () => {
+            if (currentPage > 1) renderPage(currentPage - 1);
+        });
+
+        btnNextPage?.addEventListener('click', () => {
+            if (currentPage < totalPages) renderPage(currentPage + 1);
+        });
+
+        // Inicializa a paginação na carga (oculta itens além do limite)
+        renderPage(1);
+
+
+        // --- CHART JS ---
         const chartCanvas = document.getElementById('priceHistoryChart');
         if (chartCanvas && typeof Chart !== 'undefined' && chartRawData) {
             const ctx = chartCanvas.getContext('2d');
@@ -345,34 +469,17 @@
                     scales: {
                         y: {
                             beginAtZero: false,
-                            ticks: {
-                                color: '#4b5563',
-                                callback: function(value) {
-                                     return 'R$ ' + value.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-                                }
-                            },
-                             grid: { color: '#e5e7eb' }
+                            ticks: { color: '#4b5563', callback: v => 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 0 }) },
+                            grid: { color: '#e5e7eb' }
                         },
-                        x: {
-                             ticks: { color: '#4b5563' },
-                            grid: { display: false }
-                        }
+                        x: { ticks: { color: '#4b5563' }, grid: { display: false } }
                     },
                     plugins: {
                         legend: { display: false },
                         tooltip: {
-                            backgroundColor: '#374151',
-                            titleColor: '#ffffff',
-                            bodyColor: '#ffffff',
+                            backgroundColor: '#374151', titleColor: '#fff', bodyColor: '#fff',
                             callbacks: {
-                                label: function(context) {
-                                    let label = context.dataset.label || '';
-                                    if (label) { label += ': '; }
-                                    if (context.parsed.y !== null) {
-                                         label += 'R$ ' + context.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                                    }
-                                    return label;
-                                }
+                                label: ctx => (ctx.dataset.label || '') + (ctx.parsed.y ? ': R$ ' + ctx.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '')
                             }
                         }
                     }
@@ -380,6 +487,8 @@
             });
         }
 
+        // --- WEBSOCKET (Lógica protegida pelo isAdmin) ---
+        @if($isAdmin)
         const wsIndicator = document.getElementById('javaWsIndicator');
         const wsStatus = document.getElementById('javaWsStatus');
         const wsConnectBtn = document.getElementById('javaWsConnect');
@@ -389,129 +498,50 @@
         const wsMessageInput = document.getElementById('javaWsMessage');
         const wsLog = document.getElementById('javaWsLog');
 
-        const appendLog = (message) => {
+        const appendLog = (msg) => {
             if (!wsLog) return;
-            const time = new Date().toLocaleTimeString();
-            wsLog.textContent += `[${time}] ${message}\n`;
+            wsLog.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
             wsLog.scrollTop = wsLog.scrollHeight;
         };
-
-        const toggleWsControls = (isConnected) => {
-            wsIndicator?.classList.toggle('active', isConnected);
-            if (wsStatus) wsStatus.textContent = isConnected ? 'Conectado' : 'Desconectado';
-            if (wsConnectBtn) wsConnectBtn.disabled = isConnected;
-            if (wsDisconnectBtn) wsDisconnectBtn.disabled = !isConnected;
-            if (wsSendExitBtn) wsSendExitBtn.disabled = !isConnected;
-            if (wsSendBtn) wsSendBtn.disabled = !isConnected;
-            if (wsMessageInput) {
-                wsMessageInput.disabled = !isConnected;
-                if (!isConnected) wsMessageInput.value = '';
-            }
+        const toggleWsControls = (conn) => {
+            wsIndicator?.classList.toggle('active', conn);
+            if(wsStatus) wsStatus.textContent = conn ? 'Conectado' : 'Desconectado';
+            if(wsConnectBtn) wsConnectBtn.disabled = conn;
+            if(wsDisconnectBtn) wsDisconnectBtn.disabled = !conn;
+            if(wsSendExitBtn) wsSendExitBtn.disabled = !conn;
+            if(wsSendBtn) wsSendBtn.disabled = !conn;
+            if(wsMessageInput) { wsMessageInput.disabled = !conn; if(!conn) wsMessageInput.value = ''; }
         };
-
-        const resolveWsUrl = () => {
-            return "ws://localhost:3000";
-        };
-
         let javaWs = null;
-
-        const notifyHomeView = () => {
-            if (!javaWs || javaWs.readyState !== WebSocket.OPEN) return;
-            const payload = JSON.stringify({
-                tipo: 'info',
-                mensagem: 'Usuario abriu a tela home'
-            });
-            appendLog(`Informando o servidor: ${payload}`);
-            javaWs.send(payload);
-        };
-
         const connectToJavaWs = () => {
             if (javaWs && javaWs.readyState === WebSocket.OPEN) return;
-
-            const url = resolveWsUrl();
-            appendLog(`Tentando conectar em ${url}`);
-
             try {
-                javaWs = new WebSocket(url);
-            } catch (error) {
-                appendLog(`Erro ao criar WebSocket: ${error.message}`);
-                return;
-            }
-
+                javaWs = new WebSocket("ws://localhost:3000");
+            } catch (e) { appendLog(`Erro WS: ${e.message}`); return; }
+            
             javaWs.addEventListener('open', () => {
-                appendLog('Conexao estabelecida com sucesso.');
-                toggleWsControls(true);
-                notifyHomeView();
+                appendLog('Conectado.'); toggleWsControls(true);
+                javaWs.send(JSON.stringify({ tipo: 'info', mensagem: 'Home aberta' }));
             });
-
-            javaWs.addEventListener('message', (event) => {
-                appendLog(`Mensagem recebida: ${event.data}`);
-            });
-
-            javaWs.addEventListener('close', (event) => {
-                appendLog(`Conexao finalizada (code=${event.code}, reason=${event.reason || 'n/a'}).`);
-                toggleWsControls(false);
-                javaWs = null;
-            });
-
-            javaWs.addEventListener('error', () => {
-                appendLog('Erro no WebSocket.');
-            });
+            javaWs.addEventListener('message', e => appendLog(`Recebido: ${e.data}`));
+            javaWs.addEventListener('close', () => { appendLog('Fechado.'); toggleWsControls(false); javaWs = null; });
+            javaWs.addEventListener('error', () => appendLog('Erro WS.'));
         };
 
         wsConnectBtn?.addEventListener('click', connectToJavaWs);
-
-        // Conecta automaticamente ao carregar a tela
         connectToJavaWs();
-
-        wsDisconnectBtn?.addEventListener('click', () => {
-            if (!javaWs || javaWs.readyState !== WebSocket.OPEN) return;
-            appendLog('Encerrando conexao a pedido do usuario.');
-            javaWs.close(1000, 'Cliente encerrou a conexao');
-        });
-
-        wsSendExitBtn?.addEventListener('click', () => {
-            if (!javaWs || javaWs.readyState !== WebSocket.OPEN) {
-                appendLog('Nao ha conexao ativa para enviar mensagem.');
-                return;
-            }
-            const payload = JSON.stringify({ tipo: 'pedidoDeSair' });
-            appendLog(`Enviando pedido de sair: ${payload}`);
-            javaWs.send(payload);
-        });
-
+        wsDisconnectBtn?.addEventListener('click', () => javaWs?.close(1000, 'User closed'));
+        wsSendExitBtn?.addEventListener('click', () => javaWs?.send(JSON.stringify({ tipo: 'pedidoDeSair' })));
         wsSendBtn?.addEventListener('click', () => {
-            if (!javaWs || javaWs.readyState !== WebSocket.OPEN) {
-                appendLog('Nao ha conexao ativa para enviar mensagem.');
-                return;
-            }
-
-            const raw = wsMessageInput?.value.trim();
-            if (!raw) {
-                appendLog('Mensagem vazia. Informe um JSON valido.');
-                return;
-            }
-
-            let toSend = raw;
-            try {
-                toSend = JSON.stringify(JSON.parse(raw));
-            } catch (error) {
-                appendLog('JSON invalido. Verifique o formato.');
-                return;
-            }
-
-            appendLog(`Enviando: ${toSend}`);
-            javaWs.send(toSend);
-            if (wsMessageInput) wsMessageInput.value = '';
+            const val = wsMessageInput?.value.trim();
+            if(!val) return;
+            try { javaWs?.send(JSON.stringify(JSON.parse(val))); wsMessageInput.value = ''; } 
+            catch { appendLog('JSON Inválido'); }
         });
-
-        window.addEventListener('beforeunload', () => {
-            if (javaWs && javaWs.readyState === WebSocket.OPEN) {
-                javaWs.close(1001, 'Pagina recarregada ou fechada');
-            }
-        });
+        window.addEventListener('beforeunload', () => javaWs?.close(1001));
+        @endif
     });
 </script>
-    @include('forms')
+@include('forms')
 </body>
 </html>
