@@ -71,8 +71,6 @@ class PrevisoesController extends Controller
         if (!$commodity) {
             return redirect()->route('home')->withErrors('Nenhuma commodity cadastrada para exibir.');
         }
-        }
-        
 
         // 3. Buscar Dados Descritivos (Card Principal)
         $descriptiveData = DB::table('commodity_descriptive_metrics as metrics')
