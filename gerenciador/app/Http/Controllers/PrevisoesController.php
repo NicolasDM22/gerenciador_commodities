@@ -12,7 +12,7 @@ class PrevisoesController extends Controller
     public function index(Request $request)
     {
         $userId = $request->session()->get('auth_user_id');
-
+        $isadmin = (bool) ($request->session()->get('auth_is_admin') ?? false);
         if (!$userId) {
             return redirect()->route('login');
         }
@@ -61,10 +61,13 @@ class PrevisoesController extends Controller
                 ->orderBy('nome')
                 ->first();
         }
-
-        if (!$commodity) {
+        
+        if(!$isadmin = (bool) ($user->is_admin ?? false)){
+            if (!$commodity) {
             return redirect()->route('home')->withErrors('Nenhuma commodity cadastrada para exibir.');
         }
+        }
+        
 
         $descriptiveData = DB::table('commodity_descriptive_metrics as metrics')
             ->select(

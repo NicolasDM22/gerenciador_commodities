@@ -6,6 +6,9 @@
     <title>Painel Principal</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" defer></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js" defer></script>
     <style>
         :root {
             --gray-50: #f9fafb;
@@ -170,6 +173,48 @@
         .page-btn:disabled { opacity: 0.5; cursor: default; }
         .page-info { font-size: 0.85rem; color: var(--gray-600); font-weight: 500; }
         
+        table.data-table{
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-size: 0.95rem;
+        }
+
+        table.data-table thead {
+            background-color: var(--gray-200);
+        }
+        table.data-table th, table.data-table td {
+            padding: 0.65rem 0.75rem;
+            border: 1px solid var(--gray-100);
+            text-align: left;
+        }
+        table.data-table tbody tr:houver {
+            background-color: var(--gray-50);
+        }
+        .dataTable_wrapper .dataTables_filter input {
+            border-radius: 999px;
+            border: 1px solid var(--gray-300);
+            padding: 0.35rem 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .dataTables_wrapper .dataTables_length select{
+            border-radius: 10px;
+            border: 1px solid var(--gray-300);
+            padding: 0.2rem 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .dataTable_wrapper .dataTables_paginate .paginate_button {
+            border-radius: 999px
+            border: 1px solid transparent  ;
+            padding: 0.2rem 0.6rem;
+            margin: 0 1px;
+        }
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current, .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+            border-coler: var(--primary);
+            background: rgba(37, 99, 235, 0.08);
+        }
         @media (max-width: 820px) {
             .top-bar { flex-direction: column; align-items: flex-start; }
             .top-actions { width: 100%; justify-content: flex-start; }
@@ -215,30 +260,35 @@
                     Visualizar análises
                 </h2>
             </div>
-
-            @if($previousAnalyses->isNotEmpty())
-                <ul class="analysis-list">
-                    @foreach($previousAnalyses->take(5) as $analysis)
-                        <li>
-                            <a href="{{ $analysis->url }}">{{ $analysis->commodity }}</a>
-                            <span>{{ $analysis->date }}</span>
-                        </li>
-                    @endforeach
-                </ul>
-                @if($previousAnalyses->count() > 5)
-                    <div style="margin-top: 1rem; text-align: center;">
-                        <span style="color: var(--gray-500); font-size: 0.85rem;">
-                            + {{ $previousAnalyses->count() - 5 }} outras análises disponíveis.
-                        </span>
-                    </div>
-                @endif
-            @else
-                <div style="text-align: center; padding: 2rem 0;">
-                    <p>Nenhuma análise anterior encontrada.</p>
-                    <p style="font-size: 0.9rem; color: var(--gray-500);">Crie sua primeira análise.</p>
-                </div>
-            @endif
+                    <!-- Data table -->
+        <div style="margin-top: 2rem;">
+            <table id="commoditiesTable" class="data-table">
+                <thead>
+                    <tr>
+                        <th>Commodity</th>
+                        <th>Data</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($previousAnalyses as $analysis)
+                    <tr>
+                        <td>{{ $analysis->commodity }}</td>
+                        <td>{{ $analysis->date }}</td>
+                        <td><a href="{{ $analysis->url }}">Ver Análise</a></td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="3" style="text-align:center; color: var(--gray-500);">
+                            Nenhuma análise cadastrada até o momento.
+                        </td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
+    </div>
+        <!-- Fim Data table -->
 
         <div class="card">
             <h2>{{ $chartData['commodityName'] ?? 'Histórico de Preços' }}</h2>
@@ -486,7 +536,17 @@
                 }
             });
         }
-
+        // --- DATA TABLE ---
+    const commoditiesTable = document.getElementById('commoditiesTables');
+        if(commoditiesTable && window.jQuery && $.fn.DataTable){
+            $(commoditiesTable).DataTable({
+                pageLength: 10,
+                order: [[0, 'asc']],
+                language: {
+                    url: 'https://cdn.datatables.net/plug-ins/1.13.8/i18n/pt-BR.json'
+                }
+            });
+        }
         // --- WEBSOCKET (Lógica protegida pelo isAdmin) ---
         @if($isAdmin)
         const wsIndicator = document.getElementById('javaWsIndicator');
