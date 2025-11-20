@@ -410,8 +410,7 @@
         };
 
         const resolveWsUrl = () => {
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            return `${protocol}//${window.location.host}/ws`;
+            return "ws://localhost:3000";
         };
 
         let javaWs = null;

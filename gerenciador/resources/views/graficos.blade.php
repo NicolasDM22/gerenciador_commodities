@@ -3,15 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gráficos - Previsão de Commodities</title> {{-- <--- Título Alterado --}}
+    <title>Gráficos - Previsão de Commodities</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
-<style>
+    <style>
+        /* --- Variáveis e Reset (Mantidos do seu padrão) --- */
         :root {
             --gray-50: #f9fafb;
             --gray-100: #f3f4f6;
             --gray-200: #e5e7eb;
             --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
             --gray-500: #6b7280;
             --gray-600: #4b5563;
             --gray-700: #374151;
@@ -21,11 +23,14 @@
             --success: #059669;
             --danger: #dc2626;
             --white: #ffffff;
+            
+            /* Cores específicas do gráfico */
+            --chart-green: #22c55e;
+            --chart-yellow: #eab308;
+            --chart-red: #ef4444;
         }
 
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
 
         body {
             margin: 0;
@@ -40,6 +45,7 @@
             flex-direction: column;
         }
 
+        /* --- Top Bar --- */
         .top-bar {
             background: var(--white);
             padding: 1.5rem clamp(1.5rem, 3vw, 3rem);
@@ -64,23 +70,10 @@
             border: 3px solid var(--gray-200);
         }
 
-        .profile-info strong {
-            font-size: 1.25rem;
-            display: block;
-        }
+        .profile-info strong { font-size: 1.25rem; display: block; }
+        .profile-info span { color: var(--gray-500); font-size: 0.95rem; }
 
-        .profile-info span {
-            color: var(--gray-500);
-            font-size: 0.95rem;
-        }
-
-        .top-actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.75rem;
-            align-items: center;
-        }
-
+        /* --- Botões Gerais --- */
         .button {
             border: none;
             border-radius: 12px;
@@ -91,7 +84,9 @@
             transition: transform 0.15s ease, box-shadow 0.15s ease;
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 0.4rem;
+            text-decoration: none;
         }
 
         .button:hover {
@@ -104,37 +99,18 @@
             color: var(--white);
         }
 
-        .button-outline {
-            background: transparent;
-            color: var(--primary);
-            border: 1px solid rgba(37, 99, 235, 0.4);
-        }
-
         .button-secondary {
             background: var(--white);
             border: 1px solid var(--gray-300);
             color: var(--gray-700);
         }
-
-        .button[disabled] {
-            opacity: 0.55;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-            background: var(--gray-100);
-        }
         
-        .button-icon {
-            padding: 0.6rem 0.8rem;
-            line-height: 1;
-        }
-        
-        .button-secondary:hover {
-             background: var(--gray-50);
-             box-shadow: none;
-             transform: none;
-        }
+        .button-secondary:hover { background: var(--gray-50); box-shadow: none; transform: none; }
 
+        .button-icon { padding: 0.6rem 0.8rem; line-height: 1; }
+        .button[disabled] { opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none; background: var(--gray-100); }
+
+        /* --- Layout Principal --- */
         main.content {
             flex: 1;
             width: min(1180px, 100%);
@@ -144,67 +120,14 @@
             gap: 1.75rem;
         }
 
-        .alert {
-            padding: 1rem 1.25rem;
-            border-radius: 16px;
-            font-size: 0.95rem;
-        }
-
-        .alert-success {
-            background: rgba(5, 150, 105, 0.12);
-            color: var(--success);
-        }
-
-        .alert-danger {
-            background: rgba(220, 38, 38, 0.12);
-            color: var(--danger);
-        }
-
-        .alert-danger ul {
-            margin: 0.75rem 0 0 1.2rem;
-            padding: 0;
-        }
-
         .card {
             background: var(--white);
             border-radius: 22px;
             padding: 1.5rem;
             box-shadow: 0 22px 45px -30px rgba(15, 23, 42, 0.3);
-        }
-
-        .card h2 {
-            margin: 0;
-            font-size: 1.25rem;
-        }
-
-        .table-wrapper {
-            overflow: auto;
-            border-radius: 18px;
-            border: 1px solid var(--gray-200);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 640px;
-        }
-
-        th,
-        td {
-            padding: 0.85rem 1rem;
-            text-align: left;
-            font-size: 0.94rem;
-            border-bottom: 1px solid var(--gray-200);
-        }
-
-        th {
-            background: var(--gray-50);
-            font-weight: 600;
-            color: var(--gray-700);
-        }
-
-        tr:last-child td {
-            border-bottom: none;
+            min-height: 600px;
+            display: flex;
+            flex-direction: column;
         }
 
         .analysis-header {
@@ -213,69 +136,72 @@
             align-items: center;
             gap: 1rem;
             padding-bottom: 1.25rem;
-            border-bottom: 1px solid var(--gray-200);
             margin-bottom: 1rem;
         }
-        
-        .analysis-header .nav-buttons {
-            display: flex;
-            gap: 0.5rem;
-        }
 
-        .analysis-body {
-            display: grid;
-            gap: 2.5rem; 
-        }
-        
-        .analysis-section h2 {
-             margin-bottom: 1.25rem;
-             font-size: 1.15rem;
-             font-weight: 600;
-             color: var(--gray-700);
-        }
-        
-        .descriptive-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1rem 2rem;
-        }
-        
-        .descriptive-grid p {
-            margin: 0.6rem 0;
-            font-size: 0.95rem;
-            color: var(--gray-700);
-            line-height: 1.5;
-        }
-        
-        .descriptive-grid strong {
-            font-weight: 600;
+        .analysis-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
             color: var(--gray-600);
-            display: inline-block;
-            min-width: 180px; 
+            font-weight: 700;
         }
         
-        .text-center {
-            text-align: center;
-        }
-        
-        .text-success {
-            color: var(--success);
-        }
-        
-        .text-danger {
-            color: var(--danger);
+        .analysis-header .nav-buttons { display: flex; gap: 0.5rem; }
+
+        /* --- GRID DOS GRÁFICOS (ESPECÍFICO DESTA PÁGINA) --- */
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            flex: 1;
+            align-items: center;
         }
 
-        @media (max-width: 820px) {
-            .top-bar {
-                flex-direction: column;
-                align-items: flex-start;
-            }
+        .chart-wrapper {
+            width: 100%;
+            position: relative;
+            height: 400px; /* Altura para caber bem os eixos */
+            padding: 10px;
+        }
 
-            .top-actions {
-                width: 100%;
-                justify-content: flex-start;
-            }
+        /* --- LEGENDA CUSTOMIZADA (ESTILO DA IMAGEM) --- */
+        .custom-legend {
+            background-color: #e5e7eb; /* Fundo cinza claro */
+            border-radius: 8px;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            width: fit-content;
+            margin: 0 auto; /* Centralizar horizontalmente */
+            margin-top: 1rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: var(--gray-700);
+        }
+
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 2px;
+        }
+        
+        .color-green { background-color: var(--chart-green); }
+        .color-yellow { background-color: var(--chart-yellow); }
+        .color-red { background-color: var(--chart-red); }
+
+        /* Responsividade */
+        @media (max-width: 900px) {
+            .top-bar { flex-direction: column; align-items: flex-start; }
+            .charts-container { grid-template-columns: 1fr; gap: 3rem; }
+            .chart-wrapper { height: 300px; }
+            .custom-legend { flex-direction: column; gap: 0.5rem; width: 100%; align-items: center; }
         }
     </style>
 </head>
@@ -283,10 +209,10 @@
 <div class="page">
     <header class="top-bar">
         <div class="profile">
-            <img class="avatar" src="{{ $avatarUrl }}" alt="Avatar de {{ $user->nome ?? $user->usuario }}">
+            <img class="avatar" src="{{ $avatarUrl ?? 'https://ui-avatars.com/api/?name=User&background=random' }}" alt="Avatar">
             <div class="profile-info">
-                <strong>{{ $user->nome ?? $user->usuario }}</strong>
-                <span>{{ $user->email ?? 'E-mail não informado' }}</span>
+                <strong>{{ $user->nome ?? 'Usuário' }}</strong>
+                <span>{{ $user->email ?? 'Email' }}</span>
             </div>
         </div>
         <div class="top-actions">
@@ -298,29 +224,194 @@
     </header>
 
     <main class="content">
-        {{-- Alertas (opcional, pode copiar se quiser) --}}
         @if (session('status'))
             <div class="alert alert-success">{{ session('status') }}</div>
         @endif
-        @if ($errors->any())
-            {{-- ... alerta de erro ... --}}
-        @endif
 
-        {{-- [CONTEÚDO ESPECÍFICO DESTA PÁGINA] --}}
         <section class="card">
             <div class="analysis-header">
                 <div class="nav-buttons">
-                    <a href="{{ route('forecasts') }}" class="button button-secondary button-icon" title="Voltar para Análise">&larr;</a>
+                    <a href="{{ route('forecasts') }}" class="button button-secondary button-icon" title="Voltar">&larr;</a>
                     <a href="{{ route('previsoes.conclusao') }}" class="button button-secondary button-icon" title="Ir para Conclusão">&rarr;</a>
                 </div>
-                <h2>Gráficos de previsão</h2>
-                <a href="{{ route('home') }}" class="button button-secondary button-icon" title="Voltar para Home">&times;</a>
+                
+                <a href="{{ route('home') }}" class="button button-secondary button-icon" style="font-size: 1.2rem; line-height: 0.8;" title="Fechar">&times;</a>
             </div>
-            <div class="analysis-body">
-                <p>Aqui estarão os gráficos de estabilidade política e climática</p>
+
+            <div class="charts-container">
+                <div class="chart-wrapper">
+                    <canvas id="chartEconomic"></canvas>
+                </div>
+
+                <div class="chart-wrapper">
+                    <canvas id="chartClimate"></canvas>
+                </div>
             </div>
+
+            <div class="custom-legend">
+                <div class="legend-item">
+                    <div class="legend-color color-green"></div>
+                    Brasil
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color color-yellow"></div>
+                    Indonésia
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color color-red"></div>
+                    Costa do Marfim
+                </div>
+            </div>
+
         </section>
     </main>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        // --- Configurações Comuns ---
+        const commonOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }, // Oculta legenda padrão pois fizemos HTML customizado
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.raw.country}: R$${context.raw.y.toFixed(2)}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    min: 14.5,
+                    max: 18.5,
+                    title: {
+                        display: true,
+                        text: 'Preço Médio (R$/kg)',
+                        color: '#4b5563',
+                        font: { weight: 'bold', size: 14 }
+                    },
+                    grid: { display: false, drawBorder: true },
+                    border: { display: true, width: 2, color: '#9ca3af' },
+                    ticks: { font: { weight: 'bold' }, color: '#374151' }
+                },
+                x: {
+                    min: 0.5,
+                    max: 5.5,
+                    grid: { display: false },
+                    border: { display: true, width: 2, color: '#9ca3af' },
+                    ticks: { stepSize: 1, font: { weight: 'bold' }, color: '#374151' }
+                }
+            }
+        };
+
+        // --- Gráfico 1: Estabilidade Econômica ---
+        const ctxEcon = document.getElementById('chartEconomic').getContext('2d');
+        
+        // Ajuste das opções específicas para o título do eixo X
+        const optionsEcon = JSON.parse(JSON.stringify(commonOptions)); // Clone simples
+        optionsEcon.scales.x.title = {
+            display: true,
+            text: 'Estabilidade Econômica',
+            color: '#4b5563',
+            font: { weight: 'bold', size: 14 },
+            padding: { top: 10 }
+        };
+
+        new Chart(ctxEcon, {
+            type: 'scatter',
+            data: {
+                datasets: [
+                    {
+                        // Brasil (Verde - Alta Estabilidade na img da esq)
+                        label: 'Brasil',
+                        data: [{x: 5, y: 17.8, country: 'Brasil'}],
+                        pointStyle: 'crossRot', // Faz o X
+                        pointRadius: 8,
+                        pointBorderWidth: 4,
+                        borderColor: '#22c55e',
+                        backgroundColor: '#22c55e'
+                    },
+                    {
+                        // Indonésia (Amarelo - Média Estabilidade)
+                        label: 'Indonésia',
+                        data: [{x: 3, y: 15.3, country: 'Indonésia'}],
+                        pointStyle: 'crossRot',
+                        pointRadius: 8,
+                        pointBorderWidth: 4,
+                        borderColor: '#eab308',
+                        backgroundColor: '#eab308'
+                    },
+                    {
+                        // Costa do Marfim (Vermelho - Baixa Estabilidade)
+                        label: 'Costa do Marfim',
+                        data: [{x: 1, y: 14.8, country: 'Costa do Marfim'}],
+                        pointStyle: 'crossRot',
+                        pointRadius: 8,
+                        pointBorderWidth: 4,
+                        borderColor: '#ef4444',
+                        backgroundColor: '#ef4444'
+                    }
+                ]
+            },
+            options: optionsEcon
+        });
+
+        // --- Gráfico 2: Estabilidade Climática ---
+        const ctxClim = document.getElementById('chartClimate').getContext('2d');
+        
+        const optionsClim = JSON.parse(JSON.stringify(commonOptions));
+        optionsClim.scales.x.title = {
+            display: true,
+            text: 'Estabilidade Climática',
+            color: '#4b5563',
+            font: { weight: 'bold', size: 14 },
+            padding: { top: 10 }
+        };
+
+        new Chart(ctxClim, {
+            type: 'scatter',
+            data: {
+                datasets: [
+                    {
+                        // Brasil (Verde - Baixa Estabilidade Climática na img da dir?)
+                        // NOTA: Na imagem da direita, o X Verde está no 1 (baixo) mas alto preço.
+                        label: 'Brasil',
+                        data: [{x: 1.2, y: 17.8, country: 'Brasil'}],
+                        pointStyle: 'crossRot',
+                        pointRadius: 8,
+                        pointBorderWidth: 4,
+                        borderColor: '#22c55e',
+                        backgroundColor: '#22c55e'
+                    },
+                    {
+                        // Indonésia (Amarelo - Média)
+                        label: 'Indonésia',
+                        data: [{x: 3, y: 15.3, country: 'Indonésia'}],
+                        pointStyle: 'crossRot',
+                        pointRadius: 8,
+                        pointBorderWidth: 4,
+                        borderColor: '#eab308',
+                        backgroundColor: '#eab308'
+                    },
+                    {
+                        // Costa do Marfim (Vermelho - Média)
+                        label: 'Costa do Marfim',
+                        data: [{x: 3, y: 14.8, country: 'Costa do Marfim'}],
+                        pointStyle: 'crossRot',
+                        pointRadius: 8,
+                        pointBorderWidth: 4,
+                        borderColor: '#ef4444',
+                        backgroundColor: '#ef4444'
+                    }
+                ]
+            },
+            options: optionsClim
+        });
+    });
+</script>
 </body>
 </html>
