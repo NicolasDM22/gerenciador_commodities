@@ -104,7 +104,7 @@
         .analysis-list li { 
             padding: 0.75rem 0; 
             border-bottom: 1px solid var(--gray-100); 
-            display: flex; justify-content: space-between; align-items: center;
+            display: flex; justify-content: top; align-items: center;
         }
         .analysis-list li:last-child { border-bottom: none; }
         .analysis-list a { color: var(--link-color); text-decoration: none; font-weight: 500; }
@@ -235,6 +235,7 @@
             @if($isAdmin)
                 <a href="{{ route('forecasts') }}" class="button button-secondary">Debug Previsões</a>
             @endif
+            <button class="button button-outline" id="openFormsModal" type="button">Nova análise</button>
             <button class="button button-outline" id="openProfileModal" type="button">Atualizar perfil</button>
             <form action="{{ route('logout') }}" method="POST">
                 @csrf
@@ -256,7 +257,7 @@
 
         <div class="card">
             <div class="card-header">
-                <h2 href="#" id="openAnalysisManager" class="link-action">
+                <h2>
                     Visualizar análises
                 </h2>
             </div>

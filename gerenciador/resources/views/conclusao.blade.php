@@ -267,7 +267,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         const ctx = document.getElementById('finalChart').getContext('2d');
 
-        // Dados Mockados para replicar Figma (Declínio, leve subida, pico, queda brusca)
+        // Dados Mockados para replicar  (Declínio, leve subida, pico, queda brusca)
         // Labels aproximados: 09/25 a 04/26
         const data = {
             labels: ['09/25', '10/25', '11/25', '12/25', '01/26', '02/26', '03/26', '04/26'],

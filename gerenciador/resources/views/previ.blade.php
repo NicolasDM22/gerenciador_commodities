@@ -92,6 +92,7 @@
             display: inline-flex;
             align-items: center;
             gap: 0.4rem;
+            text-decoration: none;
         }
 
         .button:hover {
