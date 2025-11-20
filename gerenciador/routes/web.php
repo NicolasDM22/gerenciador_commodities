@@ -20,7 +20,7 @@ Route::controller(LoginController::class)->group(function () {
     Route::post('/logout', 'logout')->name('logout');
 });
 
-<<<<<<< HEAD
+// Rotas Protegidas (Com o middleware 'auth')
 Route::get('/home', [HomeController::class, 'index'])->name('home');
 Route::post('/support-chat/open', [SupportChatController::class, 'open'])->name('support-chat.open');
 Route::post('/support-chat/message', [SupportChatController::class, 'send'])->name('support-chat.message');
@@ -34,7 +34,7 @@ Route::get('/forms', function () {return view('forms');});
 Route::post('/forms/salvar', [FormsController::class, 'salvar'])->name('forms.salvar');
 Route::get('/profile', function () {return view('profile');});
 Route::post('/profile/update', [ProfileModalController::class, 'update'])->name('profile.update');
-=======
+
 // --- ROTAS LOGADAS (Sem o middleware 'auth')
 Route::group([], function () { 
     
@@ -59,4 +59,3 @@ Route::middleware(['admin'])->group(function () { // Removido 'auth', mantido sÃ
     Route::get('/admin/notificacoes', [AdminNotificationController::class, 'index'])->name('admin.notifications');
     Route::post('/admin/notificacoes/{notificationId}/lida', [AdminNotificationController::class, 'markAsRead'])->name('admin.notifications.read');
 });
->>>>>>> origin/matias
