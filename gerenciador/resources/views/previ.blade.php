@@ -343,10 +343,23 @@
             
             <div class="analysis-header">
                 <div class="nav-buttons">
+                    {{-- Botão Esquerda: Desabilitado pois é a primeira tela --}}
                     <button class="button button-secondary button-icon" disabled type="button">&larr;</button>
-                    <a href="{{ route('previsoes.graficos') }}" class="button button-secondary button-icon" title="Ir para Gráficos">&rarr;</a>
+                    
+                    {{-- Botão Direita: Lógica para ir para Gráficos com ou sem ID --}}
+                    @if(isset($selectedCommodity) && $selectedCommodity->id)
+                        <a href="{{ route('previsoes.graficos.show', ['id' => $selectedCommodity->id]) }}" 
+                           class="button button-secondary button-icon" 
+                           title="Ir para Gráficos">&rarr;</a>
+                    @else
+                        <a href="{{ route('previsoes.graficos') }}" 
+                           class="button button-secondary button-icon" 
+                           title="Ir para Gráficos">&rarr;</a>
+                    @endif
                 </div>
-                <h2>Análise descritiva</h2>
+
+                <h2>Análise descritiva - {{ $selectedCommodity->nome ?? 'Geral' }}</h2>
+                
                 <a href="{{ route('home') }}" class="button button-secondary button-icon" title="Voltar para Home">&times;</a>
             </div>
             

@@ -56,18 +56,59 @@
         .profile-info span { color: var(--gray-500); font-size: 0.95rem; }
         .top-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
         .button {
-            border: none; border-radius: 12px; padding: 0.75rem 1.4rem;
-            font-size: 0.95rem; font-weight: 600; cursor: pointer;
+            border: none;
+            border-radius: 12px;
+            padding: 0.75rem 1.4rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
             transition: transform 0.15s ease, box-shadow 0.15s ease;
-            display: inline-flex; align-items: center; gap: 0.4rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
             text-decoration: none;
-            justify-content: center;
         }
-        .button:hover { transform: translateY(-1px); box-shadow: 0 12px 25px rgba(37, 99, 235, 0.18); }
-        .button-primary { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: var(--white); }
-        .button-outline { background: transparent; color: var(--primary); border: 1px solid rgba(37, 99, 235, 0.4); }
-        .button-secondary { background: var(--white); border: 1px solid var(--gray-300); color: var(--gray-700); }
-        .button[disabled] { opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        .button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 25px rgba(37, 99, 235, 0.18);
+        }
+
+        .button-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: var(--white);
+        }
+
+        .button-outline {
+            background: transparent;
+            color: var(--primary);
+            border: 1px solid rgba(37, 99, 235, 0.4);
+        }
+
+        .button-secondary {
+            background: var(--white);
+            border: 1px solid var(--gray-300);
+            color: var(--gray-700);
+        }
+
+        .button[disabled] {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+            background: var(--gray-100);
+        }
+        
+        .button-icon {
+            padding: 0.6rem 0.8rem;
+            line-height: 1;
+        }
+        
+        .button-secondary:hover {
+             background: var(--gray-50);
+             box-shadow: none;
+             transform: none;
+        }
         
         main.content {
             flex: 1; width: min(1180px, 100%); margin: 0 auto;

@@ -7,7 +7,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
     <style>
-        /* --- Variáveis e Reset (Mantidos do seu padrão) --- */
+        /* --- Variáveis e Reset (Mantidos do padrão) --- */
         :root {
             --gray-50: #f9fafb;
             --gray-100: #f3f4f6;
@@ -148,7 +148,7 @@
         
         .analysis-header .nav-buttons { display: flex; gap: 0.5rem; }
 
-        /* --- GRID DOS GRÁFICOS (ESPECÍFICO DESTA PÁGINA) --- */
+        /* --- GRID DOS GRÁFICOS --- */
         .charts-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -160,20 +160,20 @@
         .chart-wrapper {
             width: 100%;
             position: relative;
-            height: 400px; /* Altura para caber bem os eixos */
+            height: 400px;
             padding: 10px;
         }
 
-        /* --- LEGENDA CUSTOMIZADA (ESTILO DA IMAGEM) --- */
+        /* --- LEGENDA CUSTOMIZADA --- */
         .custom-legend {
-            background-color: #e5e7eb; /* Fundo cinza claro */
+            background-color: #e5e7eb;
             border-radius: 8px;
             padding: 1rem 2rem;
             display: flex;
             justify-content: center;
             gap: 2rem;
             width: fit-content;
-            margin: 0 auto; /* Centralizar horizontalmente */
+            margin: 0 auto;
             margin-top: 1rem;
         }
 
@@ -231,10 +231,28 @@
         <section class="card">
             <div class="analysis-header">
                 <div class="nav-buttons">
-                    <a href="{{ route('forecasts') }}" class="button button-secondary button-icon" title="Voltar">&larr;</a>
-                    <a href="{{ route('previsoes.conclusao') }}" class="button button-secondary button-icon" title="Ir para Conclusão">&rarr;</a>
+                    
+                    {{-- Botão Esquerda (Voltar para Descritivo) --}}
+                    @if(isset($commodityId))
+                        <a href="{{ route('forecasts.show', ['id' => $commodityId]) }}" 
+                           class="button button-secondary button-icon" title="Voltar">&larr;</a>
+                    @else
+                        <a href="{{ route('forecasts') }}" 
+                           class="button button-secondary button-icon" title="Voltar">&larr;</a>
+                    @endif
+
+                    {{-- Botão Direita (Ir para Conclusão) --}}
+                    @if(isset($commodityId))
+                        <a href="{{ route('previsoes.conclusao.show', ['id' => $commodityId]) }}" 
+                           class="button button-secondary button-icon" title="Ir para Conclusão">&rarr;</a>
+                    @else
+                        <a href="{{ route('previsoes.conclusao') }}" 
+                           class="button button-secondary button-icon" title="Ir para Conclusão">&rarr;</a>
+                    @endif
                 </div>
                 
+                <h2>Gráficos de Estabilidade</h2>
+
                 <a href="{{ route('home') }}" class="button button-secondary button-icon" style="font-size: 1.2rem; line-height: 0.8;" title="Fechar">&times;</a>
             </div>
 
@@ -275,7 +293,7 @@
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { display: false }, // Oculta legenda padrão pois fizemos HTML customizado
+                legend: { display: false }, 
                 tooltip: {
                     callbacks: {
                         label: function(context) {
@@ -311,8 +329,7 @@
         // --- Gráfico 1: Estabilidade Econômica ---
         const ctxEcon = document.getElementById('chartEconomic').getContext('2d');
         
-        // Ajuste das opções específicas para o título do eixo X
-        const optionsEcon = JSON.parse(JSON.stringify(commonOptions)); // Clone simples
+        const optionsEcon = JSON.parse(JSON.stringify(commonOptions)); 
         optionsEcon.scales.x.title = {
             display: true,
             text: 'Estabilidade Econômica',
@@ -326,17 +343,15 @@
             data: {
                 datasets: [
                     {
-                        // Brasil (Verde - Alta Estabilidade na img da esq)
                         label: 'Brasil',
                         data: [{x: 5, y: 17.8, country: 'Brasil'}],
-                        pointStyle: 'crossRot', // Faz o X
+                        pointStyle: 'crossRot',
                         pointRadius: 8,
                         pointBorderWidth: 4,
                         borderColor: '#22c55e',
                         backgroundColor: '#22c55e'
                     },
                     {
-                        // Indonésia (Amarelo - Média Estabilidade)
                         label: 'Indonésia',
                         data: [{x: 3, y: 15.3, country: 'Indonésia'}],
                         pointStyle: 'crossRot',
@@ -346,7 +361,6 @@
                         backgroundColor: '#eab308'
                     },
                     {
-                        // Costa do Marfim (Vermelho - Baixa Estabilidade)
                         label: 'Costa do Marfim',
                         data: [{x: 1, y: 14.8, country: 'Costa do Marfim'}],
                         pointStyle: 'crossRot',
@@ -377,8 +391,6 @@
             data: {
                 datasets: [
                     {
-                        // Brasil (Verde - Baixa Estabilidade Climática na img da dir?)
-                        // NOTA: Na imagem da direita, o X Verde está no 1 (baixo) mas alto preço.
                         label: 'Brasil',
                         data: [{x: 1.2, y: 17.8, country: 'Brasil'}],
                         pointStyle: 'crossRot',
@@ -388,7 +400,6 @@
                         backgroundColor: '#22c55e'
                     },
                     {
-                        // Indonésia (Amarelo - Média)
                         label: 'Indonésia',
                         data: [{x: 3, y: 15.3, country: 'Indonésia'}],
                         pointStyle: 'crossRot',
@@ -398,7 +409,6 @@
                         backgroundColor: '#eab308'
                     },
                     {
-                        // Costa do Marfim (Vermelho - Média)
                         label: 'Costa do Marfim',
                         data: [{x: 3, y: 14.8, country: 'Costa do Marfim'}],
                         pointStyle: 'crossRot',

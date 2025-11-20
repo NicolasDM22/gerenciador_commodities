@@ -9,36 +9,40 @@ use Illuminate\Support\Str;
 
 class PrevisoesController extends Controller
 {
-    public function index(Request $request)
+    /**
+     * Método principal (Dashboard/Descritivo)
+     * Rota: /previsoes ou /previsoes/{id}
+     */
+    public function index(Request $request, $id = null)
     {
-        $userId = $request->session()->get('auth_user_id');
-        $isadmin = (bool) ($request->session()->get('auth_is_admin') ?? false);
-        if (!$userId) {
-            return redirect()->route('login');
-        }
-
-        $user = DB::table('users')
-            ->select('id', 'usuario', 'nome', 'email', 'foto_blob', 'foto_mime', 'is_admin', 'created_at', 'updated_at')
-            ->where('id', $userId)
-            ->first();
-
+        // 1. Autenticação e Dados do Usuário
+        $user = $this->getAuthenticatedUser($request);
         if (!$user) {
             return redirect()->route('login');
         }
-
         $avatarUrl = $this->resolveAvatarUrl($user);
-
-        $commodityId = $request->query('commodity_id');
 
         $commodity = null;
 
-        if ($commodityId) {
+        // 2. Lógica de Seleção da Commodity
+        
+        // Prioridade 1: ID passado na Rota (/previsoes/1)
+        if ($id) {
             $commodity = DB::table('commodities')
                 ->select('id', 'nome', 'categoria', 'unidade')
-                ->where('id', $commodityId)
+                ->where('id', $id)
                 ->first();
         }
 
+        // Prioridade 2: ID passado via Query String (/previsoes?commodity_id=1)
+        if (!$commodity && $request->query('commodity_id')) {
+             $commodity = DB::table('commodities')
+                ->select('id', 'nome', 'categoria', 'unidade')
+                ->where('id', $request->query('commodity_id'))
+                ->first();
+        }
+
+        // Prioridade 3: Última commodity com métricas cadastradas (Modo Padrão)
         if (!$commodity) {
             $latestMetrics = DB::table('commodity_descriptive_metrics as metrics')
                 ->select('metrics.commodity_id')
@@ -55,20 +59,22 @@ class PrevisoesController extends Controller
             }
         }
 
+        // Prioridade 4: Fallback (Primeira em ordem alfabética)
         if (!$commodity) {
             $commodity = DB::table('commodities')
                 ->select('id', 'nome', 'categoria', 'unidade')
                 ->orderBy('nome')
                 ->first();
         }
-        
-        if(!$isadmin = (bool) ($user->is_admin ?? false)){
-            if (!$commodity) {
+
+        // Se ainda assim não achar nada, erro.
+        if (!$commodity) {
             return redirect()->route('home')->withErrors('Nenhuma commodity cadastrada para exibir.');
         }
         }
         
 
+        // 3. Buscar Dados Descritivos (Card Principal)
         $descriptiveData = DB::table('commodity_descriptive_metrics as metrics')
             ->select(
                 'metrics.volume_compra_ton',
@@ -85,6 +91,7 @@ class PrevisoesController extends Controller
             ->orderByDesc('metrics.created_at')
             ->first();
 
+        // Objeto vazio para evitar erros na View se não houver métricas
         if (!$descriptiveData) {
             $descriptiveData = (object) [
                 'materia_prima' => $commodity->nome,
@@ -96,25 +103,20 @@ class PrevisoesController extends Controller
             ];
         }
 
+        // 4. Buscar Previsões Nacionais (Tabela 1)
         $nationalForecasts = DB::table('commodity_national_forecasts')
             ->select('referencia_mes', 'preco_medio', 'variacao_perc')
             ->where('commodity_id', $commodity->id)
             ->orderBy('referencia_mes')
             ->get()
             ->map(function ($forecast) {
-                if ($forecast->referencia_mes) {
-                    $forecast->mes_ano = Str::ucfirst(
-                        Carbon::parse($forecast->referencia_mes)
-                            ->locale('pt_BR')
-                            ->translatedFormat('F/Y')
-                    );
-                } else {
-                    $forecast->mes_ano = null;
-                }
-
+                $forecast->mes_ano = $forecast->referencia_mes 
+                    ? Str::ucfirst(Carbon::parse($forecast->referencia_mes)->locale('pt_BR')->translatedFormat('F/Y')) 
+                    : '-';
                 return $forecast;
             });
 
+        // 5. Buscar Comparativos Regionais (Tabela 2)
         $regionalComparisons = DB::table('commodity_regional_comparisons')
             ->select('pais', 'preco_medio', 'logistica_perc', 'risco', 'estabilidade', 'ranking')
             ->where('commodity_id', $commodity->id)
@@ -127,57 +129,74 @@ class PrevisoesController extends Controller
             'descriptiveData' => $descriptiveData,
             'nationalForecasts' => $nationalForecasts,
             'regionalComparisons' => $regionalComparisons,
-            'selectedCommodity' => $commodity,
+            'selectedCommodity' => $commodity, // Passamos o objeto completo para pegar o ID na View
         ]);
     }
 
-    public function graficos(Request $request)
+    /**
+     * Tela de Gráficos
+     * Rota: /previsoes/graficos ou /previsoes/graficos/{id}
+     */
+    public function graficos(Request $request, $id = null)
     {
-        $userId = $request->session()->get('auth_user_id');
-        if (!$userId) {
-            return redirect()->route('login');
-        }
-
-        $user = DB::table('users')
-            ->select('id', 'usuario', 'nome', 'email', 'foto_blob', 'foto_mime', 'is_admin', 'created_at', 'updated_at')
-            ->where('id', $userId)
-            ->first();
+        $user = $this->getAuthenticatedUser($request);
         if (!$user) {
             return redirect()->route('login');
         }
-
         $avatarUrl = $this->resolveAvatarUrl($user);
 
-        // TODO: Adicionar aqui a logica para buscar os dados especificos para os graficos
+        // Se o ID vier nulo, tentamos pegar da query string ou deixamos nulo (modo genérico)
+        $commodityId = $id ?? $request->query('commodity_id');
+
+        // TODO: Adicionar lógica para buscar dados reais do gráfico filtrando por $commodityId
+        // Ex: $chartData = DB::table('commodity_charts')->where('commodity_id', $commodityId)->get();
+
         return view('graficos', [
             'user' => $user,
             'avatarUrl' => $avatarUrl,
+            'commodityId' => $commodityId, // Fundamental para os botões de navegação
         ]);
     }
 
-    public function conclusao(Request $request)
+    /**
+     * Tela de Conclusão
+     * Rota: /previsoes/conclusao ou /previsoes/conclusao/{id}
+     */
+    public function conclusao(Request $request, $id = null)
     {
-        $userId = $request->session()->get('auth_user_id');
-        if (!$userId) {
-            return redirect()->route('login');
-        }
-
-        $user = DB::table('users')
-            ->select('id', 'usuario', 'nome', 'email', 'foto_blob', 'foto_mime', 'is_admin', 'created_at', 'updated_at')
-            ->where('id', $userId)
-            ->first();
+        $user = $this->getAuthenticatedUser($request);
         if (!$user) {
             return redirect()->route('login');
         }
-
         $avatarUrl = $this->resolveAvatarUrl($user);
 
-        // TODO: Adicionar aqui a logica para buscar os dados especificos para a conclusao
+        $commodityId = $id ?? $request->query('commodity_id');
+
+        // TODO: Adicionar lógica para buscar texto de conclusão e dados do gráfico final pelo $commodityId
 
         return view('conclusao', [
             'user' => $user,
             'avatarUrl' => $avatarUrl,
+            'commodityId' => $commodityId, // Fundamental para os botões de navegação
         ]);
     }
-}
 
+    // --- MÉTODOS AUXILIARES PRIVADOS ---
+
+    /**
+     * Recupera o usuário autenticado na sessão personalizada
+     */
+    private function getAuthenticatedUser(Request $request)
+    {
+        $userId = $request->session()->get('auth_user_id');
+
+        if (!$userId) {
+            return null;
+        }
+
+        return DB::table('users')
+            ->select('id', 'usuario', 'nome', 'email', 'foto_blob', 'foto_mime', 'is_admin', 'created_at', 'updated_at')
+            ->where('id', $userId)
+            ->first();
+    }
+}
