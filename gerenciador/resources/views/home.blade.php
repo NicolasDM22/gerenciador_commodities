@@ -298,7 +298,7 @@
         </div>
 
         @if($isAdmin)
-        <div class="card" id="javaWsCard">
+        <div class="card" id="javaWsCard" data-ws-url="{{ config('services.java_ws.url', '') }}">
             <h2>Servidor Java (WebSocket)</h2>
             <p class="ws-status">
                 <span class="ws-indicator" id="javaWsIndicator"></span>
@@ -540,8 +540,8 @@
         }
 
         // --- DATA TABLE ---
-    const commoditiesTable = document.getElementById('commoditiesTables');
-        if(commoditiesTable && window.jQuery && $.fn.DataTable){
+        const commoditiesTable = document.getElementById('commoditiesTable');
+        if (commoditiesTable && window.jQuery && $.fn.DataTable) {
             $(commoditiesTable).DataTable({
                 pageLength: 10,
                 order: [[0, 'asc']],
@@ -550,8 +550,30 @@
                 }
             });
         }
-        // --- WEBSOCKET (Lógica protegida pelo isAdmin) ---
+
+        // --- WEBSOCKET (Logica protegida pelo isAdmin) ---
         @if($isAdmin)
+        const wsCard = document.getElementById('javaWsCard');
+        const formatWsUrl = (raw) => {
+            if (!raw || typeof raw !== 'string') return '';
+            const trimmed = raw.trim();
+            if (!trimmed) return '';
+            if (trimmed.startsWith('ws://') || trimmed.startsWith('wss://')) return trimmed;
+            if (trimmed.startsWith('/')) {
+                const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                return `${proto}//${window.location.host}${trimmed}`;
+            }
+            return trimmed;
+        };
+        const resolveWsUrl = () => {
+            const fromDataset = formatWsUrl(wsCard?.dataset?.wsUrl);
+            if (fromDataset) return fromDataset;
+            const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const hostname = window.location.hostname || 'localhost';
+            const fallbackPort = wsCard?.dataset?.wsPort || 3000;
+            return `${proto}//${hostname}:${fallbackPort}`;
+        };
+
         const wsIndicator = document.getElementById('javaWsIndicator');
         const wsStatus = document.getElementById('javaWsStatus');
         const wsConnectBtn = document.getElementById('javaWsConnect');
@@ -567,112 +589,42 @@
             wsLog.scrollTop = wsLog.scrollHeight;
         };
 
-
-        const toggleWsControls = (isConnected) => {
-            wsIndicator?.classList.toggle('active', isConnected);
-            if (wsStatus) wsStatus.textContent = isConnected ? 'Conectado' : 'Desconectado';
-            wsConnectBtn.disabled = isConnected;
-            wsDisconnectBtn.disabled = !isConnected;
-            wsSendExitBtn.disabled = !isConnected;
-            wsSendBtn.disabled = !isConnected;
-            wsMessageInput.disabled = !isConnected;
-            if (!isConnected) wsMessageInput.value = '';
-
         const toggleWsControls = (conn) => {
             wsIndicator?.classList.toggle('active', conn);
-            if(wsStatus) wsStatus.textContent = conn ? 'Conectado' : 'Desconectado';
-            if(wsConnectBtn) wsConnectBtn.disabled = conn;
-            if(wsDisconnectBtn) wsDisconnectBtn.disabled = !conn;
-            if(wsSendExitBtn) wsSendExitBtn.disabled = !conn;
-            if(wsSendBtn) wsSendBtn.disabled = !conn;
-            if(wsMessageInput) { wsMessageInput.disabled = !conn; if(!conn) wsMessageInput.value = ''; }
-
+            if (wsStatus) wsStatus.textContent = conn ? 'Conectado' : 'Desconectado';
+            if (wsConnectBtn) wsConnectBtn.disabled = conn;
+            if (wsDisconnectBtn) wsDisconnectBtn.disabled = !conn;
+            if (wsSendExitBtn) wsSendExitBtn.disabled = !conn;
+            if (wsSendBtn) wsSendBtn.disabled = !conn;
+            if (wsMessageInput) {
+                wsMessageInput.disabled = !conn;
+                if (!conn) wsMessageInput.value = '';
+            }
         };
         let javaWs = null;
 
-
-        const notifyHomeView = () => {
-            if (!javaWs || javaWs.readyState !== WebSocket.OPEN) return;
-            const payload = JSON.stringify({ tipo: 'info', mensagem: 'Usuario abriu a tela home' });
-            appendLog(`Informando o servidor: ${payload}`);
-            javaWs.send(payload);
-        };
-
         const connectToJavaWs = () => {
             if (javaWs && javaWs.readyState === WebSocket.OPEN) return;
-            const url = resolveWsUrl();
-            appendLog(`Tentando conectar em ${url}`);
-
-
-        const connectToJavaWs = () => {
-            if (javaWs && javaWs.readyState === WebSocket.OPEN) return;
-
+            const targetUrl = resolveWsUrl();
+            appendLog(`Conectando em ${targetUrl} ...`);
             try {
-                javaWs = new WebSocket("ws://localhost:3000");
-            } catch (e) { appendLog(`Erro WS: ${e.message}`); return; }
-            
+                javaWs = new WebSocket(targetUrl);
+            } catch (e) {
+                appendLog(`Erro WS: ${e.message}`);
+                return;
+            }
+
             javaWs.addEventListener('open', () => {
-
-                appendLog('Conexao estabelecida com sucesso.');
+                appendLog('Conectado.');
                 toggleWsControls(true);
-                notifyHomeView();
+                javaWs.send(JSON.stringify({ tipo: 'info', mensagem: 'Home aberta' }));
             });
-
-            javaWs.addEventListener('message', (event) => {
-                appendLog(`Mensagem recebida: ${event.data}`);
-            });
-
-            javaWs.addEventListener('close', (event) => {
-                appendLog(`Conexao finalizada (code=${event.code}, reason=${event.reason || 'n/a'}).`);
+            javaWs.addEventListener('message', (event) => appendLog(`Recebido: ${event.data}`));
+            javaWs.addEventListener('close', () => {
+                appendLog('Fechado.');
                 toggleWsControls(false);
                 javaWs = null;
             });
-
-            javaWs.addEventListener('error', () => appendLog('Erro no WebSocket.'));
-        };
-
-        wsConnectBtn.addEventListener('click', connectToJavaWs);
-        connectToJavaWs(); // auto conectar
-
-        wsDisconnectBtn.addEventListener('click', () => {
-            if (!javaWs || javaWs.readyState !== WebSocket.OPEN) return;
-            appendLog('Encerrando conexao a pedido do usuario.');
-            javaWs.close(1000, 'Cliente encerrou a conexao');
-        });
-
-        wsSendExitBtn.addEventListener('click', () => {
-            if (!javaWs || javaWs.readyState !== WebSocket.OPEN) return appendLog('Nao ha conexao ativa.');
-            const payload = JSON.stringify({ tipo: 'pedidoDeSair' });
-            appendLog(`Enviando pedido de sair: ${payload}`);
-            javaWs.send(payload);
-        });
-
-        wsSendBtn.addEventListener('click', () => {
-            if (!javaWs || javaWs.readyState !== WebSocket.OPEN) return appendLog('Nao ha conexao ativa.');
-            const raw = wsMessageInput?.value.trim();
-            if (!raw) return appendLog('Mensagem vazia.');
-            let toSend = raw;
-            try {
-                toSend = JSON.stringify(JSON.parse(raw));
-            } catch {
-                appendLog('JSON invalido.');
-                return;
-            }
-            appendLog(`Enviando: ${toSend}`);
-            javaWs.send(toSend);
-            wsMessageInput.value = '';
-        });
-
-        window.addEventListener('beforeunload', () => {
-            if (javaWs && javaWs.readyState === WebSocket.OPEN) {
-                javaWs.close(1001, 'Pagina recarregada ou fechada');
-            }
-
-                appendLog('Conectado.'); toggleWsControls(true);
-                javaWs.send(JSON.stringify({ tipo: 'info', mensagem: 'Home aberta' }));
-            });
-            javaWs.addEventListener('message', e => appendLog(`Recebido: ${e.data}`));
-            javaWs.addEventListener('close', () => { appendLog('Fechado.'); toggleWsControls(false); javaWs = null; });
             javaWs.addEventListener('error', () => appendLog('Erro WS.'));
         };
 
@@ -682,10 +634,13 @@
         wsSendExitBtn?.addEventListener('click', () => javaWs?.send(JSON.stringify({ tipo: 'pedidoDeSair' })));
         wsSendBtn?.addEventListener('click', () => {
             const val = wsMessageInput?.value.trim();
-            if(!val) return;
-            try { javaWs?.send(JSON.stringify(JSON.parse(val))); wsMessageInput.value = ''; } 
-            catch { appendLog('JSON Inválido'); }
-
+            if (!val) return;
+            try {
+                javaWs?.send(JSON.stringify(JSON.parse(val)));
+                wsMessageInput.value = '';
+            } catch {
+                appendLog('JSON invalido');
+            }
         });
         window.addEventListener('beforeunload', () => javaWs?.close(1001));
         @endif

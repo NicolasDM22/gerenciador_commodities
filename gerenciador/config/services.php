@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'java_ws' => [
+        'url' => env('JAVA_WS_URL', ''),
+    ],
+
 ];
