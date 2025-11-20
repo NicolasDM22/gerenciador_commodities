@@ -109,7 +109,7 @@
             padding: 2rem clamp(1rem, 2vw, 2.5rem) 3rem; display: grid; gap: 1.75rem;
         }
 
-        .alert { padding: 1rem 1.25rem; border-radius: 16px; font-size: 0.95rem; margin-bottom: 1rem; }
+        .alert { padding: 1rem 1.25rem; border-radius: 16px; font-size: 0.95rem;}
         .alert-success { background: rgba(5, 150, 105, 0.12); color: var(--success); }
         .alert-danger { background: rgba(220, 38, 38, 0.12); color: var(--danger); }
         .alert-danger ul { margin: 0.75rem 0 0 1.2rem; padding: 0; }
@@ -337,14 +337,34 @@
 
     $(document).ready(function() {
         // 1. Inicializar DataTables
+        $(document).ready(function() {
         $('#commoditiesTable').DataTable({
-            language: {
-                url: 'https://cdn.datatables.net/plug-ins/1.13.8/i18n/pt-BR.json'
-            },
             pageLength: 5,
-            lengthMenu: [5, 10, 25],
-            responsive: true
+            lengthMenu: [5, 10, 25, 50],
+            responsive: true,
+            language: {
+                search: "Filtrar:", 
+            
+                searchPlaceholder: "Buscar registros...",
+                
+                // Outras traduções para manter em Português
+                lengthMenu: "Exibir _MENU_ resultados por página",
+                zeroRecords: "Nenhum registro encontrado",
+                info: "Mostrando _START_ até _END_ de _TOTAL_ registro(s)",
+                infoEmpty: "Não há registros disponíveis",
+                infoFiltered: "(filtrado de _MAX_ registros no total)",
+                paginate: {
+                    first: "Primeiro",
+                    last: "Último",
+                    next: "Próximo",
+                    previous: "Anterior"
+                },
+                loadingRecords: "Carregando...",
+                processing: "Processando...",
+                emptyTable: "Nenhum registro encontrado"
+            }
         });
+    });
     });
 
     document.addEventListener('DOMContentLoaded', function() {
