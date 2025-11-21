@@ -342,9 +342,13 @@
             pageLength: 5,
             lengthMenu: [5, 10, 25, 50],
             responsive: true,
+            // Aqui começa a configuração de idioma personalizada
             language: {
+                // 'search' é o texto que fica ANTES da caixa (Label)
+                // Deixe uma string vazia "" se quiser esconder a palavra "Pesquisar"
                 search: "Filtrar:", 
-            
+                
+                // 'searchPlaceholder' é o texto DENTRO da caixa
                 searchPlaceholder: "Buscar registros...",
                 
                 // Outras traduções para manter em Português
