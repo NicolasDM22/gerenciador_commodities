@@ -259,7 +259,7 @@
                         <tr>
                             <td>{{ $analysis->id ?? '-' }}</td>
                             <td>{{ $analysis->commodity ?? 'N/A' }}</td>
-                            <td>{{ $analysis->date ?? '-' }}</td>
+                            <td>{{ $analysis->data_previsao ?? '-' }}</td>
                             <td>
                                 <a href="{{ $analysis->url ?? '#' }}" style="color: var(--link-color); font-weight: 600; text-decoration: none;">
                                     Ver Detalhes
