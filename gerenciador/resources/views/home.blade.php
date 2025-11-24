@@ -109,10 +109,67 @@
             padding: 2rem clamp(1rem, 2vw, 2.5rem) 3rem; display: grid; gap: 1.75rem;
         }
 
-        .alert { padding: 1rem 1.25rem; border-radius: 16px; font-size: 0.95rem;}
-        .alert-success { background: rgba(5, 150, 105, 0.12); color: var(--success); }
-        .alert-danger { background: rgba(220, 38, 38, 0.12); color: var(--danger); }
-        .alert-danger ul { margin: 0.75rem 0 0 1.2rem; padding: 0; }
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            pointer-events: none;
+            width: auto;
+        }
+
+        .toast-notification {
+            background: var(--white);
+            min-width: 300px;
+            width: fit-content;
+            max-width: 90vw;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+            animation: slideDown 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            pointer-events: auto;
+            border-left: 5px solid var(--gray-500);
+        }
+
+        .toast-success { border-left-color: var(--success); }
+        .toast-error { border-left-color: var(--danger); }
+
+        .toast-content { 
+            font-size: 0.95rem; 
+            color: var(--gray-700); 
+            font-weight: 500;
+            white-space: nowrap; 
+        }
+
+        .toast-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--gray-400); }
+        .toast-close:hover { color: var(--gray-600); }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeOut {
+            to {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+        }
 
         .card {
             background: var(--white); border-radius: 16px;
@@ -171,45 +228,21 @@
 </head>
 <body>
 
+<div id="toast-container" class="toast-container"></div>
+
 <div class="page">
-    <header class="top-bar">
-        <div class="profile">
-            <img class="avatar" src="{{ $avatarUrl ?? 'https://ui-avatars.com/api/?name=User' }}" alt="Avatar">
-            <div class="profile-info">
-                <strong>{{ $user->nome ?? $user->usuario }}</strong>
-                <span>{{ $user->email ?? 'Sem e-mail' }}</span>
-            </div>
-        </div>
-        <div class="top-actions">
-            @if($isAdmin)
-                <a href="{{ route('forecasts') }}" class="button button-secondary">Debug Previsões</a>
-            @endif
-            <button class="button button-outline" id="btnOpenFormsModal" type="button">Nova análise</button>
-            
-            <button class="button button-outline" id="btnOpenProfileModal" type="button">Atualizar perfil</button>
-            
-            <form action="{{ route('logout') }}" method="POST">
-                @csrf
-                <button class="button button-primary" type="submit">Sair</button>
-            </form>
-        </div>
-    </header>
+    <x-topbar :user="$user" :isAdmin="$isAdmin ?? false">
+        
+        @if($isAdmin ?? false)
+            <a href="{{ route('forecasts') }}" class="button button-secondary">Debug Previsões</a>
+        @endif
+        
+        <button class="button button-outline" id="btnOpenFormsModal" type="button">Nova análise</button>
+        <button class="button button-outline" id="btnOpenProfileModal" type="button">Atualizar perfil</button>
+
+    </x-topbar>
 
     <main class="content">
-        @if (session('status'))
-            <div class="alert alert-success">{{ session('status') }}</div>
-        @endif
-        @if ($errors->any())
-            <div class="alert alert-danger">
-                <strong>Ops! Algo deu errado:</strong>
-                <ul>
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
         <div class="card">
             <h2>Visualizar análises</h2>
             <table id="commoditiesTable" class="display" style="width:100%">
@@ -234,7 +267,7 @@
                             </td>
                         </tr>
                     @empty
-                        {{-- DataTables lida com tabela vazia, mas deixamos vazio aqui --}}
+                        {{-- DataTables lida com tabela vazia --}}
                     @endforelse
                 </tbody>
             </table>
@@ -342,27 +375,15 @@
             pageLength: 5,
             lengthMenu: [5, 10, 25, 50],
             responsive: true,
-            // Aqui começa a configuração de idioma personalizada
             language: {
-                // 'search' é o texto que fica ANTES da caixa (Label)
-                // Deixe uma string vazia "" se quiser esconder a palavra "Pesquisar"
                 search: "Filtrar:", 
-                
-                // 'searchPlaceholder' é o texto DENTRO da caixa
                 searchPlaceholder: "Buscar registros...",
-                
-                // Outras traduções para manter em Português
                 lengthMenu: "Exibir _MENU_ resultados por página",
                 zeroRecords: "Nenhum registro encontrado",
                 info: "Mostrando _START_ até _END_ de _TOTAL_ registro(s)",
                 infoEmpty: "Não há registros disponíveis",
                 infoFiltered: "(filtrado de _MAX_ registros no total)",
-                paginate: {
-                    first: "Primeiro",
-                    last: "Último",
-                    next: "Próximo",
-                    previous: "Anterior"
-                },
+                paginate: { first: "Primeiro", last: "Último", next: "Próximo", previous: "Anterior" },
                 loadingRecords: "Carregando...",
                 processing: "Processando...",
                 emptyTable: "Nenhum registro encontrado"
@@ -392,14 +413,13 @@
             });
         }
 
-        // 3. Gráfico RESTAURADO (Estilo Laranja Original)
+        // 3. Gráfico RESTAURADO
         const chartCanvas = document.getElementById('priceHistoryChart');
 
         if (chartCanvas && typeof Chart !== 'undefined') {
             
             let dataToUse = chartRawData;
             if (!dataToUse || !dataToUse.labels) {
-                // Fallback apenas para segurança, caso controller falhe
                 dataToUse = {
                     labels: ['Jan', 'Fev', 'Mar', 'Abr'],
                     prices: [50, 52, 51, 54]
@@ -414,13 +434,13 @@
                     datasets: [{
                         label: 'Preço Médio (R$/kg)',
                         data: dataToUse.prices || [],
-                        borderColor: '#F97316', // Laranja Original
-                        backgroundColor: 'rgba(249, 115, 22, 0.1)', // Fundo Laranja Original
+                        borderColor: '#F97316', 
+                        backgroundColor: 'rgba(249, 115, 22, 0.1)', 
                         borderWidth: 2,
-                        pointBackgroundColor: '#F97316', // Ponto Laranja Original
+                        pointBackgroundColor: '#F97316', 
                         pointRadius: 4,
                         pointHoverRadius: 6,
-                        tension: 0.1 // Tensão Original (mais "reto")
+                        tension: 0.1 
                     }]
                 },
                 options: {
@@ -447,7 +467,7 @@
             });
         }
 
-        // 4. WebSocket (Apenas Admin) - Conexão Fixa 3000
+        // 4. WebSocket (Apenas Admin)
         @if($isAdmin)
             const wsLog = document.getElementById('javaWsLog');
             const statusText = document.getElementById('javaWsStatus');
@@ -472,7 +492,7 @@
             };
 
             let javaWs = null;
-            const WS_URL = "ws://localhost:3000"; // Fixo para evitar erros
+            const WS_URL = "ws://localhost:3000"; 
 
             const connectWs = () => {
                 if (javaWs && javaWs.readyState === WebSocket.OPEN) return;
@@ -523,10 +543,46 @@
                 if(javaWs) javaWs.send(JSON.stringify({ tipo: 'pedidoDeSair' }));
             });
 
-            // Tenta conectar ao carregar a página
             connectWs();
         @endif
     });
+
+    // Função JS para criar o HTML do Toast
+    function showToast(message, type = 'default') {
+        const container = document.getElementById('toast-container');
+        if(!container) return; // Segurança
+
+        const toast = document.createElement('div');
+        toast.className = `toast-notification toast-${type}`;
+        
+        let icon = '';
+        if(type === 'success') icon = '✅ ';
+        if(type === 'error') icon = '❌ ';
+
+        toast.innerHTML = `
+            <div class="toast-content">${icon}${message}</div>
+            <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
+        `;
+
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.animation = 'fadeOut 0.3s forwards';
+            toast.addEventListener('animationend', () => {
+                toast.remove();
+            });
+        }, 5000);
+    }
+
+    @if (session('status'))
+        showToast("{{ session('status') }}", 'success');
+    @endif
+
+    @if ($errors->any())
+        @foreach ($errors->all() as $error)
+            showToast("{{ $error }}", 'error');
+        @endforeach
+    @endif
 </script>
 
 @include('forms')

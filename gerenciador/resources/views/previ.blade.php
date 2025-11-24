@@ -307,21 +307,7 @@
     </head>
 <body>
 <div class="page">
-    <header class="top-bar">
-        <div class="profile">
-            <img class="avatar" src="{{ $avatarUrl }}" alt="Avatar de {{ $user->nome ?? $user->usuario }}">
-            <div class="profile-info">
-                <strong>{{ $user->nome ?? $user->usuario }}</strong>
-                <span>{{ $user->email ?? 'E-mail não informado' }}</span>
-            </div>
-        </div>
-        <div class="top-actions">
-            <form action="{{ route('logout') }}" method="POST">
-                @csrf
-                <button class="button button-primary" type="submit">Sair</button>
-            </form>
-        </div>
-    </header>
+    <x-topbar :user="$user" />
 
     <main class="content">
         @if (session('status'))

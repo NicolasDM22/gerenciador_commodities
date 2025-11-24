@@ -207,21 +207,7 @@
 </head>
 <body>
 <div class="page">
-    <header class="top-bar">
-        <div class="profile">
-            <img class="avatar" src="{{ $avatarUrl ?? 'https://ui-avatars.com/api/?name=User&background=random' }}" alt="Avatar">
-            <div class="profile-info">
-                <strong>{{ $user->nome ?? 'Usuário' }}</strong>
-                <span>{{ $user->email ?? 'Email' }}</span>
-            </div>
-        </div>
-        <div class="top-actions">
-            <form action="{{ route('logout') }}" method="POST">
-                @csrf
-                <button class="button button-primary" type="submit">Sair</button>
-            </form>
-        </div>
-    </header>
+    <x-topbar :user="$user" />
 
     <main class="content">
         @if (session('status'))

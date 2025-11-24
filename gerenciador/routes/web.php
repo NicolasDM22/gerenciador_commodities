@@ -28,6 +28,7 @@ Route::group([], function () {
     
     Route::get('/home', [HomeController::class, 'index'])->name('home');
     Route::post('/profile', [HomeController::class, 'update'])->name('profile.update');
+    Route::post('/profile', [ProfileModalController::class, 'update'])->name('profile.update');
     
     // Chat de Suporte
     Route::post('/support-chat/open', [SupportChatController::class, 'open'])->name('support-chat.open');
