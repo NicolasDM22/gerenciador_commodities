@@ -370,7 +370,6 @@
 
     $(document).ready(function() {
         // 1. Inicializar DataTables
-        $(document).ready(function() {
         $('#commoditiesTable').DataTable({
             pageLength: 5,
             lengthMenu: [5, 10, 25, 50],
@@ -390,7 +389,6 @@
             }
         });
     });
-    });
 
     document.addEventListener('DOMContentLoaded', function() {
         
@@ -402,7 +400,7 @@
         document.getElementById('btnCloseProfileModal')?.addEventListener('click', () => toggleProfile(false));
         document.getElementById('btnCancelProfileModal')?.addEventListener('click', () => toggleProfile(false));
 
-        // Conexão com o Modal do Forms (que está no include abaixo)
+        // Conexão com o Modal do Forms
         const btnOpenForms = document.getElementById('btnOpenFormsModal');
         const formsModal = document.getElementById('formsModal'); 
         
@@ -509,9 +507,25 @@
                     };
 
                     javaWs.onmessage = (e) => {
-                        appendLog(`Recebido: ${e.data}`);
-                    };
+                    // Mantém o log visual no card
+                    appendLog(`Recebido: ${e.data}`);
 
+                    try {
+                        // Tenta ler os dados como JSON
+                        const data = JSON.parse(e.data);
+
+                        // Verifica se é a mensagem de desligamento
+                        if (data.tipo === "desligamento") {
+                            // Exibe o alerta vermelho com a mensagem do servidor
+                            showToast(data.msg, 'error');
+                        }
+                    } catch (err) {
+                        // Se a mensagem não for um JSON válido, ignora o erro silenciosamente
+                        // ou apenas trata como texto comum
+                    }
+                };
+
+                    // --- MUDANÇA AQUI: Toast no evento onclose ---
                     javaWs.onclose = (e) => {
                         appendLog(`Conexão fechada (Código: ${e.code})`);
                         updateWsUI(false);
@@ -550,7 +564,7 @@
     // Função JS para criar o HTML do Toast
     function showToast(message, type = 'default') {
         const container = document.getElementById('toast-container');
-        if(!container) return; // Segurança
+        if(!container) return; 
 
         const toast = document.createElement('div');
         toast.className = `toast-notification toast-${type}`;
