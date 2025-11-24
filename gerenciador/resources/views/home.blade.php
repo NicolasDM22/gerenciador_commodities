@@ -189,20 +189,6 @@
         /* CHART */
         .chart-wrapper { position: relative; min-height: 350px; width: 100%; }
 
-        /* WEBSOCKET ADMIN PANEL */
-        .ws-controls { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 1rem 0; }
-        .ws-field { display: flex; flex: 1; gap: 0.5rem; align-items: center; margin-top: 1rem; }
-        .ws-field input { flex: 1; padding: 0.6rem 0.8rem; border-radius: 10px; border: 1px solid var(--gray-300); }
-        .ws-log {
-            background: var(--gray-50); border-radius: 12px; padding: 1rem;
-            font-family: monospace; font-size: 0.85rem;
-            max-height: 200px; overflow-y: auto;
-            border: 1px solid var(--gray-200); white-space: pre-wrap; margin-top: 1rem;
-        }
-        .ws-status { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600; color: var(--gray-600); }
-        .ws-indicator { width: 10px; height: 10px; border-radius: 50%; background: var(--danger); transition: background 0.2s; }
-        .ws-indicator.active { background: var(--success); }
-
         /* MODAL */
         .modal {
             position: fixed; inset: 0; background: rgba(17, 24, 39, 0.5);
@@ -281,26 +267,7 @@
         </div>
 
         @if($isAdmin)
-        <div class="card" id="javaWsCard">
-            <h2>Servidor Java (WebSocket)</h2>
-            <p class="ws-status">
-                <span class="ws-indicator" id="javaWsIndicator"></span>
-                <span id="javaWsStatus">Desconectado</span>
-            </p>
-            
-            <div class="ws-controls">
-                <button class="button button-secondary" type="button" id="javaWsConnect">Conectar</button>
-                <button class="button button-outline" type="button" id="javaWsDisconnect" disabled>Desconectar</button>
-                <button class="button button-outline" type="button" id="javaWsSendExit" disabled>Enviar pedido de sair</button>
-            </div>
-            
-            <div class="ws-field">
-                <input type="text" id="javaWsMessage" placeholder='Mensagem JSON, ex: {"tipo":"echo"}' disabled>
-                <button class="button button-primary" type="button" id="javaWsSend" disabled>Enviar</button>
-            </div>
-            
-            <div class="ws-log" id="javaWsLog">Aguardando conexão...</div>
-        </div>
+            @include('server')
         @endif
 
     </main>
@@ -464,101 +431,6 @@
                 }
             });
         }
-
-        // 4. WebSocket (Apenas Admin)
-        @if($isAdmin)
-            const wsLog = document.getElementById('javaWsLog');
-            const statusText = document.getElementById('javaWsStatus');
-            const indicator = document.getElementById('javaWsIndicator');
-            
-            const appendLog = (msg) => {
-                if(wsLog) {
-                    wsLog.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
-                    wsLog.scrollTop = wsLog.scrollHeight;
-                }
-            };
-
-            const updateWsUI = (connected) => {
-                if(indicator) indicator.classList.toggle('active', connected);
-                if(statusText) statusText.textContent = connected ? 'Conectado' : 'Desconectado';
-                
-                document.getElementById('javaWsConnect').disabled = connected;
-                document.getElementById('javaWsDisconnect').disabled = !connected;
-                document.getElementById('javaWsSend').disabled = !connected;
-                document.getElementById('javaWsMessage').disabled = !connected;
-                document.getElementById('javaWsSendExit').disabled = !connected;
-            };
-
-            let javaWs = null;
-            const WS_URL = "ws://localhost:3000"; 
-
-            const connectWs = () => {
-                if (javaWs && javaWs.readyState === WebSocket.OPEN) return;
-                
-                appendLog(`Tentando conectar em ${WS_URL}...`);
-                
-                try {
-                    javaWs = new WebSocket(WS_URL);
-
-                    javaWs.onopen = () => {
-                        appendLog('Conexão estabelecida!');
-                        updateWsUI(true);
-                        javaWs.send(JSON.stringify({ tipo: 'info', msg: 'Admin Laravel Conectado' }));
-                    };
-
-                    javaWs.onmessage = (e) => {
-                    // Mantém o log visual no card
-                    appendLog(`Recebido: ${e.data}`);
-
-                    try {
-                        // Tenta ler os dados como JSON
-                        const data = JSON.parse(e.data);
-
-                        // Verifica se é a mensagem de desligamento
-                        if (data.tipo === "desligamento") {
-                            // Exibe o alerta vermelho com a mensagem do servidor
-                            showToast(data.msg, 'error');
-                        }
-                    } catch (err) {
-                        // Se a mensagem não for um JSON válido, ignora o erro silenciosamente
-                        // ou apenas trata como texto comum
-                    }
-                };
-
-                    // --- MUDANÇA AQUI: Toast no evento onclose ---
-                    javaWs.onclose = (e) => {
-                        appendLog(`Conexão fechada (Código: ${e.code})`);
-                        updateWsUI(false);
-                        javaWs = null;
-                    };
-
-                    javaWs.onerror = () => {
-                        appendLog('Erro de conexão.');
-                    };
-
-                } catch (err) {
-                    appendLog('Erro crítico: ' + err.message);
-                }
-            };
-
-            document.getElementById('javaWsConnect')?.addEventListener('click', connectWs);
-            document.getElementById('javaWsDisconnect')?.addEventListener('click', () => {
-                if(javaWs) javaWs.close(1000, 'Admin desconectou');
-            });
-            document.getElementById('javaWsSend')?.addEventListener('click', () => {
-                const input = document.getElementById('javaWsMessage');
-                if(input && javaWs && input.value) {
-                    javaWs.send(input.value);
-                    appendLog(`Enviado: ${input.value}`);
-                    input.value = '';
-                }
-            });
-            document.getElementById('javaWsSendExit')?.addEventListener('click', () => {
-                if(javaWs) javaWs.send(JSON.stringify({ tipo: 'pedidoDeSair' }));
-            });
-
-            connectWs();
-        @endif
     });
 
     // Função JS para criar o HTML do Toast
