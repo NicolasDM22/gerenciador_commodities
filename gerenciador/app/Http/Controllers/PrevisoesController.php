@@ -15,7 +15,7 @@ class PrevisoesController extends Controller
      */
     public function index(Request $request, $id = null)
     {
-        // 1. Autenticação e Dados do Usuário
+        // 1. Autenticação
         $user = $this->getAuthenticatedUser($request);
         if (!$user) {
             return redirect()->route('login');
@@ -24,9 +24,9 @@ class PrevisoesController extends Controller
 
         $commodity = null;
 
-        // 2. Lógica de Seleção da Commodity
-        
-        // Prioridade 1: ID passado na Rota (/previsoes/1)
+        // 2. Lógica de Seleção da Commodity (Hierarquia Rígida)
+
+        // CASO 1: ID veio na Rota (/previsoes/2)
         if ($id) {
             $commodity = DB::table('commodities')
                 ->select('id', 'nome', 'categoria', 'unidade')
@@ -34,7 +34,8 @@ class PrevisoesController extends Controller
                 ->first();
         }
 
-        // Prioridade 2: ID passado via Query String (/previsoes?commodity_id=1)
+        // CASO 2: ID veio na Query String (/previsoes?commodity_id=2)
+        // Só tenta se não achou no CASO 1
         if (!$commodity && $request->query('commodity_id')) {
              $commodity = DB::table('commodities')
                 ->select('id', 'nome', 'categoria', 'unidade')
@@ -42,7 +43,8 @@ class PrevisoesController extends Controller
                 ->first();
         }
 
-        // Prioridade 3: Última commodity com métricas cadastradas (Modo Padrão)
+        // CASO 3: Fallback (Modo Padrão - Última atualizada)
+        // Só tenta se não achou nem no CASO 1 nem no CASO 2
         if (!$commodity) {
             $latestMetrics = DB::table('commodity_descriptive_metrics as metrics')
                 ->select('metrics.commodity_id')
@@ -59,7 +61,7 @@ class PrevisoesController extends Controller
             }
         }
 
-        // Prioridade 4: Fallback (Primeira em ordem alfabética)
+        // CASO 4: Último recurso (Primeira alfabética)
         if (!$commodity) {
             $commodity = DB::table('commodities')
                 ->select('id', 'nome', 'categoria', 'unidade')
@@ -67,12 +69,12 @@ class PrevisoesController extends Controller
                 ->first();
         }
 
-        // Se ainda assim não achar nada, erro.
+        // Erro fatal se banco estiver vazio
         if (!$commodity) {
-            return redirect()->route('home')->withErrors('Nenhuma commodity cadastrada para exibir.');
+            return redirect()->route('home')->withErrors('Nenhuma commodity cadastrada.');
         }
 
-        // 3. Buscar Dados Descritivos (Card Principal)
+        // 3. Buscar Dados Descritivos
         $descriptiveData = DB::table('commodity_descriptive_metrics as metrics')
             ->select(
                 'metrics.volume_compra_ton',
@@ -85,23 +87,17 @@ class PrevisoesController extends Controller
             ->join('commodities', 'commodities.id', '=', 'metrics.commodity_id')
             ->where('metrics.commodity_id', $commodity->id)
             ->orderByDesc('metrics.referencia_mes')
-            ->orderByDesc('metrics.updated_at')
-            ->orderByDesc('metrics.created_at')
             ->first();
 
-        // Objeto vazio para evitar erros na View se não houver métricas
         if (!$descriptiveData) {
             $descriptiveData = (object) [
                 'materia_prima' => $commodity->nome,
-                'volume_compra_ton' => 0,
-                'preco_medio_global' => 0,
-                'preco_medio_brasil' => 0,
-                'preco_alvo' => 0,
-                'referencia_mes' => null,
+                'volume_compra_ton' => 0, 'preco_medio_global' => 0,
+                'preco_medio_brasil' => 0, 'preco_alvo' => 0, 'referencia_mes' => null,
             ];
         }
 
-        // 4. Buscar Previsões Nacionais (Tabela 1)
+        // 4. Previsões Nacionais
         $nationalForecasts = DB::table('commodity_national_forecasts')
             ->select('referencia_mes', 'preco_medio', 'variacao_perc')
             ->where('commodity_id', $commodity->id)
@@ -114,7 +110,7 @@ class PrevisoesController extends Controller
                 return $forecast;
             });
 
-        // 5. Buscar Comparativos Regionais (Tabela 2)
+        // 5. Comparativos Regionais
         $regionalComparisons = DB::table('commodity_regional_comparisons')
             ->select('pais', 'preco_medio', 'logistica_perc', 'risco', 'estabilidade', 'ranking')
             ->where('commodity_id', $commodity->id)
@@ -127,73 +123,73 @@ class PrevisoesController extends Controller
             'descriptiveData' => $descriptiveData,
             'nationalForecasts' => $nationalForecasts,
             'regionalComparisons' => $regionalComparisons,
-            'selectedCommodity' => $commodity, // Passamos o objeto completo para pegar o ID na View
+            'selectedCommodity' => $commodity, // AQUI GARANTIMOS O ID CORRETO NA VIEW
         ]);
     }
 
     /**
      * Tela de Gráficos
-     * Rota: /previsoes/graficos ou /previsoes/graficos/{id}
      */
     public function graficos(Request $request, $id = null)
     {
         $user = $this->getAuthenticatedUser($request);
-        if (!$user) {
-            return redirect()->route('login');
-        }
+        if (!$user) return redirect()->route('login');
         $avatarUrl = $this->resolveAvatarUrl($user);
 
-        // Se o ID vier nulo, tentamos pegar da query string ou deixamos nulo (modo genérico)
+        // Define o ID
         $commodityId = $id ?? $request->query('commodity_id');
+        if (!$commodityId) {
+            $commodityId = DB::table('commodities')->latest('id')->value('id');
+        }
 
-        // TODO: Adicionar lógica para buscar dados reais do gráfico filtrando por $commodityId
-        // Ex: $chartData = DB::table('commodity_charts')->where('commodity_id', $commodityId)->get();
+        // --- BUSCA DADOS REAIS DO BANCO PARA OS GRÁFICOS ---
+        // Vamos usar a tabela de comparativos regionais para gerar os gráficos de barra
+        $chartData = DB::table('commodity_regional_comparisons')
+            ->select('pais', 'preco_medio', 'logistica_perc', 'risco', 'estabilidade')
+            ->where('commodity_id', $commodityId)
+            ->orderBy('preco_medio', 'desc') // Ordenar para ficar bonito no gráfico
+            ->get();
 
         return view('graficos', [
             'user' => $user,
             'avatarUrl' => $avatarUrl,
-            'commodityId' => $commodityId, // Fundamental para os botões de navegação
+            'commodityId' => $commodityId,
+            'chartData' => $chartData, // Passando os dados para a View
         ]);
     }
 
     /**
      * Tela de Conclusão
-     * Rota: /previsoes/conclusao ou /previsoes/conclusao/{id}
      */
     public function conclusao(Request $request, $id = null)
     {
         $user = $this->getAuthenticatedUser($request);
-        if (!$user) {
-            return redirect()->route('login');
-        }
+        if (!$user) return redirect()->route('login');
         $avatarUrl = $this->resolveAvatarUrl($user);
 
+        // Prioridade: ID da Rota -> ID da Query -> Último do Banco
         $commodityId = $id ?? $request->query('commodity_id');
 
-        // TODO: Adicionar lógica para buscar texto de conclusão e dados do gráfico final pelo $commodityId
+        if (!$commodityId) {
+            $commodityId = DB::table('commodities')->latest('id')->value('id');
+        }
 
         return view('conclusao', [
             'user' => $user,
             'avatarUrl' => $avatarUrl,
-            'commodityId' => $commodityId, // Fundamental para os botões de navegação
+            'commodityId' => $commodityId, 
         ]);
     }
 
-    // --- MÉTODOS AUXILIARES PRIVADOS ---
+    // --- MÉTODOS AUXILIARES ---
 
-    /**
-     * Recupera o usuário autenticado na sessão personalizada
-     */
     private function getAuthenticatedUser(Request $request)
     {
         $userId = $request->session()->get('auth_user_id');
-
-        if (!$userId) {
-            return null;
-        }
+        if (!$userId) return null;
 
         return DB::table('users')
-            ->select('id', 'usuario', 'nome', 'email', 'foto_blob', 'foto_mime', 'is_admin', 'created_at', 'updated_at')
+            ->select('id', 'usuario', 'nome', 'email', 'foto_blob', 'foto_mime', 'is_admin')
             ->where('id', $userId)
             ->first();
     }

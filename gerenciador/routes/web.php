@@ -43,28 +43,24 @@ Route::group([], function () {
 // --- ROTAS ADMINISTRATIVAS ---
 Route::middleware(['admin'])->group(function () { 
 
-    // 1. Rotas de Navegação "Genéricas" (Modo Exemplo ou Última Commodity)
-    // Devem vir ANTES das rotas com {id} para evitar conflito de nomes
-    Route::get('/previsoes', [PrevisoesController::class, 'index'])->name('forecasts');
-    Route::get('/previsoes/graficos', [PrevisoesController::class, 'graficos'])->name('previsoes.graficos');
-    Route::get('/previsoes/conclusao', [PrevisoesController::class, 'conclusao'])->name('previsoes.conclusao');
+// 1. Rotas "Genéricas" (Sem ID na URL)
+Route::get('/previsoes', [PrevisoesController::class, 'index'])->name('forecasts'); // Nome opcional, mas útil
+Route::get('/previsoes/graficos', [PrevisoesController::class, 'graficos'])->name('previsoes.graficos');
+Route::get('/previsoes/conclusao', [PrevisoesController::class, 'conclusao'])->name('previsoes.conclusao');
 
-    // 2. Rotas de Navegação com ID (Modo Específico)
-    // O where('id', '[0-9]+') garante que só aceitem números, aumentando a segurança
-    Route::get('/previsoes/graficos/{id}', [PrevisoesController::class, 'graficos'])
-        ->where('id', '[0-9]+')
-        ->name('previsoes.graficos.show');
+// 2. Rotas Específicas (Com ID na URL)
+Route::get('/previsoes/graficos/{id}', [PrevisoesController::class, 'graficos'])
+    ->where('id', '[0-9]+')
+    ->name('previsoes.graficos.show');
 
-    Route::get('/previsoes/conclusao/{id}', [PrevisoesController::class, 'conclusao'])
-        ->where('id', '[0-9]+')
-        ->name('previsoes.conclusao.show');
-    
-    // Esta rota captura /previsoes/5. 
-    // É CRUCIAL que ela fique após as rotas de 'graficos' e 'conclusao' acima,
-    // senão o Laravel tentaria ler "graficos" como se fosse um ID.
-    Route::get('/previsoes/{id}', [PrevisoesController::class, 'index'])
-        ->where('id', '[0-9]+')
-        ->name('forecasts.show');
+Route::get('/previsoes/conclusao/{id}', [PrevisoesController::class, 'conclusao'])
+    ->where('id', '[0-9]+')
+    ->name('previsoes.conclusao.show');
+
+// A rota principal com ID (Deve ser a última deste grupo ou ter nome diferente das outras)
+Route::get('/previsoes/{id}', [PrevisoesController::class, 'index'])
+    ->where('id', '[0-9]+')
+    ->name('previsoes.show'); 
 
     // Notificações Admin
     Route::get('/admin/notificacoes', [AdminNotificationController::class, 'index'])->name('admin.notifications');

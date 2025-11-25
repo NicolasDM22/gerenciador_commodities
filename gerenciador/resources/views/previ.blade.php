@@ -7,6 +7,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
     <style>
+        /* --- 1. ESTILOS GERAIS --- */
         :root {
             --gray-50: #f9fafb;
             --gray-100: #f3f4f6;
@@ -23,23 +24,25 @@
             --white: #ffffff;
         }
 
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
 
         body {
             margin: 0;
             background: var(--gray-100);
             font-family: "Segoe UI", Arial, sans-serif;
             color: var(--gray-900);
+            /* TRAVA A ROLAGEM DA PÁGINA INTEIRA */
+            height: 100vh;
+            overflow: hidden; 
         }
 
         .page {
-            min-height: 100vh;
+            height: 100%;
             display: flex;
             flex-direction: column;
         }
 
+        /* --- TOP BAR --- */
         .top-bar {
             background: var(--white);
             padding: 1.5rem clamp(1.5rem, 3vw, 3rem);
@@ -48,193 +51,113 @@
             align-items: center;
             gap: 1.5rem;
             box-shadow: 0 4px 22px rgba(15, 23, 42, 0.08);
+            flex-shrink: 0; /* Impede que o topo encolha */
+            z-index: 10;
         }
 
-        .profile {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
+        .profile { display: flex; align-items: center; gap: 1rem; }
+        
         .avatar {
-            width: 64px;
-            height: 64px;
-            border-radius: 18px;
-            object-fit: cover;
-            border: 3px solid var(--gray-200);
+            width: 64px; height: 64px; border-radius: 18px;
+            object-fit: cover; border: 3px solid var(--gray-200);
         }
+        
+        .profile-info strong { font-size: 1.25rem; display: block; }
+        .profile-info span { color: var(--gray-500); font-size: 0.95rem; }
+        
+        .top-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
 
-        .profile-info strong {
-            font-size: 1.25rem;
-            display: block;
-        }
-
-        .profile-info span {
-            color: var(--gray-500);
-            font-size: 0.95rem;
-        }
-
-        .top-actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.75rem;
-            align-items: center;
-        }
-
+        /* --- BOTÕES --- */
         .button {
-            border: none;
-            border-radius: 12px;
-            padding: 0.75rem 1.4rem;
-            font-size: 0.95rem;
-            font-weight: 600;
-            cursor: pointer;
+            border: none; border-radius: 12px; padding: 0.75rem 1.4rem;
+            font-size: 0.95rem; font-weight: 600; cursor: pointer;
             transition: transform 0.15s ease, box-shadow 0.15s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            text-decoration: none;
+            display: inline-flex; align-items: center; justify-content: center;
+            gap: 0.4rem; text-decoration: none;
         }
-
-        .button:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 12px 25px rgba(37, 99, 235, 0.18);
-        }
-
-        .button-primary {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: var(--white);
-        }
-
-        .button-outline {
-            background: transparent;
-            color: var(--primary);
-            border: 1px solid rgba(37, 99, 235, 0.4);
-        }
-
+        .button:hover { transform: translateY(-1px); box-shadow: 0 12px 25px rgba(37, 99, 235, 0.18); }
+        .button-primary { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: var(--white); }
+        .button-outline { background: transparent; color: var(--primary); border: 1px solid rgba(37, 99, 235, 0.4); }
+        
         .button-secondary {
             background: var(--white);
             border: 1px solid var(--gray-300);
             color: var(--gray-700);
         }
+        .button-secondary:hover { background: var(--gray-50); box-shadow: none; transform: none; }
+        .button[disabled] { opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none; background: var(--gray-100); }
+        .button-icon { padding: 0.6rem 0.8rem; line-height: 1; }
 
-        .button[disabled] {
-            opacity: 0.55;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-            background: var(--gray-100);
-        }
-        
-        .button-icon {
-            padding: 0.6rem 0.8rem;
-            line-height: 1;
-        }
-        
-        .button-secondary:hover {
-             background: var(--gray-50);
-             box-shadow: none;
-             transform: none;
-        }
-
+        /* --- LAYOUT PRINCIPAL (Flex + Hidden Overflow) --- */
         main.content {
             flex: 1;
-            width: min(1180px, 100%);
+            width: min(1280px, 100%); /* Largura igual à dos gráficos */
             margin: 0 auto;
             padding: 2rem clamp(1rem, 2vw, 2.5rem) 3rem;
-            display: grid;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Segura o conteúdo para não vazar */
             gap: 1.75rem;
         }
 
         .alert {
-            padding: 1rem 1.25rem;
-            border-radius: 16px;
-            font-size: 0.95rem;
+            padding: 1rem 1.25rem; border-radius: 16px; font-size: 0.95rem;
+            flex-shrink: 0; /* Alertas não devem encolher */
         }
+        .alert-success { background: rgba(5, 150, 105, 0.12); color: var(--success); }
+        .alert-danger { background: rgba(220, 38, 38, 0.12); color: var(--danger); }
+        .alert-danger ul { margin: 0.75rem 0 0 1.2rem; padding: 0; }
 
-        .alert-success {
-            background: rgba(5, 150, 105, 0.12);
-            color: var(--success);
-        }
-
-        .alert-danger {
-            background: rgba(220, 38, 38, 0.12);
-            color: var(--danger);
-        }
-
-        .alert-danger ul {
-            margin: 0.75rem 0 0 1.2rem;
-            padding: 0;
-        }
-
+        /* --- CARD ESTRUTURAL --- */
         .card {
             background: var(--white);
             border-radius: 22px;
-            padding: 1.5rem;
+            /* Padding padrão (1.5rem) em todos os lados. Isso afasta o scroll da borda direita */
+            padding: 1.5rem; 
             box-shadow: 0 22px 45px -30px rgba(15, 23, 42, 0.3);
-        }
-
-        .card h2 {
-            margin: 0;
-            font-size: 1.25rem;
-        }
-
-        .table-wrapper {
-            overflow: auto;
-            border-radius: 18px;
-            border: 1px solid var(--gray-200);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 640px;
-        }
-
-        table th {
-        font-weight: 700;
-        }
-
-        table td {
-        font-weight: 600;
-        }
-
-        th,
-        td {
-            padding: 0.85rem 1rem;
-            text-align: left;
-            font-size: 0.94rem;
-            border-bottom: 1px solid var(--gray-200);
-        }
-
-        th {
-            background: var(--gray-50);
-            font-weight: 600;
-            color: var(--gray-700);
-        }
-
-        tr:last-child td {
-            border-bottom: none;
-        }
-
-        .analysis-header {
+            /* Flex Column para o card ocupar altura e rolar dentro */
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 1rem;
-            padding-bottom: 1.25rem;
+            flex-direction: column;
+            height: 100%; 
+            overflow: hidden;
+        }
+
+        /* --- CABEÇALHO DO CARD (FIXO) --- */
+        .analysis-header {
+            display: flex; justify-content: space-between; align-items: center;
+            gap: 1rem; padding-bottom: 1.25rem; margin-bottom: 1rem;
             border-bottom: 1px solid var(--gray-200);
-            margin-bottom: 1rem;
+            flex-shrink: 0; /* Não encolhe ao scrollar */
+            /* Ajuste fino para alinhar visualmente o cabeçalho com o conteúdo scrollável */
+            padding-right: 0.5rem; 
         }
         
-        .analysis-header .nav-buttons {
+        .analysis-header h2 {
+            margin: 0;
+            /* Ajustado para bater com a página de gráficos */
+            font-size: 1.5rem; 
+            font-weight: 700;
+            color: var(--gray-600);
+        }
+        
+        .analysis-header .nav-buttons { display: flex; gap: 0.5rem; }
+
+        /* --- CORPO COM SCROLL (AQUI ROLA O CONTEÚDO) --- */
+        .analysis-body {
             display: flex;
-            gap: 0.5rem;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto; /* Scroll vertical ativado */
+            flex: 1; /* Ocupa o espaço restante */
+            /* Espaço entre o conteúdo (texto/tabelas) e a barra de rolagem */
+            padding-right: 1rem; 
         }
 
-        .analysis-body {
-            display: grid;
-            gap: 1rem; 
-        }
+        /* Scrollbar bonita */
+        .analysis-body::-webkit-scrollbar { width: 8px; }
+        .analysis-body::-webkit-scrollbar-track { background: transparent; }
+        .analysis-body::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
+        .analysis-body::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
         
         .analysis-section h2 {
              margin-bottom: 1.25rem;
@@ -247,61 +170,41 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 1rem 2rem;
-            }
-
-            .descriptive-grid p {
-            margin: 0.6rem 0;
-            font-size: 0.95rem;
-            color: var(--gray-700);
-            line-height: 1.5;
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            }
-
-            .descriptive-grid strong {
-            font-weight: 600;
-            color: var(--gray-600);
-            padding-right: 1rem;
-            }
-
-            .descriptive-grid p > span {
-            font-weight: 500;
-            text-align: right;
-            color: var(--gray-900);
-            }
-
-            .descriptive-grid p > span.text-success {
-            color: var(--success);
-            }
-
-            .descriptive-grid p > span.text-danger {
-            color: var(--danger);
-            }
-
-        
-        .text-center {
-            text-align: center;
-        }
-        
-        .text-success {
-            color: var(--success);
-        }
-        
-        .text-danger {
-            color: var(--danger);
         }
 
-        @media (max-width: 820px) {
-            .top-bar {
-                flex-direction: column;
-                align-items: flex-start;
-            }
+        .descriptive-grid p {
+            margin: 0.6rem 0; font-size: 0.95rem; color: var(--gray-700);
+            line-height: 1.5; display: flex; justify-content: space-between; align-items: baseline;
+        }
+        .descriptive-grid strong { font-weight: 600; color: var(--gray-600); padding-right: 1rem; }
+        .descriptive-grid p > span { font-weight: 500; text-align: right; color: var(--gray-900); }
+        .descriptive-grid p > span.text-success { color: var(--success); }
+        .descriptive-grid p > span.text-danger { color: var(--danger); }
 
-            .top-actions {
-                width: 100%;
-                justify-content: flex-start;
-            }
+        /* Tabela */
+        .table-wrapper {
+            overflow: auto; border-radius: 18px; border: 1px solid var(--gray-200);
+        }
+        table { width: 100%; border-collapse: collapse; min-width: 640px; }
+        th, td { padding: 0.85rem 1rem; text-align: left; font-size: 0.94rem; border-bottom: 1px solid var(--gray-200); }
+        th { background: var(--gray-50); font-weight: 600; color: var(--gray-700); }
+        td { font-weight: 600; }
+        tr:last-child td { border-bottom: none; }
+
+        .text-center { text-align: center; }
+        .text-success { color: var(--success); }
+        .text-danger { color: var(--danger); }
+
+        @media (max-width: 1000px) {
+            /* No mobile, removemos o scroll fixo para facilitar a navegação nativa */
+            body { height: auto; overflow: auto; }
+            .page { height: auto; }
+            .content { height: auto; overflow: visible; }
+            .card { height: auto; overflow: visible; }
+            .analysis-body { overflow: visible; height: auto; }
+            
+            .top-bar { flex-direction: column; align-items: flex-start; }
+            .top-actions { width: 100%; justify-content: flex-start; }
         }
     </style>
     </head>
@@ -327,28 +230,24 @@
 
         <section class="card">
             
+            {{-- CABEÇALHO FIXO --}}
             <div class="analysis-header">
                 <div class="nav-buttons">
-                    {{-- Botão Esquerda: Desabilitado pois é a primeira tela --}}
                     <button class="button button-secondary button-icon" disabled type="button">&larr;</button>
                     
-                    {{-- Botão Direita: Lógica para ir para Gráficos com ou sem ID --}}
-                    @if(isset($selectedCommodity) && $selectedCommodity->id)
-                        <a href="{{ route('previsoes.graficos.show', ['id' => $selectedCommodity->id]) }}" 
-                           class="button button-secondary button-icon" 
-                           title="Ir para Gráficos">&rarr;</a>
-                    @else
-                        <a href="{{ route('previsoes.graficos') }}" 
-                           class="button button-secondary button-icon" 
-                           title="Ir para Gráficos">&rarr;</a>
-                    @endif
+                    <a href="{{ route('previsoes.graficos.show', ['id' => $selectedCommodity->id]) }}" 
+                    class="button button-secondary button-icon" 
+                    title="Ir para Gráficos">
+                    &rarr;
+                    </a>
                 </div>
 
-                <h2>Análise descritiva - {{ $selectedCommodity->nome ?? 'Geral' }}</h2>
+                <h2>Análise Descritiva - {{ $selectedCommodity->nome ?? 'Geral' }}</h2>
                 
-                <a href="{{ route('home') }}" class="button button-secondary button-icon" title="Voltar para Home">&times;</a>
+                <a href="{{ route('home') }}" class="button button-secondary button-icon" style="font-size: 1.2rem; line-height: 0.8;" title="Voltar para Home">&times;</a>
             </div>
             
+            {{-- CORPO COM SCROLL --}}
             <div class="analysis-body">
                 
                 <div class="analysis-section">
@@ -358,7 +257,7 @@
                         @endphp
                         <div>
                             <p><strong>Matéria prima:</strong> <span>{{ $descriptiveData->materia_prima }}</span></p>
-                            <p><strong>Volume de compra:</strong> <span>{{ $descriptiveData->volume_compra_ton }} Toneladas</span></p>
+                            <p><strong>Volume de compra:</strong> <span>{{ number_format($descriptiveData->volume_compra_ton, 0, ',', '.') }} Toneladas</span></p>
                             <p><strong>Preço médio atual (global):</strong> <span>R${{ number_format($descriptiveData->preco_medio_global, 2, ',', '.') }}/kg</span></p>
                         </div>
                         <div>

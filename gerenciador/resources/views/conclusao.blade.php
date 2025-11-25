@@ -217,17 +217,14 @@
         <section class="card">
             <div class="analysis-header">
                 <div class="nav-buttons">
-                    
-                    {{-- Botão Esquerda (Voltar para Gráficos) --}}
-                    @if(isset($commodityId))
-                        <a href="{{ route('previsoes.graficos.show', ['id' => $commodityId]) }}" 
-                           class="button button-secondary button-icon" title="Voltar para Gráficos">&larr;</a>
-                    @else
-                        <a href="{{ route('previsoes.graficos') }}" 
-                           class="button button-secondary button-icon" title="Voltar para Gráficos">&larr;</a>
-                    @endif
+                    {{-- Botão Esquerda: Volta para Gráficos --}}
+                    <a href="{{ route('previsoes.graficos.show', ['id' => $commodityId]) }}" 
+                    class="button button-secondary button-icon" 
+                    title="Voltar para Gráficos">
+                    &larr;
+                    </a>
 
-                    {{-- Botão Direita (Desabilitado - Fim do fluxo) --}}
+                    {{-- Botão Direita: Fim do fluxo --}}
                     <button class="button button-secondary button-icon" disabled type="button">&rarr;</button>
                 </div>
                 
