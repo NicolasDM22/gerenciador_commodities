@@ -145,7 +145,6 @@
 <body>
     <div class="card">
         <h1>Novo cadastro</h1>
-        <p>Crie sua conta informando usuario, e-mail, telefone, endereco (opcional) e senha.</p>
 
         @if ($errors->any())
             <div class="alert">
