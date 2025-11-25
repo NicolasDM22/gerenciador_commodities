@@ -171,20 +171,68 @@
             }
         }
 
+        /* --- CARD & DATATABLES CUSTOMIZATIONS --- */
         .card {
             background: var(--white); border-radius: 16px;
             padding: 1.5rem; box-shadow: 0 10px 25px -10px rgba(15, 23, 42, 0.1);
+            position: relative; /* Necessário para posicionamento absoluto dos filhos se precisar */
         }
-        .card h2 { margin: 0 0 1.5rem 0; font-size: 1.15rem; font-weight: 600; color: var(--gray-700); }
+        
+        .card h2 { 
+            margin: 0 0 1.5rem 0; 
+            font-size: 1.15rem; 
+            font-weight: 600; 
+            color: var(--gray-700); 
+        }
 
-        /* DATA TABLE CUSTOMIZATION */
+        /* AJUSTE PARA ALINHAR O FILTRO COM O TÍTULO */
+        .dataTables_wrapper {
+            position: relative;
+        }
+
+        .dataTables_wrapper .dataTables_filter {
+            position: absolute;
+            top: -3.5rem; /* Puxa o filtro para cima, na mesma linha do H2 */
+            right: 0;
+            z-index: 10;
+        }
+
         .dataTables_wrapper .dataTables_filter input {
-            border-radius: 20px; border: 1px solid var(--gray-300); padding: 5px 10px;
+            border-radius: 20px; 
+            border: 1px solid var(--gray-300); 
+            padding: 6px 15px;
+            margin-left: 0.5rem;
+            outline: none;
+            transition: border-color 0.2s;
+            font-size: 0.9rem;
         }
-        .dataTables_wrapper .dataTables_length select {
-            border-radius: 8px; border: 1px solid var(--gray-300); padding: 5px;
+
+        .dataTables_wrapper .dataTables_filter input:focus {
+            border-color: var(--primary);
         }
+
+        .dataTables_wrapper .dataTables_length {
+            display: none; 
+        }
+        
         table.dataTable thead th { background-color: var(--gray-50); color: var(--gray-700); }
+        table.dataTable.no-footer { border-bottom: 1px solid var(--gray-200); }
+
+        /* Responsividade para o filtro não sobrepor o título em telas pequenas */
+        @media (max-width: 650px) {
+            .dataTables_wrapper .dataTables_filter {
+                position: relative;
+                top: 0;
+                right: auto;
+                text-align: left;
+                margin-bottom: 1rem;
+            }
+            .dataTables_wrapper .dataTables_filter input {
+                margin-left: 0;
+                width: 100%;
+                margin-top: 5px;
+            }
+        }
 
         /* CHART */
         .chart-wrapper { position: relative; min-height: 350px; width: 100%; }
@@ -244,10 +292,10 @@
                     @forelse($previousAnalyses ?? [] as $analysis)
                         <tr>
                             <td>{{ $analysis->id ?? '-' }}</td>
-                            <td>{{ $analysis->commodity ?? 'N/A' }}</td>
+                            <td>{{ $analysis->commodity_nome ?? 'N/A' }}</td>
                             <td>{{ $analysis->data_previsao ?? '-' }}</td>
                             <td>
-                                <a href="{{ $analysis->url ?? '#' }}" style="color: var(--link-color); font-weight: 600; text-decoration: none;">
+                                <a href="{{ url('/previsoes/' . $analysis->id) }}" style="color: var(--link-color); font-weight: 600; text-decoration: none;">
                                     Ver Detalhes
                                 </a>
                             </td>
@@ -336,19 +384,19 @@
     const chartRawData = @json($chartData ?? null);
 
     $(document).ready(function() {
-        // 1. Inicializar DataTables
+        // 1. Inicializar DataTables com as alterações pedidas
         $('#commoditiesTable').DataTable({
-            pageLength: 5,
-            lengthMenu: [5, 10, 25, 50],
+            pageLength: 5, // Exibe 5 por vez (mas agora recebe todos os dados)
+            lengthChange: false, // <--- REMOVE O SELETOR "Exibir X resultados"
             responsive: true,
             language: {
-                search: "Filtrar:", 
-                searchPlaceholder: "Buscar registros...",
-                lengthMenu: "Exibir _MENU_ resultados por página",
-                zeroRecords: "Nenhum registro encontrado",
+                search: "", // Remove o label "Search:", deixa só o input
+                searchPlaceholder: "Filtrar análises...",
+                // Se não houver filtro, mostra o total. Se houver, mostra "filtrado de X"
                 info: "Mostrando _START_ até _END_ de _TOTAL_ registro(s)",
-                infoEmpty: "Não há registros disponíveis",
                 infoFiltered: "(filtrado de _MAX_ registros no total)",
+                zeroRecords: "Nenhum registro encontrado",
+                infoEmpty: "Não há registros disponíveis",
                 paginate: { first: "Primeiro", last: "Último", next: "Próximo", previous: "Anterior" },
                 loadingRecords: "Carregando...",
                 processing: "Processando...",
