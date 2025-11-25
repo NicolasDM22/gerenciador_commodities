@@ -30,15 +30,17 @@ class HomeController extends Controller
 
         $avatarUrl = $this->resolveAvatarUrl($user);
 
-        $previousAnalyses = collect([
-        ]);
+        $analysis = DB::table('previsoes')
+            ->select('id', 'commodity_nome', 'data_previsao', 'acao')
+            ->limit(5)
+            ->get();
 
         $chartData = [
             'labels' => ['09/25', '10/25', '11/25', '12/25', '01/26', '02/26', '03/26', '04/26'],
             'prices' => [60, 58, 57, 57.5, 59, 62, 56, 52],
-            'commodityName' => 'Exemplo'
+            'commodityName' => 'AAAA'
         ];
-
+        
         $isAdmin = (bool) ($user->is_admin ?? false);
         $adminData = ['notifications' => collect()];
 
@@ -58,10 +60,10 @@ class HomeController extends Controller
         return view('home', [
             'user' => $user,
             'avatarUrl' => $avatarUrl,
-            'previousAnalyses' => $previousAnalyses,
             'chartData' => $chartData,
             'isAdmin' => $isAdmin,
             'adminData' => $adminData,
+            'previousAnalyses' => $analysis,
         ]);
     }
 }
