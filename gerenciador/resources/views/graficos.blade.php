@@ -45,18 +45,6 @@
             flex-direction: column;
         }
 
-        /* --- TOP BAR --- */
-        .top-bar {
-            background: var(--white);
-            padding: 1rem clamp(1.5rem, 3vw, 3rem);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 1.5rem;
-            box-shadow: 0 4px 22px rgba(15, 23, 42, 0.08);
-            z-index: 10;
-            flex-shrink: 0; /* Não encolhe */
-        }
 
         .profile { display: flex; align-items: center; gap: 1rem; }
         .avatar { width: 48px; height: 48px; border-radius: 12px; object-fit: cover; border: 2px solid var(--gray-200); }
