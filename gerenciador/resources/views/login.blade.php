@@ -161,7 +161,6 @@
 <body>
     <div class="login-card">
         <h1>Entrar</h1>
-        <p>Informe seu e-mail, telefone, endereco e senha cadastrados.</p>
 
         @if (session('status'))
             <div class="status">{{ session('status') }}</div>
@@ -205,13 +204,13 @@
         </form>
 
         <div class="footer-link">
-            Ainda nao possui cadastro?
+            Ainda não possui cadastro?
             <a href="{{ route('register') }}">Criar conta</a>
         </div>
 
         @if (session()->has('auth_usuario'))
             <div class="session-details">
-                Usuario autenticado: <strong>{{ session('auth_usuario') }}</strong>
+                Usuário autenticado: <strong>{{ session('auth_usuario') }}</strong>
             </div>
         @endif
     </div>

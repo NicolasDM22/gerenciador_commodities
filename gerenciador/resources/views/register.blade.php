@@ -233,7 +233,7 @@
         </form>
 
         <div class="footer-link">
-            Ja possui uma conta?
+            Já possui uma conta?
             <a href="{{ route('login') }}">Acesse aqui</a>
         </div>
     </div>
