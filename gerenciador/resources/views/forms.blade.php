@@ -1,20 +1,29 @@
-<!-- resources/views/forms.blade.php -->
-<!-- Modal -->
 <div class="modal" id="formsModal">
     <div class="modal-dialog">
 
-        <button class="close-btn" type="button" id="closeFormsModal">×</button>
+        <div class="modal-header">
+            <h3 class="modal-title">Nova análise</h3>
+            
+            <button type="button" id="closeFormsModal" class="button button-secondary button-icon">
+                &times;
+            </button>
+        </div>
 
-        <form action="{{ route('forms.salvar') }}" method="POST">
+        <form id="analiseForm" action="{{ route('forms.salvar') }}" method="POST">
             @csrf
 
             <div class="grid-inputs">
-                <input type="text" name="materia_prima" placeholder="Matéria-prima" required>
-                <input type="text" name="volume" placeholder="Volume" required>
-                <input type="text" name="preco_atual" placeholder="Preço atual de compra" required>
-                <input type="text" name="unidade" placeholder="Unidade de medida" required>
-                <input type="text" name="preco_alvo" placeholder="Preço alvo" required>
-                <input type="text" name="cep" placeholder="CEP de entrega" required>
+                <select name="materia_prima" required>
+                    <option value="" disabled selected hidden>Selecione uma matéria-prima</option>
+                    <option value="soja">Soja</option>
+                    <option value="acucar">Açúcar</option>
+                    <option value="trigo">Trigo</option>
+                    <option value="cacau">Cacau</option>
+                </select>
+
+                <input type="text" id="volume" name="volume" placeholder="Volume (em kg)" required>
+                <input type="text" id="preco_alvo" name="preco_alvo" placeholder="Preço alvo (em R$)" required>
+                <input type="text" id="cep" name="cep" placeholder="CEP de entrega" maxlength="9" required>
             </div>
 
             <div class="center-btn">
@@ -26,100 +35,243 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    // ==========================================================
+    // 1. LÓGICA DE ABRIR/FECHAR MODAL
+    // ==========================================================
     const formsModal = document.getElementById('formsModal');
-    const openFormsModalBtn = document.getElementById('openFormsModal');
     const closeFormsModalBtn = document.getElementById('closeFormsModal');
+    const openFormsModalBtn = document.getElementById('btnOpenFormsModal'); // Botão que fica no layout pai
 
-    const toggleFormsModal = (show) => {
-        if (show) formsModal.classList.add('active');
-        else formsModal.classList.remove('active');
+    const closeForms = () => {
+        if(formsModal) formsModal.classList.remove('active');
     };
 
-    openFormsModalBtn?.addEventListener('click', (e) => {
-        e.preventDefault();
-        toggleFormsModal(true);
-    });
+    const openForms = (e) => {
+        if (e) e.preventDefault();
+        if(formsModal) formsModal.classList.add('active');
+    };
 
-    closeFormsModalBtn?.addEventListener('click', () => toggleFormsModal(false));
-
+    // Eventos
+    closeFormsModalBtn?.addEventListener('click', closeForms);
+    
     formsModal?.addEventListener('click', (e) => {
-        if (e.target === formsModal) toggleFormsModal(false);
+        // Fecha se clicar no fundo escuro (fora do dialog)
+        if (e.target === formsModal) closeForms();
     });
+
+    // Se o botão de abrir existir na página principal, atrela o evento
+    openFormsModalBtn?.addEventListener('click', openForms);
+
+
+    // ==========================================================
+    // 2. MÁSCARAS E VALIDAÇÃO
+    // ==========================================================
+    const form = document.getElementById('analiseForm');
+    const volumeInput = document.getElementById('volume');
+    const precoInput = document.getElementById('preco_alvo');
+    const cepInput = document.getElementById('cep');
+
+    if (form) {
+        // --- Máscara Volume (apenas números e vírgula) ---
+        volumeInput?.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/[^0-9,]/g, '');
+            // Garante apenas uma vírgula
+            if ((value.match(/,/g) || []).length > 1) {
+                 value = value.substring(0, value.lastIndexOf(','));
+            }
+            e.target.value = value;
+        });
+
+        // --- Máscara Preço (R$ 0.000,00) ---
+        precoInput?.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/\D/g, ''); 
+            if (value === '') {
+                e.target.value = '';
+                return;
+            }
+            value = (parseInt(value) / 100).toFixed(2) + '';
+            value = value.replace('.', ',');
+            value = value.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
+            e.target.value = 'R$ ' + value;
+        });
+
+        // --- Máscara CEP (XXXXX-XXX) ---
+        cepInput?.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 5) {
+                value = value.substring(0, 5) + '-' + value.substring(5, 8);
+            }
+            e.target.value = value;
+        });
+
+        // --- Validação ao Enviar (Submit) ---
+        form.addEventListener('submit', (e) => {
+            let valid = true;
+            let mensagens = [];
+
+            // Valida Volume
+            let volumeRaw = volumeInput.value.replace(/\./g, '').replace(',', '.');
+            if (!volumeRaw || parseFloat(volumeRaw) <= 0) {
+                valid = false;
+                volumeInput.classList.add('input-error');
+                mensagens.push("O volume deve ser maior que zero.");
+            } else {
+                volumeInput.classList.remove('input-error');
+            }
+
+            // Valida Preço
+            let precoRaw = precoInput.value.replace('R$ ', '').replace(/\./g, '').replace(',', '.');
+            if (!precoRaw || parseFloat(precoRaw) <= 0) {
+                valid = false;
+                precoInput.classList.add('input-error');
+                mensagens.push("O preço alvo deve ser maior que zero.");
+            } else {
+                precoInput.classList.remove('input-error');
+            }
+
+            // Valida CEP
+            if (cepInput.value.length < 9) {
+                valid = false;
+                cepInput.classList.add('input-error');
+                mensagens.push("Informe um CEP completo.");
+            } else {
+                cepInput.classList.remove('input-error');
+            }
+
+            // Se inválido, bloqueia e mostra Toast
+            if (!valid) {
+                e.preventDefault();
+                // Verifica se a função showToast existe no escopo global
+                if (typeof showToast === 'function') {
+                    // \n aqui funcionará pois o CSS tem white-space: pre-line
+                    showToast("Corrija os erros:\n- " + mensagens.join("\n- "), "error");
+                } else {
+                    alert("Corrija os erros:\n- " + mensagens.join("\n- "));
+                }
+            }
+        });
+    }
 });
 </script>
 
 <style>
+/* ========================
+   MODAL LAYOUT
+   ======================== */
 .modal {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,.65);
-    display: none;
-    justify-content: center;
-    align-items: center;
+    position: fixed; inset: 0; 
+    background: rgba(0,0,0,.65); 
+    display: none; 
+    justify-content: center; align-items: center; 
     z-index: 999;
 }
 
-.modal.active {
-    display: flex;
-}
+.modal.active { display: flex; }
 
 .modal-dialog {
-    position: relative;
-    background: #fff;
-    padding: 2rem 2.4rem;
-    border-radius: 16px;
-    width: 560px;      
-    max-width: 90%;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.18);
+    background: #fff; 
+    padding: 2rem 2.4rem; 
+    border-radius: 16px; 
+    width: 560px; max-width: 90%; 
+    box-shadow: 0 6px 16px rgba(0,0,0,0.18); 
     animation: fadeIn .2s ease-in-out;
+    display: flex; flex-direction: column;
 }
 
-.close-btn {
-    position: absolute;
-    top: 10px;
-    right: 14px;
-    background: none;
-    border: none;
-    font-size: 22px;
+/* ========================
+   HEADER & BOTÃO X
+   ======================== */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #374151; /* Cinza Escuro */
+}
+
+/* Botão Fechar estilo Secondary */
+.button-secondary {
+    background: #ffffff;
+    border: 1px solid #d1d5db; /* cinza claro */
+    color: #374151;
+    border-radius: 12px;
     cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+.button-secondary:hover {
+    background: #f9fafb;
+    transform: translateY(-1px);
+}
+.button-icon {
+    padding: 0.6rem 0.8rem;
+    line-height: 1;
+    font-size: 1.2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
+/* ========================
+   FORMULÁRIO E INPUTS
+   ======================== */
 .grid-inputs {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    column-gap: 14px;  /* espaço horizontal */
-    row-gap: 20px;     /* espaço vertical maior */
+    display: grid; 
+    grid-template-columns: 1fr 1fr; 
+    column-gap: 14px; 
+    row-gap: 20px;
 }
 
-.grid-inputs input {
-    background: #f2f2f2;
-    padding: .95rem;   /* inputs um pouco maiores */
-    border-radius: 10px;
-    border: 1px solid #d8d8d8;
+.grid-inputs input, select {
+    background: #f2f2f2; 
+    padding: .95rem; 
+    border-radius: 10px; 
+    border: 1px solid #d8d8d8; 
     font-size: 0.95rem;
-
-    /* sombra leve */
     box-shadow: 0 2px 3px rgba(0,0,0,0.12);
+    width: 100%;
+    outline: none;
+    transition: border 0.2s;
 }
 
-.center-btn {
-    text-align: center;
-    margin-top: 22px;
-}
+/* Estilo do Select (Placeholder Fake) */
+select { color: #000; cursor: pointer; }
+select:invalid { color: #757575; } /* Cinza quando vazio */
+option { color: #000; }
+option[value=""] { display: none; }
+
+/* Botão Principal */
+.center-btn { text-align: center; margin-top: 22px; }
 
 .button-primary {
-    background: #3e3e3e;
-    color: white;
-    padding: .7rem 1.5rem;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    font-size: 1rem;
+    background: #3e3e3e; color: white; 
+    padding: .7rem 1.5rem; 
+    border-radius: 8px; border: none; cursor: pointer; 
+    font-size: 1rem; 
     box-shadow: 0 3px 6px rgba(0,0,0,0.22);
 }
+.button-primary:hover { opacity: .9; }
 
-.button-primary:hover {
-    opacity: .9;
+/* ========================
+   ESTADOS DE ERRO
+   ======================== */
+.input-error {
+    border: 1px solid #ff4d4d !important;
+    background-color: #fff0f0 !important;
+    animation: shake 0.3s;
+}
+
+@keyframes shake {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  50% { transform: translateX(5px); }
+  75% { transform: translateX(-5px); }
+  100% { transform: translateX(0); }
 }
 
 @keyframes fadeIn {

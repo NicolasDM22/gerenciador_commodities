@@ -147,7 +147,9 @@
             font-size: 0.95rem; 
             color: var(--gray-700); 
             font-weight: 500;
-            white-space: nowrap; 
+            white-space: pre-line;
+            line-height: 1.5;
+            padding-top: 2px; 
         }
 
         .toast-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--gray-400); }
@@ -482,31 +484,34 @@
     });
 
     // Função JS para criar o HTML do Toast
-    function showToast(message, type = 'default') {
-        const container = document.getElementById('toast-container');
-        if(!container) return; 
+    // Substitua sua função showToast atual por esta:
+function showToast(message, type = 'default') {
+    const container = document.getElementById('toast-container');
+    if(!container) return; 
 
-        const toast = document.createElement('div');
-        toast.className = `toast-notification toast-${type}`;
-        
-        let icon = '';
-        if(type === 'success') icon = '✅ ';
-        if(type === 'error') icon = '❌ ';
+    const toast = document.createElement('div');
+    toast.className = `toast-notification toast-${type}`;
+    
+    let icon = '';
+    if(type === 'success') icon = '<span style="margin-right: 8px">✅</span>';
+    if(type === 'error') icon = '<span style="margin-right: 8px">❌</span>';
 
-        toast.innerHTML = `
-            <div class="toast-content">${icon}${message}</div>
-            <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
-        `;
+    // AQUI: Garante que o texto seja tratado corretamente
+    toast.innerHTML = `
+        <div class="toast-content">${icon}${message}</div>
+        <button class="toast-close" onclick="this.parentElement.remove()" style="margin-left: auto;">&times;</button>
+    `;
 
-        container.appendChild(toast);
+    container.appendChild(toast);
 
-        setTimeout(() => {
-            toast.style.animation = 'fadeOut 0.3s forwards';
-            toast.addEventListener('animationend', () => {
-                toast.remove();
-            });
-        }, 5000);
-    }
+    // Remove automaticamente
+    setTimeout(() => {
+        toast.style.animation = 'fadeOut 0.3s forwards';
+        toast.addEventListener('animationend', () => {
+            toast.remove();
+        });
+    }, 6000); // Aumentei um pouco o tempo pois textos longos demoram mais para ler
+}
 
     @if (session('status'))
         showToast("{{ session('status') }}", 'success');
