@@ -45,13 +45,6 @@
             flex-direction: column;
         }
 
-
-        .profile { display: flex; align-items: center; gap: 1rem; }
-        .avatar { width: 48px; height: 48px; border-radius: 12px; object-fit: cover; border: 2px solid var(--gray-200); }
-        .profile-info strong { font-size: 1.1rem; display: block; }
-        .profile-info span { color: var(--gray-500); font-size: 0.85rem; }
-        .top-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
-
         /* --- BOTÕES --- */
         .button {
             border: none; border-radius: 10px; padding: 0.6rem 1.2rem;
@@ -152,6 +145,31 @@
             padding-right: 10px; /* Espaço para scrollbar */
             padding-bottom: 2rem;
         }
+        
+        /* --- TOP BAR --- */
+        .top-bar {
+            background: var(--white);
+            padding: 1.5rem clamp(1.5rem, 3vw, 3rem);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1.5rem;
+            box-shadow: 0 4px 22px rgba(15, 23, 42, 0.08);
+            flex-shrink: 0; /* Impede que o topo encolha */
+            z-index: 10;
+        }
+
+        .profile { display: flex; align-items: center; gap: 1rem; }
+        
+        .avatar {
+            width: 64px; height: 64px; border-radius: 18px;
+            object-fit: cover; border: 3px solid var(--gray-200);
+        }
+        
+        .profile-info strong { font-size: 1.25rem; display: block; }
+        .profile-info span { color: var(--gray-500); font-size: 0.95rem; }
+        
+        .top-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
 
         /* Estilizando a scrollbar para ficar bonita */
         .charts-container::-webkit-scrollbar { width: 8px; }
@@ -191,7 +209,7 @@
 </head>
 <body>
 <div class="page">
-    <x-topbar :user="$user" />
+    <x-topbar :user="$user" />  
 
     <main class="content">
         @if (session('status'))
