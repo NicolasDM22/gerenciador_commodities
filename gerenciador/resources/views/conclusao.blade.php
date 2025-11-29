@@ -7,7 +7,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
     <style>
-        /* --- Variáveis e Reset (Mantidos do seu padrão) --- */
+        /* --- Variáveis e Reset (Mantidos do padrão) --- */
         :root {
             --gray-50: #f9fafb;
             --gray-100: #f3f4f6;
@@ -135,20 +135,20 @@
 
         .analysis-header h2 {
             margin: 0;
-            font-size: 1.5rem; /* Aumentei um pouco para destacar como na imagem */
-            color: var(--gray-600); /* Tom mais cinza conforme imagem */
+            font-size: 1.5rem;
+            color: var(--gray-600);
             font-weight: 700;
         }
         
         .analysis-header .nav-buttons { display: flex; gap: 0.5rem; }
 
-        /* --- GRID DA CONCLUSÃO (NOVO) --- */
+        /* --- GRID DA CONCLUSÃO --- */
         .conclusion-container {
             display: grid;
-            grid-template-columns: 1fr 1.2fr; /* Texto ocupa um pouco menos que o gráfico */
+            grid-template-columns: 1fr 1.2fr; 
             gap: 3rem;
             align-items: center;
-            flex: 1; /* Ocupa o espaço restante do card */
+            flex: 1; 
         }
 
         .conclusion-text {
@@ -162,16 +162,16 @@
             font-size: 1rem;
             line-height: 1.6;
             color: var(--gray-700);
-            font-weight: 600; /* Texto em negrito suave conforme imagem */
+            font-weight: 600;
         }
 
         .chart-wrapper {
             width: 100%;
             position: relative;
-            height: 350px; /* Altura fixa para o gráfico */
+            height: 350px;
         }
 
-        /* --- Footer de Ações (Botões Exportar) --- */
+        /* --- Footer de Ações --- */
         .actions-footer {
             display: flex;
             justify-content: flex-end;
@@ -181,9 +181,9 @@
         }
 
         .button-export {
-            background-color: #d1d5db; /* Cinza mais escuro que o gray-200 */
+            background-color: #d1d5db;
             color: var(--gray-700);
-            border-radius: 25px; /* Bem arredondado */
+            border-radius: 25px;
             font-weight: 700;
             padding: 0.6rem 1.5rem;
             border: none;
@@ -192,7 +192,7 @@
         }
 
         .button-export:hover {
-            background-color: #9ca3af; /* gray-400 */
+            background-color: #9ca3af; 
             color: var(--gray-900);
         }
 
@@ -207,21 +207,7 @@
 </head>
 <body>
 <div class="page">
-    <header class="top-bar">
-        <div class="profile">
-            <img class="avatar" src="{{ $avatarUrl ?? 'https://ui-avatars.com/api/?name=User&background=random' }}" alt="Avatar">
-            <div class="profile-info">
-                <strong>{{ $user->nome ?? 'Usuário' }}</strong>
-                <span>{{ $user->email ?? 'Email' }}</span>
-            </div>
-        </div>
-        <div class="top-actions">
-            <form action="{{ route('logout') }}" method="POST">
-                @csrf
-                <button class="button button-primary" type="submit">Sair</button>
-            </form>
-        </div>
-    </header>
+    <x-topbar :user="$user" />
 
     <main class="content">
         @if (session('status'))
@@ -231,7 +217,14 @@
         <section class="card">
             <div class="analysis-header">
                 <div class="nav-buttons">
-                    <a href="{{ route('previsoes.graficos') }}" class="button button-secondary button-icon">&larr;</a>
+                    {{-- Botão Esquerda: Volta para Gráficos --}}
+                    <a href="{{ route('previsoes.graficos.show', ['id' => $commodityId]) }}" 
+                    class="button button-secondary button-icon" 
+                    title="Voltar para Gráficos">
+                    &larr;
+                    </a>
+
+                    {{-- Botão Direita: Fim do fluxo --}}
                     <button class="button button-secondary button-icon" disabled type="button">&rarr;</button>
                 </div>
                 
@@ -243,9 +236,9 @@
             <div class="conclusion-container">
                 
                 <div class="conclusion-text">
-                    <p>Lorem ipsum dolor sit amet consectetur, adipisicing elit. Aut eligendi, molestiae doloremque, iure ipsa quis cupiditate aperiam assumenda iusto accusantium nostrum maiores facere numquam harum fugiat molestias dolores. Cupiditate, molestiae.</p>
-                    <p>Lorem ipsum, dolor sit amet consectetur adipisicing elit. Dolore dignissimos unde alias atque laudantium numquam repellat beatae. Ullam distinctio tempore, ea fugit accusamus nulla nesciunt consequatur sequi repellendus exercitationem corporis?</p>
-                    <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Omnis quibusdam eius perspiciatis accusantium. Omnis vel rem possimus est, dolor atque blanditiis, soluta officia perferendis, consectetur optio veniam dolore quos vero.</p>
+                    <p>Com base na análise de estabilidade econômica e climática, recomenda-se cautela nas negociações para os próximos trimestres. A volatilidade observada nos mercados emergentes sugere uma estratégia de hedging mais agressiva.</p>
+                    <p>Para o mercado nacional, a tendência de alta nos custos logísticos pode impactar a margem final. Sugerimos antecipação de contratos com fornecedores locais onde o risco climático se mostrou menor no último período.</p>
+                    <p>Em resumo: O cenário aponta para uma leve retração de oferta global, o que deve sustentar os preços em patamares elevados até o início da próxima safra.</p>
                 </div>
 
                 <div class="chart-wrapper">
@@ -267,20 +260,22 @@
     document.addEventListener('DOMContentLoaded', function() {
         const ctx = document.getElementById('finalChart').getContext('2d');
 
-        // Dados Mockados para replicar Figma (Declínio, leve subida, pico, queda brusca)
+        // Dados Mockados para o gráfico de linha da conclusão
         // Labels aproximados: 09/25 a 04/26
         const data = {
             labels: ['09/25', '10/25', '11/25', '12/25', '01/26', '02/26', '03/26', '04/26'],
             datasets: [{
                 label: 'Preço Médio (R$/kg)',
                 data: [60, 57.8, 56.9, 57.3, 60.0, 62.0, 56.0, 52.0], 
-                borderColor: '#f97316', 
+                borderColor: '#f97316', // Laranja
                 backgroundColor: 'rgba(249, 115, 22, 0.1)',
                 borderWidth: 2,
                 pointBackgroundColor: '#ffffff',
                 pointBorderColor: '#f97316',
-                pointRadius: 0, 
-                pointHoverRadius: 4,
+                pointRadius: 4, 
+                pointHoverRadius: 6,
+                fill: true,
+                tension: 0.3 // Suaviza a linha
             }]
         };
 
@@ -291,52 +286,35 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: {
-                        display: false 
-                    },
+                    legend: { display: false },
                     tooltip: {
                         mode: 'index',
                         intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                return `Preço: R$${context.raw.toFixed(2)}`;
+                            }
+                        }
                     }
                 },
                 scales: {
                     y: {
                         beginAtZero: false,
                         min: 50, 
-                        max: 64,
+                        max: 65,
                         title: {
                             display: true,
-                            text: 'Preço Médio (R$/kg)',
+                            text: 'Previsão de Preço (R$/kg)',
                             color: '#4b5563',
-                            font: {
-                                weight: 'bold'
-                            }
+                            font: { weight: 'bold' }
                         },
-                        grid: {
-                            display: false, 
-                            drawBorder: true
-                        },
-                        border: {
-                             display: true,
-                             width: 2,
-                             color: '#9ca3af'
-                        }
+                        grid: { display: false, drawBorder: true },
+                        border: { display: true, width: 2, color: '#9ca3af' }
                     },
                     x: {
-                        grid: {
-                            display: false, 
-                        },
-                        ticks: {
-                            font: {
-                                weight: 'bold'
-                            },
-                            color: '#374151'
-                        },
-                         border: {
-                             display: true,
-                             width: 2,
-                             color: '#9ca3af'
-                        }
+                        grid: { display: false },
+                        ticks: { font: { weight: 'bold' }, color: '#374151' },
+                        border: { display: true, width: 2, color: '#9ca3af' }
                     }
                 }
             }

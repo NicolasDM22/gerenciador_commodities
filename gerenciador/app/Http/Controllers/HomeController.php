@@ -29,10 +29,13 @@ class HomeController extends Controller
         }
 
         $avatarUrl = $this->resolveAvatarUrl($user);
-
+        // --- ALTERAÇÃO AQUI ---
+        // Removemos o ->limit(5) para que o DataTables receba TUDO e possa filtrar corretamente.
+        // Adicionamos orderBy para mostrar os mais recentes primeiro.
         $analysis = DB::table('previsoes')
             ->select('id', 'commodity_nome', 'data_previsao', 'acao')
-            ->limit(5)
+            ->orderByDesc('data_previsao') // Opcional: ordena por data
+            // ->limit(5) <--- REMOVIDO
             ->get();
 
         $chartData = [

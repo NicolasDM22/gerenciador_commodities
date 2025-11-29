@@ -9,9 +9,10 @@ use App\Http\Controllers\FormsController;
 use App\Http\Controllers\ProfileModalController;
 use Illuminate\Support\Facades\Route;
 
+// Redirecionamento inicial
 Route::redirect('/', '/login');
 
-// Rotas Públicas
+// --- ROTAS PÚBLICAS (Login/Registro) ---
 Route::controller(LoginController::class)->group(function () {
     Route::get('/login', 'show')->name('login');
     Route::post('/login', 'authenticate')->name('login.authenticate');
@@ -20,42 +21,48 @@ Route::controller(LoginController::class)->group(function () {
     Route::post('/logout', 'logout')->name('logout');
 });
 
-// Rotas Protegidas (Com o middleware 'auth')
-Route::get('/home', [HomeController::class, 'index'])->name('home');
-Route::post('/support-chat/open', [SupportChatController::class, 'open'])->name('support-chat.open');
-Route::post('/support-chat/message', [SupportChatController::class, 'send'])->name('support-chat.message');
-Route::post('/support-chat/close', [SupportChatController::class, 'close'])->name('support-chat.close');
-Route::get('/admin/notificacoes', [AdminNotificationController::class, 'index'])->name('admin.notifications');
-Route::post('/admin/notificacoes/{notificationId}/lida', [AdminNotificationController::class, 'markAsRead'])->name('admin.notifications.read');
-Route::get('/previsoes', [PrevisoesController::class, 'index'])->name('forecasts');
-Route::get('/previsoes/graficos', [PrevisoesController::class, 'graficos'])->name('previsoes.graficos');
-Route::get('/previsoes/conclusao', [PrevisoesController::class, 'conclusao'])->name('previsoes.conclusao');
-Route::get('/forms', function () {return view('forms');});
-Route::post('/forms/salvar', [FormsController::class, 'salvar'])->name('forms.salvar');
-Route::get('/profile', function () {return view('profile');});
-Route::post('/profile/update', [ProfileModalController::class, 'update'])->name('profile.update');
-
-// --- ROTAS LOGADAS (Sem o middleware 'auth')
+// --- ROTAS LOGADAS (Usuários comuns e Admins) ---
+// Estas rotas não têm middleware 'auth' padrão do Laravel, 
+// assumindo que você verifica a sessão no controller ou em middleware próprio
 Route::group([], function () { 
     
     Route::get('/home', [HomeController::class, 'index'])->name('home');
     Route::post('/profile', [HomeController::class, 'update'])->name('profile.update');
+    Route::post('/profile', [ProfileModalController::class, 'update'])->name('profile.update');
     
+    // Chat de Suporte
     Route::post('/support-chat/open', [SupportChatController::class, 'open'])->name('support-chat.open');
     Route::post('/support-chat/message', [SupportChatController::class, 'send'])->name('support-chat.message');
     Route::post('/support-chat/close', [SupportChatController::class, 'close'])->name('support-chat.close');
     
+    // Formulários
     Route::get('/forms', function () { return view('forms'); });
     Route::post('/forms/salvar', [FormsController::class, 'salvar'])->name('forms.salvar');
 });
 
-// --- ROTAS ADMIN (Usando apenas o SEU middleware manual) ---
-Route::middleware(['admin'])->group(function () { // Removido 'auth', mantido só 'admin'
-    
-    Route::get('/previsoes', [PrevisoesController::class, 'index'])->name('forecasts');
-    Route::get('/previsoes/graficos', [PrevisoesController::class, 'graficos'])->name('previsoes.graficos');
-    Route::get('/previsoes/conclusao', [PrevisoesController::class, 'conclusao'])->name('previsoes.conclusao');
+// --- ROTAS ADMINISTRATIVAS ---
+Route::middleware(['admin'])->group(function () { 
 
+// 1. Rotas "Genéricas" (Sem ID na URL)
+Route::get('/previsoes', [PrevisoesController::class, 'index'])->name('forecasts'); // Nome opcional, mas útil
+Route::get('/previsoes/graficos', [PrevisoesController::class, 'graficos'])->name('previsoes.graficos');
+Route::get('/previsoes/conclusao', [PrevisoesController::class, 'conclusao'])->name('previsoes.conclusao');
+
+// 2. Rotas Específicas (Com ID na URL)
+Route::get('/previsoes/graficos/{id}', [PrevisoesController::class, 'graficos'])
+    ->where('id', '[0-9]+')
+    ->name('previsoes.graficos.show');
+
+Route::get('/previsoes/conclusao/{id}', [PrevisoesController::class, 'conclusao'])
+    ->where('id', '[0-9]+')
+    ->name('previsoes.conclusao.show');
+
+// A rota principal com ID (Deve ser a última deste grupo ou ter nome diferente das outras)
+Route::get('/previsoes/{id}', [PrevisoesController::class, 'index'])
+    ->where('id', '[0-9]+')
+    ->name('previsoes.show'); 
+
+    // Notificações Admin
     Route::get('/admin/notificacoes', [AdminNotificationController::class, 'index'])->name('admin.notifications');
     Route::post('/admin/notificacoes/{notificationId}/lida', [AdminNotificationController::class, 'markAsRead'])->name('admin.notifications.read');
 });

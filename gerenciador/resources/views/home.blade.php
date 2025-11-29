@@ -147,7 +147,9 @@
             font-size: 0.95rem; 
             color: var(--gray-700); 
             font-weight: 500;
-            white-space: nowrap; 
+            white-space: pre-line;
+            line-height: 1.5;
+            padding-top: 2px; 
         }
 
         .toast-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--gray-400); }
@@ -170,11 +172,13 @@
                 opacity: 0;
             }
         }
-
+        /* --- CARD & DATATABLES CUSTOMIZATIONS --- */
         .card {
             background: var(--white); border-radius: 16px;
             padding: 1.5rem; box-shadow: 0 10px 25px -10px rgba(15, 23, 42, 0.1);
+            position: relative; /* Necessário para posicionamento absoluto dos filhos se precisar */
         }
+
         .card h2 { margin: 0 0 1.5rem 0; font-size: 1.15rem; font-weight: 600; color: var(--gray-700); }
 
         /* DATA TABLE CUSTOMIZATION */
@@ -202,6 +206,68 @@
         .ws-status { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600; color: var(--gray-600); }
         .ws-indicator { width: 10px; height: 10px; border-radius: 50%; background: var(--danger); transition: background 0.2s; }
         .ws-indicator.active { background: var(--success); }
+
+
+        
+        .card h2 { 
+            margin: 0 0 1.5rem 0; 
+            font-size: 1.15rem; 
+            font-weight: 600; 
+            color: var(--gray-700); 
+        }
+
+        /* AJUSTE PARA ALINHAR O FILTRO COM O TÍTULO */
+        .dataTables_wrapper {
+            position: relative;
+        }
+
+        .dataTables_wrapper .dataTables_filter {
+            position: absolute;
+            top: -3.5rem; /* Puxa o filtro para cima, na mesma linha do H2 */
+            right: 0;
+            z-index: 10;
+        }
+
+        .dataTables_wrapper .dataTables_filter input {
+            border-radius: 20px; 
+            border: 1px solid var(--gray-300); 
+            padding: 6px 15px;
+            margin-left: 0.5rem;
+            outline: none;
+            transition: border-color 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .dataTables_wrapper .dataTables_filter input:focus {
+            border-color: var(--primary);
+        }
+
+        .dataTables_wrapper .dataTables_length {
+            display: none; 
+        }
+        
+        table.dataTable thead th { background-color: var(--gray-50); color: var(--gray-700); }
+        table.dataTable.no-footer { border-bottom: 1px solid var(--gray-200); }
+
+        /* Responsividade para o filtro não sobrepor o título em telas pequenas */
+        @media (max-width: 650px) {
+            .dataTables_wrapper .dataTables_filter {
+                position: relative;
+                top: 0;
+                right: auto;
+                text-align: left;
+                margin-bottom: 1rem;
+            }
+            .dataTables_wrapper .dataTables_filter input {
+                margin-left: 0;
+                width: 100%;
+                margin-top: 5px;
+            }
+        }
+
+        /* CHART */
+        .chart-wrapper { position: relative; min-height: 350px; width: 100%; }
+
 
         /* MODAL */
         .modal {
@@ -258,10 +324,10 @@
                     @forelse($previousAnalyses ?? [] as $analysis)
                         <tr>
                             <td>{{ $analysis->id ?? '-' }}</td>
-                            <td>{{ $analysis->commodity ?? 'N/A' }}</td>
+                            <td>{{ $analysis->commodity_nome ?? 'N/A' }}</td>
                             <td>{{ $analysis->data_previsao ?? '-' }}</td>
                             <td>
-                                <a href="{{ $analysis->url ?? '#' }}" style="color: var(--link-color); font-weight: 600; text-decoration: none;">
+                                <a href="{{ url('/previsoes/' . $analysis->id) }}" style="color: var(--link-color); font-weight: 600; text-decoration: none;">
                                     Ver Detalhes
                                 </a>
                             </td>
@@ -369,19 +435,19 @@
     const chartRawData = @json($chartData ?? null);
 
     $(document).ready(function() {
-        // 1. Inicializar DataTables
+        // 1. Inicializar DataTables com as alterações pedidas
         $('#commoditiesTable').DataTable({
-            pageLength: 5,
-            lengthMenu: [5, 10, 25, 50],
+            pageLength: 5, // Exibe 5 por vez (mas agora recebe todos os dados)
+            lengthChange: false, // <--- REMOVE O SELETOR "Exibir X resultados"
             responsive: true,
             language: {
-                search: "Filtrar:", 
-                searchPlaceholder: "Buscar registros...",
-                lengthMenu: "Exibir _MENU_ resultados por página",
-                zeroRecords: "Nenhum registro encontrado",
+                search: "", // Remove o label "Search:", deixa só o input
+                searchPlaceholder: "Filtrar análises...",
+                // Se não houver filtro, mostra o total. Se houver, mostra "filtrado de X"
                 info: "Mostrando _START_ até _END_ de _TOTAL_ registro(s)",
-                infoEmpty: "Não há registros disponíveis",
                 infoFiltered: "(filtrado de _MAX_ registros no total)",
+                zeroRecords: "Nenhum registro encontrado",
+                infoEmpty: "Não há registros disponíveis",
                 paginate: { first: "Primeiro", last: "Último", next: "Próximo", previous: "Anterior" },
                 loadingRecords: "Carregando...",
                 processing: "Processando...",
@@ -464,129 +530,37 @@
                 }
             });
         }
-
-        // 4. WebSocket (Apenas Admin)
-        @if($isAdmin)
-            const wsLog = document.getElementById('javaWsLog');
-            const statusText = document.getElementById('javaWsStatus');
-            const indicator = document.getElementById('javaWsIndicator');
-            
-            const appendLog = (msg) => {
-                if(wsLog) {
-                    wsLog.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
-                    wsLog.scrollTop = wsLog.scrollHeight;
-                }
-            };
-
-            const updateWsUI = (connected) => {
-                if(indicator) indicator.classList.toggle('active', connected);
-                if(statusText) statusText.textContent = connected ? 'Conectado' : 'Desconectado';
-                
-                document.getElementById('javaWsConnect').disabled = connected;
-                document.getElementById('javaWsDisconnect').disabled = !connected;
-                document.getElementById('javaWsSend').disabled = !connected;
-                document.getElementById('javaWsMessage').disabled = !connected;
-                document.getElementById('javaWsSendExit').disabled = !connected;
-            };
-
-            let javaWs = null;
-            const WS_URL = "ws://localhost:3000"; 
-
-            const connectWs = () => {
-                if (javaWs && javaWs.readyState === WebSocket.OPEN) return;
-                
-                appendLog(`Tentando conectar em ${WS_URL}...`);
-                
-                try {
-                    javaWs = new WebSocket(WS_URL);
-
-                    javaWs.onopen = () => {
-                        appendLog('Conexão estabelecida!');
-                        updateWsUI(true);
-                        javaWs.send(JSON.stringify({ tipo: 'info', msg: 'Admin Laravel Conectado' }));
-                    };
-
-                    javaWs.onmessage = (e) => {
-                    // Mantém o log visual no card
-                    appendLog(`Recebido: ${e.data}`);
-
-                    try {
-                        // Tenta ler os dados como JSON
-                        const data = JSON.parse(e.data);
-
-                        // Verifica se é a mensagem de desligamento
-                        if (data.tipo === "desligamento") {
-                            // Exibe o alerta vermelho com a mensagem do servidor
-                            showToast(data.msg, 'error');
-                        }
-                    } catch (err) {
-                        // Se a mensagem não for um JSON válido, ignora o erro silenciosamente
-                        // ou apenas trata como texto comum
-                    }
-                };
-
-                    // --- MUDANÇA AQUI: Toast no evento onclose ---
-                    javaWs.onclose = (e) => {
-                        appendLog(`Conexão fechada (Código: ${e.code})`);
-                        updateWsUI(false);
-                        javaWs = null;
-                    };
-
-                    javaWs.onerror = () => {
-                        appendLog('Erro de conexão.');
-                    };
-
-                } catch (err) {
-                    appendLog('Erro crítico: ' + err.message);
-                }
-            };
-
-            document.getElementById('javaWsConnect')?.addEventListener('click', connectWs);
-            document.getElementById('javaWsDisconnect')?.addEventListener('click', () => {
-                if(javaWs) javaWs.close(1000, 'Admin desconectou');
-            });
-            document.getElementById('javaWsSend')?.addEventListener('click', () => {
-                const input = document.getElementById('javaWsMessage');
-                if(input && javaWs && input.value) {
-                    javaWs.send(input.value);
-                    appendLog(`Enviado: ${input.value}`);
-                    input.value = '';
-                }
-            });
-            document.getElementById('javaWsSendExit')?.addEventListener('click', () => {
-                if(javaWs) javaWs.send(JSON.stringify({ tipo: 'pedidoDeSair' }));
-            });
-
-            connectWs();
-        @endif
     });
 
     // Função JS para criar o HTML do Toast
-    function showToast(message, type = 'default') {
-        const container = document.getElementById('toast-container');
-        if(!container) return; 
+    // Substitua sua função showToast atual por esta:
+function showToast(message, type = 'default') {
+    const container = document.getElementById('toast-container');
+    if(!container) return; 
 
-        const toast = document.createElement('div');
-        toast.className = `toast-notification toast-${type}`;
-        
-        let icon = '';
-        if(type === 'success') icon = '✅ ';
-        if(type === 'error') icon = '❌ ';
+    const toast = document.createElement('div');
+    toast.className = `toast-notification toast-${type}`;
+    
+    let icon = '';
+    if(type === 'success') icon = '<span style="margin-right: 8px">✅</span>';
+    if(type === 'error') icon = '<span style="margin-right: 8px">❌</span>';
 
-        toast.innerHTML = `
-            <div class="toast-content">${icon}${message}</div>
-            <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
-        `;
+    // AQUI: Garante que o texto seja tratado corretamente
+    toast.innerHTML = `
+        <div class="toast-content">${icon}${message}</div>
+        <button class="toast-close" onclick="this.parentElement.remove()" style="margin-left: auto;">&times;</button>
+    `;
 
-        container.appendChild(toast);
+    container.appendChild(toast);
 
-        setTimeout(() => {
-            toast.style.animation = 'fadeOut 0.3s forwards';
-            toast.addEventListener('animationend', () => {
-                toast.remove();
-            });
-        }, 5000);
-    }
+    // Remove automaticamente
+    setTimeout(() => {
+        toast.style.animation = 'fadeOut 0.3s forwards';
+        toast.addEventListener('animationend', () => {
+            toast.remove();
+        });
+    }, 6000); // Aumentei um pouco o tempo pois textos longos demoram mais para ler
+}
 
     @if (session('status'))
         showToast("{{ session('status') }}", 'success');

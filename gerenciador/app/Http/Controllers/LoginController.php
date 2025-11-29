@@ -54,7 +54,7 @@ class LoginController extends Controller
 
         return back()
             ->withErrors([
-                'email' => 'As credenciais fornecidas nao foram encontradas.',
+                'email' => 'As credenciais fornecidas não foram encontradas.',
             ])
             ->withInput($request->except('senha'));
     }
