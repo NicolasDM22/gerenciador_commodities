@@ -3,6 +3,8 @@ import java.util.Collection;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Esta classe ÚNICA substitui Servidor, AceitadoraDeConexao e SupervisoraDeConexao.
@@ -10,11 +12,19 @@ import org.java_websocket.server.WebSocketServer;
  */
 public class ServidorWebSocket extends WebSocketServer {
 
+    private GoogleAIClient openai;
     // A biblioteca já mantém uma lista de conexões.
     // Não precisamos mais do nosso 'ArrayList<Parceiro> usuarios'.
 
     public ServidorWebSocket(int porta) {
         super(new InetSocketAddress(porta));
+
+        String apiKey = "";
+        if (apiKey == null || apiKey.isEmpty()) {
+            System.err.println("ERRO: variável de ambiente GOOGLE_AI_KEY não definida!");
+        } else {
+            this.openai = new GoogleAIClient(apiKey);
+        }
     }
 
     /**
@@ -45,19 +55,37 @@ public class ServidorWebSocket extends WebSocketServer {
     public void onMessage(WebSocket conexao, String mensagem) {
         System.out.println("Mensagem recebida de " + conexao.getRemoteSocketAddress() + ": " + mensagem);
 
-        // Aqui, analisamos o JSON. Para este projeto, um 'contains' simples resolve.
-        // Em um projeto maior, usaríamos uma biblioteca (Gson/Jackson) para converter JSON
-        // em objetos.
-
         if (mensagem.contains("\"tipo\":\"pedidoDeSair\"")) {
-            // O cliente pediu para sair
             System.out.println("Cliente pediu para sair. Fechando conexão.");
             conexao.close();
+            return;
         }
 
-        // else if (mensagem.contains("\"tipo\":\"outraCoisa\"")) {
-        //     // Faria outra lógica...
-        // }
+        if (openai == null) {
+            conexao.send("Servidor sem API Key configurada.");
+            return;
+        }
+
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode json = mapper.readTree(mensagem);
+
+            String promptDoUsuario = "";
+            if (json.has("tipo") && json.get("tipo").asText().equals("perguntaIA") && json.has("texto")) {
+                promptDoUsuario = json.get("texto").asText();
+            } else {
+                conexao.send("{\"tipo\":\"erro\", \"conteudo\":\"Mensagem inválida ou tipo não suportado.\"}");
+                return;
+            }
+
+            String respostaIA = openai.ask(promptDoUsuario);
+
+            String respostaJson = "{\"tipo\":\"respostaIA\", \"conteudo\":\"" + respostaIA.replace("\"", "\\\"") + "\"}";
+            conexao.send(respostaJson);
+        } catch (Exception e) {
+            e.printStackTrace();
+            conexao.send("{\"tipo\":\"erro\", \"conteudo\":\"Erro ao consultar a IA: " + e.getMessage() + "\"}");
+        }
     }
 
     @Override
