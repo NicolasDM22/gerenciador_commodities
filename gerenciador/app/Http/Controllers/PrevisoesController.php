@@ -9,13 +9,8 @@ use Illuminate\Support\Str;
 
 class PrevisoesController extends Controller
 {
-    /**
-     * Método principal (Dashboard/Descritivo)
-     * Rota: /previsoes ou /previsoes/{id}
-     */
     public function index(Request $request, $id = null)
     {
-        // 1. Autenticação
         $user = $this->getAuthenticatedUser($request);
         if (!$user) {
             return redirect()->route('login');
@@ -24,27 +19,14 @@ class PrevisoesController extends Controller
 
         $commodity = null;
 
-        // 2. Lógica de Seleção da Commodity (Hierarquia Rígida)
-
-        // CASO 1: ID veio na Rota (/previsoes/2)
         if ($id) {
-            $commodity = DB::table('commodities')
-                ->select('id', 'nome', 'categoria', 'unidade')
-                ->where('id', $id)
-                ->first();
+            $commodity = DB::table('commodities')->where('id', $id)->first();
         }
 
-        // CASO 2: ID veio na Query String (/previsoes?commodity_id=2)
-        // Só tenta se não achou no CASO 1
         if (!$commodity && $request->query('commodity_id')) {
-             $commodity = DB::table('commodities')
-                ->select('id', 'nome', 'categoria', 'unidade')
-                ->where('id', $request->query('commodity_id'))
-                ->first();
+             $commodity = DB::table('commodities')->where('id', $request->query('commodity_id'))->first();
         }
 
-        // CASO 3: Fallback (Modo Padrão - Última atualizada)
-        // Só tenta se não achou nem no CASO 1 nem no CASO 2
         if (!$commodity) {
             $latestMetrics = DB::table('commodity_descriptive_metrics as metrics')
                 ->select('metrics.commodity_id')
@@ -54,27 +36,18 @@ class PrevisoesController extends Controller
                 ->first();
 
             if ($latestMetrics) {
-                $commodity = DB::table('commodities')
-                    ->select('id', 'nome', 'categoria', 'unidade')
-                    ->where('id', $latestMetrics->commodity_id)
-                    ->first();
+                $commodity = DB::table('commodities')->where('id', $latestMetrics->commodity_id)->first();
             }
         }
 
-        // CASO 4: Último recurso (Primeira alfabética)
         if (!$commodity) {
-            $commodity = DB::table('commodities')
-                ->select('id', 'nome', 'categoria', 'unidade')
-                ->orderBy('nome')
-                ->first();
+            $commodity = DB::table('commodities')->orderBy('nome')->first();
         }
 
-        // Erro fatal se banco estiver vazio
         if (!$commodity) {
             return redirect()->route('home')->withErrors('Nenhuma commodity cadastrada.');
         }
 
-        // 3. Buscar Dados Descritivos
         $descriptiveData = DB::table('commodity_descriptive_metrics as metrics')
             ->select(
                 'metrics.volume_compra_ton',
@@ -92,12 +65,14 @@ class PrevisoesController extends Controller
         if (!$descriptiveData) {
             $descriptiveData = (object) [
                 'materia_prima' => $commodity->nome,
-                'volume_compra_ton' => 0, 'preco_medio_global' => 0,
-                'preco_medio_brasil' => 0, 'preco_alvo' => 0, 'referencia_mes' => null,
+                'volume_compra_ton' => 0,
+                'preco_medio_global' => 0,
+                'preco_medio_brasil' => 0,
+                'preco_alvo' => 0,
+                'referencia_mes' => null,
             ];
         }
 
-        // 4. Previsões Nacionais
         $nationalForecasts = DB::table('commodity_national_forecasts')
             ->select('referencia_mes', 'preco_medio', 'variacao_perc')
             ->where('commodity_id', $commodity->id)
@@ -110,7 +85,6 @@ class PrevisoesController extends Controller
                 return $forecast;
             });
 
-        // 5. Comparativos Regionais
         $regionalComparisons = DB::table('commodity_regional_comparisons')
             ->select('pais', 'preco_medio', 'logistica_perc', 'risco', 'estabilidade', 'ranking')
             ->where('commodity_id', $commodity->id)
@@ -123,51 +97,41 @@ class PrevisoesController extends Controller
             'descriptiveData' => $descriptiveData,
             'nationalForecasts' => $nationalForecasts,
             'regionalComparisons' => $regionalComparisons,
-            'selectedCommodity' => $commodity, // AQUI GARANTIMOS O ID CORRETO NA VIEW
+            'selectedCommodity' => $commodity,
         ]);
     }
 
-    /**
-     * Tela de Gráficos
-     */
     public function graficos(Request $request, $id = null)
     {
         $user = $this->getAuthenticatedUser($request);
         if (!$user) return redirect()->route('login');
         $avatarUrl = $this->resolveAvatarUrl($user);
 
-        // Define o ID
         $commodityId = $id ?? $request->query('commodity_id');
         if (!$commodityId) {
             $commodityId = DB::table('commodities')->latest('id')->value('id');
         }
 
-        // --- BUSCA DADOS REAIS DO BANCO PARA OS GRÁFICOS ---
-        // Vamos usar a tabela de comparativos regionais para gerar os gráficos de barra
         $chartData = DB::table('commodity_regional_comparisons')
             ->select('pais', 'preco_medio', 'logistica_perc', 'risco', 'estabilidade')
             ->where('commodity_id', $commodityId)
-            ->orderBy('preco_medio', 'desc') // Ordenar para ficar bonito no gráfico
+            ->orderBy('preco_medio', 'desc')
             ->get();
 
         return view('graficos', [
             'user' => $user,
             'avatarUrl' => $avatarUrl,
             'commodityId' => $commodityId,
-            'chartData' => $chartData, // Passando os dados para a View
+            'chartData' => $chartData,
         ]);
     }
 
-    /**
-     * Tela de Conclusão
-     */
     public function conclusao(Request $request, $id = null)
     {
         $user = $this->getAuthenticatedUser($request);
         if (!$user) return redirect()->route('login');
         $avatarUrl = $this->resolveAvatarUrl($user);
 
-        // Prioridade: ID da Rota -> ID da Query -> Último do Banco
         $commodityId = $id ?? $request->query('commodity_id');
 
         if (!$commodityId) {
@@ -181,7 +145,58 @@ class PrevisoesController extends Controller
         ]);
     }
 
-    // --- MÉTODOS AUXILIARES ---
+    public function exportarPdf($id)
+    {
+        $commodity = DB::table('commodities')->where('id', $id)->first();
+        if(!$commodity) abort(404);
+
+        $descriptiveData = DB::table('commodity_descriptive_metrics as metrics')
+            ->select('metrics.*', 'commodities.nome as materia_prima')
+            ->join('commodities', 'commodities.id', '=', 'metrics.commodity_id')
+            ->where('metrics.commodity_id', $id)
+            ->orderByDesc('metrics.referencia_mes')
+            ->first();
+
+        if (!$descriptiveData) {
+            $descriptiveData = (object) [
+                'materia_prima' => $commodity->nome,
+                'volume_compra_ton' => 0,
+                'preco_medio_global' => 0,
+                'preco_medio_brasil' => 0,
+                'preco_alvo' => 0,
+            ];
+        }
+
+        $nationalForecasts = DB::table('commodity_national_forecasts')
+            ->select('referencia_mes', 'preco_medio', 'variacao_perc')
+            ->where('commodity_id', $id)
+            ->orderBy('referencia_mes')
+            ->get()
+            ->map(function ($forecast) {
+                $forecast->mes_ano = $forecast->referencia_mes 
+                    ? Str::ucfirst(Carbon::parse($forecast->referencia_mes)->locale('pt_BR')->translatedFormat('F/Y')) 
+                    : '-';
+                return $forecast;
+            });
+
+        $regionalComparisons = DB::table('commodity_regional_comparisons')
+            ->select('pais', 'preco_medio', 'logistica_perc', 'estabilidade', 'risco', 'ranking')
+            ->where('commodity_id', $id)
+            ->orderBy('ranking')
+            ->get();
+
+        $conclusionText = "Com base na análise de estabilidade econômica e climática, recomenda-se cautela nas negociações para os próximos trimestres. A volatilidade observada nos mercados emergentes sugere uma estratégia de hedging mais agressiva.";
+
+        // Aqui está a alteração para chamar a view correta
+        return view('pdfs.relatorio_completo', [
+            'commodity'           => $commodity,
+            'descriptiveData'     => $descriptiveData,
+            'nationalForecasts'   => $nationalForecasts,
+            'regionalComparisons' => $regionalComparisons,
+            'conclusionText'      => $conclusionText,
+            'date'                => date('d/m/Y H:i')
+        ]);
+    }
 
     private function getAuthenticatedUser(Request $request)
     {

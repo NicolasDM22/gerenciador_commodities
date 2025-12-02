@@ -79,6 +79,7 @@
             transition: transform 0.15s ease, box-shadow 0.15s ease;
             display: inline-flex;
             align-items: center;
+            justify-content: center; /* Centraliza texto no link */
             gap: 0.4rem;
             text-decoration: none;
         }
@@ -175,6 +176,7 @@
         .actions-footer {
             display: flex;
             justify-content: flex-end;
+            align-items: center; /* Alinha o texto de loading verticalmente */
             gap: 1rem;
             margin-top: 2rem;
             padding-top: 1rem;
@@ -189,6 +191,7 @@
             border: none;
             cursor: pointer;
             transition: background 0.2s;
+            font-size: 1rem;
         }
 
         .button-export:hover {
@@ -196,12 +199,17 @@
             color: var(--gray-900);
         }
 
+        .button-export:disabled {
+            cursor: wait;
+            opacity: 0.7;
+        }
+
         /* Responsividade */
         @media (max-width: 820px) {
             .top-bar { flex-direction: column; align-items: flex-start; }
             .conclusion-container { grid-template-columns: 1fr; gap: 2rem; }
             .chart-wrapper { height: 300px; }
-            .actions-footer { justify-content: center; }
+            .actions-footer { justify-content: center; flex-wrap: wrap; }
         }
     </style>
 </head>
@@ -219,8 +227,8 @@
                 <div class="nav-buttons">
                     {{-- Botão Esquerda: Volta para Gráficos --}}
                     <a href="{{ route('previsoes.graficos.show', ['id' => $commodityId]) }}" 
-                    class="button button-secondary button-icon" 
-                    title="Voltar para Gráficos">
+                       class="button button-secondary button-icon" 
+                       title="Voltar para Gráficos">
                     &larr;
                     </a>
 
@@ -248,7 +256,16 @@
             </div>
 
             <div class="actions-footer">
-                <button class="button button-export">Exportar PDF</button>
+                {{-- MENSAGEM DE LOADING (oculta por padrão) --}}
+                <span id="msgLoading" style="display:none; color: var(--gray-500); font-weight: 600;">Gerando PDF...</span>
+
+                {{-- BOTÃO EXPORTAR PDF (Via JavaScript + Iframe) --}}
+                <button id="btnExportar" 
+                        class="button button-export" 
+                        data-url="{{ route('previsoes.exportarPdf', ['id' => $commodityId]) }}">
+                    Exportar PDF
+                </button>
+                
                 <button class="button button-export">Exportar CSV</button>
             </div>
 
@@ -258,16 +275,15 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        
+        // --- GRÁFICO (Chart.js) ---
         const ctx = document.getElementById('finalChart').getContext('2d');
-
-        // Dados Mockados para o gráfico de linha da conclusão
-        // Labels aproximados: 09/25 a 04/26
         const data = {
             labels: ['09/25', '10/25', '11/25', '12/25', '01/26', '02/26', '03/26', '04/26'],
             datasets: [{
                 label: 'Preço Médio (R$/kg)',
                 data: [60, 57.8, 56.9, 57.3, 60.0, 62.0, 56.0, 52.0], 
-                borderColor: '#f97316', // Laranja
+                borderColor: '#f97316',
                 backgroundColor: 'rgba(249, 115, 22, 0.1)',
                 borderWidth: 2,
                 pointBackgroundColor: '#ffffff',
@@ -275,7 +291,7 @@
                 pointRadius: 4, 
                 pointHoverRadius: 6,
                 fill: true,
-                tension: 0.3 // Suaviza a linha
+                tension: 0.3
             }]
         };
 
@@ -291,23 +307,14 @@
                         mode: 'index',
                         intersect: false,
                         callbacks: {
-                            label: function(context) {
-                                return `Preço: R$${context.raw.toFixed(2)}`;
-                            }
+                            label: function(context) { return `Preço: R$${context.raw.toFixed(2)}`; }
                         }
                     }
                 },
                 scales: {
                     y: {
-                        beginAtZero: false,
-                        min: 50, 
-                        max: 65,
-                        title: {
-                            display: true,
-                            text: 'Previsão de Preço (R$/kg)',
-                            color: '#4b5563',
-                            font: { weight: 'bold' }
-                        },
+                        beginAtZero: false, min: 50, max: 65,
+                        title: { display: true, text: 'Previsão de Preço (R$/kg)', color: '#4b5563', font: { weight: 'bold' } },
                         grid: { display: false, drawBorder: true },
                         border: { display: true, width: 2, color: '#9ca3af' }
                     },
@@ -321,6 +328,53 @@
         };
 
         new Chart(ctx, config);
+
+
+        // --- LÓGICA DE EXPORTAÇÃO PDF CORRIGIDA (IFRAME OFF-SCREEN) ---
+        const btnExportar = document.getElementById('btnExportar');
+        if(btnExportar) {
+            btnExportar.addEventListener('click', function() {
+                var btn = this;
+                var url = btn.getAttribute('data-url');
+                var msg = document.getElementById('msgLoading');
+                var originalText = btn.innerText;
+
+                // 1. Feedback visual
+                btn.disabled = true;
+                btn.innerText = 'Processando...';
+                if(msg) msg.style.display = 'inline';
+
+                // 2. Cria o iframe (FORA DA TELA, NÃO INVISÍVEL COM DISPLAY:NONE)
+                // Se usar display:none, o html2pdf não consegue renderizar o conteúdo.
+                var iframe = document.createElement('iframe');
+                
+                // Truque: Mover o iframe para fora da viewport visível
+                iframe.style.position = 'fixed';
+                iframe.style.left = '-10000px'; 
+                iframe.style.top = '0';
+                iframe.style.width = '1000px'; // Tamanho físico necessário para renderizar
+                iframe.style.height = '1000px';
+                
+                iframe.src = url;
+                
+                // 3. Adiciona ao DOM para disparar a requisição
+                document.body.appendChild(iframe);
+
+                // 4. Restaura estado após 5s
+                setTimeout(function() {
+                    btn.disabled = false;
+                    btn.innerText = originalText;
+                    if(msg) msg.style.display = 'none';
+                    
+                    // Remove o iframe para limpar memória
+                    setTimeout(() => {
+                        if(document.body.contains(iframe)) {
+                            document.body.removeChild(iframe);
+                        }
+                    }, 1000); 
+                }, 8000); // 8 segundos para garantir o tempo de processamento dos gráficos
+            });
+        }
     });
 </script>
 </body>
