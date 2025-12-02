@@ -176,7 +176,7 @@
         .card {
             background: var(--white); border-radius: 16px;
             padding: 1.5rem; box-shadow: 0 10px 25px -10px rgba(15, 23, 42, 0.1);
-            position: relative; /* Necessário para posicionamento absoluto dos filhos se precisar */
+            position: relative;
         }
 
         .card h2 { margin: 0 0 1.5rem 0; font-size: 1.15rem; font-weight: 600; color: var(--gray-700); }
@@ -530,37 +530,141 @@
                 }
             });
         }
+
+        // -------------------------------------------------------
+        // 4. LÓGICA DO WEBSOCKET
+        // -------------------------------------------------------
+        const wsUrl = "ws://localhost:3000"; // Porta deve bater com a do Servidor Java
+        let websocket;
+
+        // Referências aos elementos do DOM
+        const btnConnect    = document.getElementById('javaWsConnect');
+        const btnDisconnect = document.getElementById('javaWsDisconnect');
+        const btnSend       = document.getElementById('javaWsSend');
+        const btnExit       = document.getElementById('javaWsSendExit');
+        const inputMsg      = document.getElementById('javaWsMessage');
+        const logArea       = document.getElementById('javaWsLog');
+        const statusLabel   = document.getElementById('javaWsStatus');
+        const statusDot     = document.getElementById('javaWsIndicator');
+
+        // Função auxiliar de log
+        function writeLog(msg) {
+            if(logArea) {
+                logArea.textContent += msg + "\n";
+                logArea.scrollTop = logArea.scrollHeight;
+            }
+        }
+
+        // Atualiza a UI (botões e texto) conforme estado
+        function updateState(isConnected) {
+            if(statusLabel) statusLabel.textContent = isConnected ? "Conectado" : "Desconectado";
+            if(statusDot) {
+                if(isConnected) statusDot.classList.add('active');
+                else statusDot.classList.remove('active');
+            }
+            
+            if(btnConnect)    btnConnect.disabled    = isConnected;
+            if(btnDisconnect) btnDisconnect.disabled = !isConnected;
+            if(btnSend)       btnSend.disabled       = !isConnected;
+            if(btnExit)       btnExit.disabled       = !isConnected;
+            if(inputMsg)      inputMsg.disabled      = !isConnected;
+        }
+
+        function initWebSocket() {
+            if(!btnConnect) return; 
+
+            writeLog("Tentando conectar em " + wsUrl + "...");
+            
+            try {
+                websocket = new WebSocket(wsUrl);
+
+                websocket.onopen = function(evt) {
+                    writeLog("Conectado com sucesso!");
+                    updateState(true);
+                };
+
+                websocket.onclose = function(evt) {
+                    writeLog("Desconectado.");
+                    updateState(false);
+                };
+
+                websocket.onmessage = function(evt) {
+                    writeLog("Recebido: " + evt.data);
+                    
+                    try {
+                        const data = JSON.parse(evt.data);
+                        if(data.tipo === 'desligamento') {
+                            showToast(data.msg, 'error');
+                        }
+                    } catch(e) {
+                    }
+                };
+
+                websocket.onerror = function(evt) {
+                    writeLog("Erro na conexão.");
+                    updateState(false);
+                };
+
+            } catch(e) {
+                writeLog("Erro ao inicializar: " + e.message);
+            }
+        }
+
+        function closeWebSocket() {
+            if(websocket) websocket.close();
+        }
+
+        function sendMessage() {
+            if(websocket && inputMsg && inputMsg.value) {
+                websocket.send(inputMsg.value);
+                writeLog("Enviado: " + inputMsg.value);
+                inputMsg.value = "";
+            }
+        }
+
+        function sendExitRequest() {
+            if(websocket) {
+                const msg = '{"tipo":"pedidoDeSair"}';
+                websocket.send(msg);
+                writeLog("Enviado pedido de sair...");
+            }
+        }
+
+        if(btnConnect)    btnConnect.addEventListener('click', initWebSocket);
+        if(btnDisconnect) btnDisconnect.addEventListener('click', closeWebSocket);
+        if(btnSend)       btnSend.addEventListener('click', sendMessage);
+        if(btnExit)       btnExit.addEventListener('click', sendExitRequest);
+        
+        initWebSocket();
     });
 
     // Função JS para criar o HTML do Toast
-    // Substitua sua função showToast atual por esta:
-function showToast(message, type = 'default') {
-    const container = document.getElementById('toast-container');
-    if(!container) return; 
+    function showToast(message, type = 'default') {
+        const container = document.getElementById('toast-container');
+        if(!container) return; 
 
-    const toast = document.createElement('div');
-    toast.className = `toast-notification toast-${type}`;
-    
-    let icon = '';
-    if(type === 'success') icon = '<span style="margin-right: 8px">✅</span>';
-    if(type === 'error') icon = '<span style="margin-right: 8px">❌</span>';
+        const toast = document.createElement('div');
+        toast.className = `toast-notification toast-${type}`;
+        
+        let icon = '';
+        if(type === 'success') icon = '<span style="margin-right: 8px">✅</span>';
+        if(type === 'error') icon = '<span style="margin-right: 8px">❌</span>';
 
-    // AQUI: Garante que o texto seja tratado corretamente
-    toast.innerHTML = `
-        <div class="toast-content">${icon}${message}</div>
-        <button class="toast-close" onclick="this.parentElement.remove()" style="margin-left: auto;">&times;</button>
-    `;
+        toast.innerHTML = `
+            <div class="toast-content">${icon}${message}</div>
+            <button class="toast-close" onclick="this.parentElement.remove()" style="margin-left: auto;">&times;</button>
+        `;
 
-    container.appendChild(toast);
+        container.appendChild(toast);
 
-    // Remove automaticamente
-    setTimeout(() => {
-        toast.style.animation = 'fadeOut 0.3s forwards';
-        toast.addEventListener('animationend', () => {
-            toast.remove();
-        });
-    }, 6000); // Aumentei um pouco o tempo pois textos longos demoram mais para ler
-}
+        // Remove automaticamente
+        setTimeout(() => {
+            toast.style.animation = 'fadeOut 0.3s forwards';
+            toast.addEventListener('animationend', () => {
+                toast.remove();
+            });
+        }, 6000); 
+    }
 
     @if (session('status'))
         showToast("{{ session('status') }}", 'success');
