@@ -114,6 +114,7 @@ class LoginController extends Controller
         $userId = DB::table('users')->insertGetId([
             'usuario' => $data['usuario'],
             'email' => trim($data['email']),
+            'nome' => $data['usuario'],
             'foto_blob' => null,
             'foto_mime' => null,
             'telefone' => $normalizedPhone,

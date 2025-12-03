@@ -110,67 +110,37 @@
         }
 
         .toast-container {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-            pointer-events: none;
-            width: auto;
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 9999; display: flex; flex-direction: column; align-items: center;
+            gap: 10px; pointer-events: none; width: auto;
         }
 
         .toast-notification {
-            background: var(--white);
-            min-width: 300px;
-            width: fit-content;
-            max-width: 90vw;
-            padding: 1rem 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1.5rem;
+            background: var(--white); min-width: 300px; width: fit-content; max-width: 90vw;
+            padding: 1rem 1.5rem; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            display: flex; align-items: center; justify-content: space-between; gap: 1.5rem;
             animation: slideDown 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-            pointer-events: auto;
-            border-left: 5px solid var(--gray-500);
+            pointer-events: auto; border-left: 5px solid var(--gray-500);
         }
 
         .toast-success { border-left-color: var(--success); }
         .toast-error { border-left-color: var(--danger); }
 
         .toast-content { 
-            font-size: 0.95rem; 
-            color: var(--gray-700); 
-            font-weight: 500;
-            white-space: pre-line;
-            line-height: 1.5;
-            padding-top: 2px; 
+            font-size: 0.95rem; color: var(--gray-700); font-weight: 500;
+            white-space: pre-line; line-height: 1.5; padding-top: 2px; 
         }
 
         .toast-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--gray-400); }
         .toast-close:hover { color: var(--gray-600); }
 
         @keyframes slideDown {
-            from {
-                transform: translateY(-100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
 
         @keyframes fadeOut {
-            to {
-                transform: translateY(-100%);
-                opacity: 0;
-            }
+            to { transform: translateY(-100%); opacity: 0; }
         }
         /* --- CARD & DATATABLES CUSTOMIZATIONS --- */
         .card {
@@ -333,7 +303,9 @@
                             </td>
                         </tr>
                     @empty
-                        {{-- DataTables lida com tabela vazia --}}
+                        <tr>
+                            <td colspan="4" style="text-align: center;">Nenhuma análise disponível.</td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>
@@ -437,13 +409,16 @@
     $(document).ready(function() {
         // 1. Inicializar DataTables com as alterações pedidas
         $('#commoditiesTable').DataTable({
-            pageLength: 5, // Exibe 5 por vez (mas agora recebe todos os dados)
-            lengthChange: false, // <--- REMOVE O SELETOR "Exibir X resultados"
+            pageLength: 5, 
+            lengthChange: false, 
             responsive: true,
+            columnDefs: [
+                { targets: [0], orderable: false, searchable: false }, // Esconder ID da pesquisa
+                { targets: [3], orderable: false, searchable: false } // Ação não pesquisável
+            ],
             language: {
-                search: "", // Remove o label "Search:", deixa só o input
+                search: "", 
                 searchPlaceholder: "Filtrar análises...",
-                // Se não houver filtro, mostra o total. Se houver, mostra "filtrado de X"
                 info: "Mostrando _START_ até _END_ de _TOTAL_ registro(s)",
                 infoFiltered: "(filtrado de _MAX_ registros no total)",
                 zeroRecords: "Nenhum registro encontrado",
@@ -483,10 +458,12 @@
         if (chartCanvas && typeof Chart !== 'undefined') {
             
             let dataToUse = chartRawData;
-            if (!dataToUse || !dataToUse.labels) {
+            // Se o controller não encontrar dados reais, usa mock para evitar erro
+            if (!dataToUse || !dataToUse.labels || dataToUse.labels.length === 0) {
+                // Mock de 8 pontos de forecast/histórico
                 dataToUse = {
-                    labels: ['Jan', 'Fev', 'Mar', 'Abr'],
-                    prices: [50, 52, 51, 54]
+                    labels: ['Set/25', 'Out/25', 'Nov/25', 'Dez/25', 'Jan/26', 'Fev/26', 'Mar/26', 'Abr/26'],
+                    prices: [50, 52, 51, 54, 55, 56, 57, 58]
                 };
             }
 
@@ -498,6 +475,7 @@
                     datasets: [{
                         label: 'Preço Médio (R$/kg)',
                         data: dataToUse.prices || [],
+                        // Cor da linha
                         borderColor: '#F97316', 
                         backgroundColor: 'rgba(249, 115, 22, 0.1)', 
                         borderWidth: 2,
@@ -513,6 +491,7 @@
                     scales: {
                         y: {
                             beginAtZero: false,
+                            // Usa formatação correta para BRL
                             ticks: { color: '#4b5563', callback: v => 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 0 }) },
                             grid: { color: '#e5e7eb' }
                         },
@@ -523,6 +502,7 @@
                         tooltip: {
                             backgroundColor: '#374151', titleColor: '#fff', bodyColor: '#fff',
                             callbacks: {
+                                // Tooltip agora usa o preço formatado
                                 label: ctx => (ctx.dataset.label || '') + (ctx.parsed.y ? ': R$ ' + ctx.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '')
                             }
                         }
@@ -534,7 +514,7 @@
         // -------------------------------------------------------
         // 4. LÓGICA DO WEBSOCKET
         // -------------------------------------------------------
-        const wsUrl = "ws://localhost:3000"; // Porta deve bater com a do Servidor Java
+        const wsUrl = "ws://localhost:3000"; 
         let websocket;
 
         // Referências aos elementos do DOM
@@ -563,11 +543,11 @@
                 else statusDot.classList.remove('active');
             }
             
-            if(btnConnect)    btnConnect.disabled    = isConnected;
-            if(btnDisconnect) btnDisconnect.disabled = !isConnected;
-            if(btnSend)       btnSend.disabled       = !isConnected;
-            if(btnExit)       btnExit.disabled       = !isConnected;
-            if(inputMsg)      inputMsg.disabled      = !isConnected;
+            if(btnConnect)      btnConnect.disabled     = isConnected;
+            if(btnDisconnect)   btnDisconnect.disabled  = !isConnected;
+            if(btnSend)         btnSend.disabled        = !isConnected;
+            if(btnExit)         btnExit.disabled        = !isConnected;
+            if(inputMsg)        inputMsg.disabled       = !isConnected;
         }
 
         function initWebSocket() {
@@ -630,12 +610,16 @@
             }
         }
 
-        if(btnConnect)    btnConnect.addEventListener('click', initWebSocket);
-        if(btnDisconnect) btnDisconnect.addEventListener('click', closeWebSocket);
-        if(btnSend)       btnSend.addEventListener('click', sendMessage);
-        if(btnExit)       btnExit.addEventListener('click', sendExitRequest);
+        if(btnConnect)      btnConnect.addEventListener('click', initWebSocket);
+        if(btnDisconnect)   btnDisconnect.addEventListener('click', closeWebSocket);
+        if(btnSend)         btnSend.addEventListener('click', sendMessage);
+        if(btnExit)         btnExit.addEventListener('click', sendExitRequest);
         
-        initWebSocket();
+        // Se o painel admin existir, tenta conectar automaticamente
+        if (document.getElementById('javaWsCard')) {
+            initWebSocket();
+        }
+        
     });
 
     // Função JS para criar o HTML do Toast
