@@ -55,7 +55,7 @@ class HomeController extends Controller
         $analysisQuery = DB::table('commodity_saida')
             ->where('tipo_analise', 'PREVISAO_MENSAL')
             ->orderByDesc('referencia_mes')
-            ->selectRaw('commodity_saida.id, commodity_saida.commodity_id, commodity_saida.referencia_mes');
+            ->selectRaw('commodity_saida.id, commodity_saida.commodity_id, commodity_saida.referencia_mes, commodity_saida.created_at, commodity_saida.updated_at');
 
         try {
             $analysis = $analysisQuery->get()

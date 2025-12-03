@@ -286,8 +286,7 @@
                     <tr>
                         <th>ID</th>
                         <th>Commodity</th>
-                        <th>Data da Análise</th>
-                        <th>Ação</th>
+                        <th>Data/Hora Registro</th> <th>Ação</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -295,7 +294,15 @@
                         <tr>
                             <td>{{ $analysis->id ?? '-' }}</td>
                             <td>{{ $analysis->commodity_nome ?? 'N/A' }}</td>
-                            <td>{{ $analysis->data_previsao ?? '-' }}</td>
+                            
+                            <td data-order="{{ !empty($analysis->updated_at) ? strtotime($analysis->updated_at) : 0 }}">
+                                @if(!empty($analysis->updated_at))
+                                    {{ date('d/m/Y H:i:s', strtotime($analysis->updated_at)) }}
+                                @else
+                                    -
+                                @endif
+                            </td>
+
                             <td>
                                 <a href="{{ url('/previsoes/' . $analysis->id) }}" style="color: var(--link-color); font-weight: 600; text-decoration: none;">
                                     Ver Detalhes
@@ -407,14 +414,16 @@
     const chartRawData = @json($chartData ?? null);
 
     $(document).ready(function() {
-        // 1. Inicializar DataTables com as alterações pedidas
+        // 1. Inicializar DataTables com a ordenação automática
         $('#commoditiesTable').DataTable({
             pageLength: 5, 
             lengthChange: false, 
             responsive: true,
+            order: [[2, 'desc']], 
+
             columnDefs: [
-                { targets: [0], orderable: false, searchable: false }, // Esconder ID da pesquisa
-                { targets: [3], orderable: false, searchable: false } // Ação não pesquisável
+                { targets: [0], orderable: false, searchable: false },
+                { targets: [3], orderable: false, searchable: false }  
             ],
             language: {
                 search: "", 
