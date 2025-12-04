@@ -17,7 +17,7 @@
                     <option value="" disabled selected hidden>Selecione uma matéria-prima</option>
                     <option value="soja">Soja</option>
                     <option value="acucar">Açúcar</option>
-                    <option value="trigo">Trigo</option>
+                    <option value="milho">Milho</option>
                     <option value="cacau">Cacau</option>
                 </select>
 

@@ -45,18 +45,13 @@ Route::group([], function () {
     Route::get('/previsoes/{id}', [PrevisoesController::class, 'index'])
         ->where('id', '[0-9]+')
         ->name('previsoes.show');
-});
 
-// Rotas exclusivas de administradores
-Route::middleware(['admin'])->group(function () {
-    Route::get('/previsoes', [PrevisoesController::class, 'index'])->name('forecasts');
     Route::get('/previsoes/graficos', [PrevisoesController::class, 'graficos'])->name('previsoes.graficos');
-    Route::get('/previsoes/conclusao', [PrevisoesController::class, 'conclusao'])->name('previsoes.conclusao');
-
     Route::get('/previsoes/graficos/{id}', [PrevisoesController::class, 'graficos'])
         ->where('id', '[0-9]+')
         ->name('previsoes.graficos.show');
 
+    Route::get('/previsoes/conclusao', [PrevisoesController::class, 'conclusao'])->name('previsoes.conclusao');
     Route::get('/previsoes/conclusao/{id}', [PrevisoesController::class, 'conclusao'])
         ->where('id', '[0-9]+')
         ->name('previsoes.conclusao.show');
@@ -64,6 +59,11 @@ Route::middleware(['admin'])->group(function () {
     Route::get('/previsoes/{id}/exportar-pdf', [PrevisoesController::class, 'exportarPdf'])
         ->where('id', '[0-9]+')
         ->name('previsoes.exportarPdf');
+});
+
+// Rotas exclusivas de administradores
+Route::middleware(['admin'])->group(function () {
+    Route::get('/previsoes', [PrevisoesController::class, 'index'])->name('forecasts');
 
     Route::get('/admin/notificacoes', [AdminNotificationController::class, 'index'])->name('admin.notifications');
     Route::post('/admin/notificacoes/{notificationId}/lida', [AdminNotificationController::class, 'markAsRead'])->name('admin.notifications.read');

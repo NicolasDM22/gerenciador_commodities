@@ -14,7 +14,7 @@ class FormsController extends Controller
     private array $materiaPrimaMap = [
         'soja' => ['nome' => 'Soja', 'id' => 1],
         'acucar' => ['nome' => 'Acucar', 'id' => 3],
-        'trigo' => ['nome' => 'Trigo', 'id' => 2],
+        'milho' => ['nome' => 'Milho', 'id' => 2],
         'cacau' => ['nome' => 'Cacau', 'id' => 4],
     ];
 
@@ -110,15 +110,7 @@ class FormsController extends Controller
         $info = $this->materiaPrimaMap[$slug] ?? ['nome' => Str::title($slug), 'id' => null];
         $nomeBusca = $info['nome'];
 
-        $commodity = DB::table('commodities')
-            ->whereRaw('LOWER(nome) = ?', [Str::lower($nomeBusca)])
-            ->orderByDesc('updated_at')
-            ->first();
-
-        if ($commodity) {
-            return $commodity;
-        }
-
+        // Try to find by commodity_id first if available
         if (!empty($info['id'])) {
             $existeSaida = DB::table('commodity_saida')
                 ->where('commodity_id', $info['id'])
@@ -132,6 +124,20 @@ class FormsController extends Controller
             }
         }
 
+        // Check commodity_entrada table for the name
+        $commodity = DB::table('commodity_entrada')
+            ->whereRaw('LOWER(nome) = ?', [Str::lower($nomeBusca)])
+            ->orderByDesc('updated_at')
+            ->first();
+
+        if ($commodity) {
+            return (object) [
+                'id' => $commodity->commodity_id,
+                'nome' => $commodity->nome,
+            ];
+        }
+
+        // Fallback to any commodity_saida record
         $fallback = DB::table('commodity_saida')
             ->select('commodity_id')
             ->when($info['id'], fn ($query) => $query->where('commodity_id', $info['id']))
@@ -287,33 +293,112 @@ EOT;
 
     private function persistCommoditySaida(object $commodity, array $structured, float $volumeKg, float $precoAlvo, Carbon $timestamp): void
     {
-        $mercadoPrincipal = $structured['mercados'][0] ?? [];
-        $indicadores = $structured['indicadores'] ?? [];
-
         $referencia = Carbon::now()->startOfMonth()->toDateString();
 
-        DB::table('commodity_saida')->updateOrInsert(
-            [
-                'commodity_id' => $commodity->id,
-                'referencia_mes' => $referencia,
-                'tipo_analise' => 'PREVISAO_MENSAL',
-            ],
-            [
-                'volume_compra_ton' => max($volumeKg / 1000, 0),
-                'preco_alvo' => $precoAlvo,
-                'preco_mes_atual' => $this->toFloat($mercadoPrincipal['preco'] ?? null),
-                'preco_medio' => $this->toFloat($mercadoPrincipal['preco'] ?? null),
-                'preco_medio_brasil' => $this->toFloat($indicadores['media_brasil'] ?? null),
-                'preco_medio_global' => $this->toFloat($indicadores['media_global'] ?? null),
-                'risco' => $indicadores['risco'] ?? null,
-                'estabilidade' => $indicadores['estabilidade'] ?? null,
-                'variacao_perc' => null,
-                'logistica_perc' => null,
-                'ranking' => 1,
-                'updated_at' => $timestamp,
-                'created_at' => $timestamp,
-            ]
-        );
+        $currentRow = DB::table('commodity_saida')
+            ->where('commodity_id', $commodity->id)
+            ->where('referencia_mes', $referencia)
+            ->where('tipo_analise', 'PREVISAO_MENSAL')
+            ->first();
+
+        $previousRow = DB::table('commodity_saida')
+            ->where('commodity_id', $commodity->id)
+            ->where('referencia_mes', '<', $referencia)
+            ->where('tipo_analise', 'PREVISAO_MENSAL')
+            ->orderByDesc('referencia_mes')
+            ->first();
+
+        $timeline = $this->buildTimelinePayload($structured['mercados'] ?? [], $currentRow, $previousRow);
+        $indicadores = $structured['indicadores'] ?? [];
+        $logistica = $structured['logistica'] ?? [];
+
+        $payload = array_merge($timeline, [
+            'commodity_id' => $commodity->id,
+            'referencia_mes' => $referencia,
+            'tipo_analise' => 'PREVISAO_MENSAL',
+            'volume_compra_ton' => max($volumeKg / 1000, 0),
+            'preco_alvo' => $precoAlvo,
+            'preco_medio' => $this->calculateAveragePrice($timeline),
+            'preco_medio_brasil' => $this->toFloat($indicadores['media_brasil'] ?? null),
+            'preco_medio_global' => $this->toFloat($indicadores['media_global'] ?? null),
+            'variacao_perc' => $this->calculateVariationPercent(
+                $timeline['preco_mes_atual'] ?? null,
+                $timeline['preco_1_mes_anterior'] ?? null
+            ),
+            'logistica_perc' => $this->toFloat($logistica['custo_estimado'] ?? ($logistica['perc'] ?? null)),
+            'risco' => $indicadores['risco'] ?? null,
+            'estabilidade' => $indicadores['estabilidade'] ?? null,
+            'ranking' => 1,
+            'updated_at' => $timestamp,
+        ]);
+
+        if ($currentRow) {
+            DB::table('commodity_saida')
+                ->where('id', $currentRow->id)
+                ->update($payload);
+        } else {
+            $payload['created_at'] = $timestamp;
+            DB::table('commodity_saida')->insert($payload);
+        }
+    }
+
+    private function buildTimelinePayload(array $mercados, ?object $currentRow, ?object $previousRow): array
+    {
+        $timeline = [
+            'preco_3_meses_anterior' => $currentRow->preco_3_meses_anterior ?? null,
+            'preco_2_meses_anterior' => $currentRow->preco_2_meses_anterior ?? null,
+            'preco_1_mes_anterior' => $currentRow->preco_1_mes_anterior ?? null,
+            'preco_mes_atual' => $currentRow->preco_mes_atual ?? null,
+            'preco_1_mes_depois' => $currentRow->preco_1_mes_depois ?? null,
+            'preco_2_meses_depois' => $currentRow->preco_2_meses_depois ?? null,
+            'preco_3_meses_depois' => $currentRow->preco_3_meses_depois ?? null,
+            'preco_4_meses_depois' => $currentRow->preco_4_meses_depois ?? null,
+        ];
+
+        if (!$currentRow && $previousRow) {
+            $timeline['preco_3_meses_anterior'] = $previousRow->preco_2_meses_anterior ?? null;
+            $timeline['preco_2_meses_anterior'] = $previousRow->preco_1_mes_anterior ?? null;
+            $timeline['preco_1_mes_anterior'] = $previousRow->preco_mes_atual ?? null;
+        }
+
+        $timeline['preco_mes_atual'] = $this->toFloat($mercados[0]['preco'] ?? $timeline['preco_mes_atual']);
+
+        $futuroCampos = [
+            'preco_1_mes_depois',
+            'preco_2_meses_depois',
+            'preco_3_meses_depois',
+            'preco_4_meses_depois',
+        ];
+
+        foreach ($futuroCampos as $index => $campo) {
+            $timeline[$campo] = $this->toFloat($mercados[$index + 1]['preco'] ?? $timeline[$campo]);
+        }
+
+        return $timeline;
+    }
+
+    private function calculateAveragePrice(array $timeline): ?float
+    {
+        $valores = array_filter([
+            $timeline['preco_mes_atual'] ?? null,
+            $timeline['preco_1_mes_depois'] ?? null,
+            $timeline['preco_2_meses_depois'] ?? null,
+        ], fn ($value) => $value !== null);
+
+        if (empty($valores)) {
+            return null;
+        }
+
+        return round(array_sum($valores) / count($valores), 2);
+    }
+
+    private function calculateVariationPercent(?float $atual, ?float $anterior): ?float
+    {
+        if ($atual === null || $anterior === null || $anterior == 0.0) {
+            return null;
+        }
+
+        return round((($atual - $anterior) / $anterior) * 100, 2);
     }
 
     private function toFloat($value): ?float

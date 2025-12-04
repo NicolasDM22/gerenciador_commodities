@@ -42,14 +42,14 @@ class HomeController extends Controller
 
         $analysis = collect();
         if ($hasCommoditySaidaTable) {
-            try {
+        try {
                 $analysis = DB::table('commodity_saida')
                     ->where('tipo_analise', 'PREVISAO_MENSAL')
                     ->orderByDesc('referencia_mes')
                     ->select('id', 'commodity_id', 'referencia_mes', 'created_at', 'updated_at')
                     ->get()
                     ->map(function ($item) {
-                        $item->commodity_nome = $this->commodityMap[$item->commodity_id] ?? 'ID Desconhecido: ' . $item->commodity_id;
+                        $item->commodity_nome = $this->commodityMap[$item->commodity_id] ?? 'Commodity #' . $item->commodity_id;
                         $item->data_previsao = $item->referencia_mes ? Carbon::parse($item->referencia_mes)->format('d/m/Y H:i') : '-';
                         return $item;
                     });
@@ -58,7 +58,7 @@ class HomeController extends Controller
             }
         }
 
-        // Gráfico
+        // GrÃ¡fico
         $defaultCommodityId = array_key_first($this->commodityMap) ?? 1;
         if ($hasCommoditySaidaTable) {
             try {
@@ -75,7 +75,7 @@ class HomeController extends Controller
             }
         }
 
-        $commodityName = $this->commodityMap[$defaultCommodityId] ?? 'Histórico Geral';
+        $commodityName = $this->commodityMap[$defaultCommodityId] ?? 'HistÃ³rico Geral';
         $chartData = ['labels' => [], 'prices' => [], 'commodityName' => $commodityName];
 
         if ($hasCommoditySaidaTable) {
@@ -134,7 +134,7 @@ class HomeController extends Controller
                 ->get()
                 ->map(function ($notification) {
                     $createdAt = $notification->created_at ? Carbon::parse($notification->created_at) : null;
-                    $notification->created_at_formatted = $createdAt ? $createdAt->format('d/m/Y H:i') : 'Nao informado';
+                    $notification->created_at_formatted = $createdAt ? $createdAt->format('d/m/Y H:i') : 'Não informado';
                     return $notification;
                 });
         }

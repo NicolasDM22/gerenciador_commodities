@@ -226,7 +226,7 @@
             <div class="analysis-header">
                 <div class="nav-buttons">
                     {{-- Botão Esquerda: Volta para Gráficos --}}
-                    <a href="{{ route('previsoes.graficos.show', ['id' => $commodityId]) }}" 
+                    <a href="{{ route('previsoes.graficos.show', ['id' => $analysisId ?? $commodityId]) }}" 
                        class="button button-secondary button-icon" 
                        title="Voltar para Gráficos">
                     &larr;
@@ -241,12 +241,37 @@
                 <a href="{{ route('home') }}" class="button button-secondary button-icon" style="font-size: 1.2rem; line-height: 0.8;" title="Fechar">&times;</a>
             </div>
 
+            @php
+                $recomendacao = $aiSummary['recomendacao'] ?? 'Recomendação automática indisponível.';
+                $logistica = $aiSummary['logistica'] ?? [];
+                $indicadores = $aiSummary['indicadores'] ?? [];
+                $timelineLabels = ($timelineSeries ?? collect())->pluck('mes_ano');
+                $timelineValues = ($timelineSeries ?? collect())->pluck('preco_medio');
+                $chartMin = $timelineValues->count() ? max(min($timelineValues->toArray()) - 5, 0) : 0;
+                $chartMax = $timelineValues->count() ? max($timelineValues->toArray()) + 5 : 100;
+            @endphp
+
             <div class="conclusion-container">
                 
                 <div class="conclusion-text">
-                    <p>Com base na análise de estabilidade econômica e climática, recomenda-se cautela nas negociações para os próximos trimestres. A volatilidade observada nos mercados emergentes sugere uma estratégia de hedging mais agressiva.</p>
-                    <p>Para o mercado nacional, a tendência de alta nos custos logísticos pode impactar a margem final. Sugerimos antecipação de contratos com fornecedores locais onde o risco climático se mostrou menor no último período.</p>
-                    <p>Em resumo: O cenário aponta para uma leve retração de oferta global, o que deve sustentar os preços em patamares elevados até o início da próxima safra.</p>
+                    <p>{{ $recomendacao }}</p>
+                    @if(!empty($logistica['melhor_rota']))
+                        <p><strong>Melhor rota logística:</strong> {{ $logistica['melhor_rota'] }}</p>
+                    @endif
+                    @if(isset($logistica['custo_estimado']))
+                        <p><strong>Custo logístico estimado:</strong> {{ number_format($logistica['custo_estimado'], 2, ',', '.') }}%</p>
+                    @endif
+                    @if(!empty($logistica['observacoes']))
+                        <p>{{ $logistica['observacoes'] }}</p>
+                    @endif
+                    <p>
+                        Indicadores atuais: média Brasil em 
+                        <strong>R${{ number_format($indicadores['media_brasil'] ?? 0, 2, ',', '.') }}/kg</strong>,
+                        média global em 
+                        <strong>R${{ number_format($indicadores['media_global'] ?? 0, 2, ',', '.') }}/kg</strong>,
+                        risco <strong>{{ $indicadores['risco'] ?? '-' }}</strong> e
+                        estabilidade <strong>{{ $indicadores['estabilidade'] ?? '-' }}</strong>.
+                    </p>
                 </div>
 
                 <div class="chart-wrapper">
@@ -262,7 +287,7 @@
                 {{-- BOTÃO EXPORTAR PDF (Via JavaScript + Iframe) --}}
                 <button id="btnExportar" 
                         class="button button-export" 
-                        data-url="{{ route('previsoes.exportarPdf', ['id' => $commodityId]) }}">
+                        data-url="{{ route('previsoes.exportarPdf', ['id' => $analysisId ?? $commodityId]) }}">
                     Exportar PDF
                 </button>
                 
@@ -275,20 +300,23 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        
-        // --- GRÁFICO (Chart.js) ---
+        const chartLabels = @json($timelineLabels->toArray());
+        const chartValues = @json($timelineValues->toArray());
         const ctx = document.getElementById('finalChart').getContext('2d');
+        const finalLabels = chartLabels.length ? chartLabels : ['Sem dados'];
+        const finalValues = chartValues.length ? chartValues : [0];
+
         const data = {
-            labels: ['09/25', '10/25', '11/25', '12/25', '01/26', '02/26', '03/26', '04/26'],
+            labels: finalLabels,
             datasets: [{
                 label: 'Preço Médio (R$/kg)',
-                data: [60, 57.8, 56.9, 57.3, 60.0, 62.0, 56.0, 52.0], 
+                data: finalValues,
                 borderColor: '#f97316',
                 backgroundColor: 'rgba(249, 115, 22, 0.1)',
                 borderWidth: 2,
                 pointBackgroundColor: '#ffffff',
                 pointBorderColor: '#f97316',
-                pointRadius: 4, 
+                pointRadius: 4,
                 pointHoverRadius: 6,
                 fill: true,
                 tension: 0.3
@@ -313,7 +341,9 @@
                 },
                 scales: {
                     y: {
-                        beginAtZero: false, min: 50, max: 65,
+                        beginAtZero: false,
+                        min: {{ $chartMin }},
+                        max: {{ $chartMax }},
                         title: { display: true, text: 'Previsão de Preço (R$/kg)', color: '#4b5563', font: { weight: 'bold' } },
                         grid: { display: false, drawBorder: true },
                         border: { display: true, width: 2, color: '#9ca3af' }

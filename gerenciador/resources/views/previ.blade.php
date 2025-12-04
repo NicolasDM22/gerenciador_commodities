@@ -159,12 +159,31 @@
         .analysis-body::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
         .analysis-body::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
         
-        .analysis-section h2 {
-             margin-bottom: 1.25rem;
-             font-size: 1.15rem;
-             font-weight: 600;
-             color: var(--gray-700);
-        }
+.analysis-section h2 {
+     margin-bottom: 1.25rem;
+     font-size: 1.15rem;
+     font-weight: 600;
+     color: var(--gray-700);
+}
+
+.ai-markets {
+     display: grid;
+     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+     gap: 1rem;
+}
+
+.ai-market-card {
+     border: 1px solid var(--gray-200);
+     border-radius: 16px;
+     background: var(--gray-50);
+     padding: 1rem;
+}
+
+.ai-market-card h3 {
+     margin: 0 0 0.5rem;
+     font-size: 1rem;
+     color: var(--gray-700);
+}
         
         .descriptive-grid {
             display: grid;
@@ -235,7 +254,7 @@
                 <div class="nav-buttons">
                     <button class="button button-secondary button-icon" disabled type="button">&larr;</button>
                     
-                    <a href="{{ route('previsoes.graficos.show', ['id' => $selectedCommodity->id]) }}" 
+                    <a href="{{ route('previsoes.graficos.show', ['id' => $analysisId ?? $selectedCommodity->id]) }}" 
                     class="button button-secondary button-icon" 
                     title="Ir para Gráficos">
                     &rarr;
@@ -267,6 +286,26 @@
                         </div>
                     </div>
                 </div>
+                
+                @if (!empty($aiSummary['mercados']))
+                <div class="analysis-section">
+                    <h2>Mercados recomendados pela IA</h2>
+                    <div class="ai-markets">
+                        @foreach ($aiSummary['mercados'] as $mercado)
+                            <div class="ai-market-card">
+                                <h3>{{ $mercado['nome'] ?? 'Mercado' }}</h3>
+                                <p><strong>Preço estimado:</strong> {{ $mercado['moeda'] ?? 'BRL' }} {{ number_format($mercado['preco'] ?? 0, 2, ',', '.') }}</p>
+                                @if (!empty($mercado['prazo_estimado_dias']))
+                                    <p><strong>Prazo estimado:</strong> {{ $mercado['prazo_estimado_dias'] }} dias</p>
+                                @endif
+                                @if (!empty($mercado['justificativa']))
+                                    <p>{{ $mercado['justificativa'] }}</p>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
                 
                 <div class="analysis-section">
                     <h2>Tendência do mercado nacional (próximos meses)</h2>
