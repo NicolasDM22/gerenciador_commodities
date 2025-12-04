@@ -12,8 +12,7 @@ class FormsController extends Controller
 {
     public function salvar(Request $request)
     {
-        // Aumenta o tempo limite de execução para 2 minutos (120 segundos)
-        set_time_limit(120);
+        set_time_limit(120); // Evita timeout da IA
 
         $userId = $request->session()->get('auth_user_id');
         if (!$userId) return redirect()->route('login');
@@ -22,23 +21,23 @@ class FormsController extends Controller
         $data = $request->validate([
             'materia_prima' => ['required', 'string', 'max:191'],
             'volume' => ['required', 'string', 'max:30'],
-            'preco_alvo' => ['required', 'string', 'max:30'],
+            'preco_alvo' => ['required', 'string', 'max:30'], // Quanto o usuário QUER pagar
             'cep' => ['required', 'string', 'max:9'],
         ]);
 
         $volume = $this->normalizeDecimal($data['volume']);
-        $preco = $this->normalizeDecimal($data['preco_alvo']);
+        $precoAlvo = $this->normalizeDecimal($data['preco_alvo']);
         $cep = preg_replace('/\D+/', '', $data['cep']) ?? '';
 
-        if ($volume <= 0 || $preco <= 0) {
+        if ($volume <= 0 || $precoAlvo <= 0) {
             return back()->withErrors('Volume e preço alvo precisam ser maiores que zero.');
         }
 
-        // 2. Identificação/Criação da Matéria-Prima
+        // 2. Identificação/Criação da Matéria-Prima (Usa o Preço Alvo apenas como referência inicial se for nova)
         $nomeMateria = Str::ucfirst(Str::lower(trim($data['materia_prima'])));
         
         try {
-            $commodityObj = $this->ensureCommodityExists($nomeMateria, $preco);
+            $commodityObj = $this->ensureCommodityExists($nomeMateria, $precoAlvo);
         } catch (\Exception $e) {
             return back()->withErrors('Erro ao processar commodity: ' . $e->getMessage());
         }
@@ -50,13 +49,14 @@ class FormsController extends Controller
             : $locations->map(fn($l) => "{$l->nome} ({$l->estado})")->implode('; ');
 
         // 4. Preparação para a IA
-        $prompt = $this->montarPrompt($commodityObj->nome, $volume, $preco, $cep, $locationsList);
+        // AQUI ESTÁ A MUDANÇA: Passamos o preço alvo, mas pedimos o preço de mercado separadamente
+        $prompt = $this->montarPrompt($commodityObj->nome, $volume, $precoAlvo, $cep, $locationsList);
 
         // 5. Conexão com a IA
         $bridgeUrl = rtrim(config('services.java_ai_bridge.url', 'http://127.0.0.1:3100/analises'), '/');
         $payload = [
             'texto' => $prompt,
-            'contexto' => "Ref: R$ {$preco}. Locais disponíveis: {$locationsList}",
+            'contexto' => "User Target: R$ {$precoAlvo}. Locais: {$locationsList}",
             'meta' => ['commodity_id' => $commodityObj->id, 'usuario_id' => $userId],
         ];
 
@@ -73,17 +73,17 @@ class FormsController extends Controller
 
         if (!$structured) return back()->withErrors('A IA falhou em gerar os dados estruturados.');
 
-        // 6. Salva (Com Transaction)
+        // 6. Salva
         $now = now();
         
-        DB::transaction(function () use ($userId, $commodityObj, $volume, $preco, $cep, $prompt, $structured, $now) {
+        DB::transaction(function () use ($userId, $commodityObj, $volume, $precoAlvo, $cep, $prompt, $structured, $now) {
             // Salva LOG
             DB::table('ai_analysis_logs')->insert([
                 'user_id' => $userId,
                 'commodity_id' => $commodityObj->id,
                 'materia_prima' => $commodityObj->nome,
                 'volume_kg' => $volume,
-                'preco_alvo' => $preco,
+                'preco_alvo' => $precoAlvo,
                 'cep' => $cep,
                 'prompt' => $prompt,
                 'response' => json_encode($structured, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
@@ -92,11 +92,11 @@ class FormsController extends Controller
                 'updated_at' => $now,
             ]);
 
-            // Salva SAÍDA (Tabela Principal para Gráficos)
-            $this->persistCommoditySaida($commodityObj, $structured, $volume, $preco, $now);
+            // Salva SAÍDA
+            $this->persistCommoditySaida($commodityObj, $structured, $volume, $precoAlvo, $now);
         });
 
-        return back()->with('status', "Análise criada! Confira na lista.");
+        return back()->with('status', "Análise criada! O mercado foi estimado pela IA.");
     }
 
     private function ensureCommodityExists(string $nome, float $price): object
@@ -121,26 +121,34 @@ class FormsController extends Controller
         return (object) ['id' => $newId, 'nome' => $nome];
     }
 
-    private function montarPrompt(string $materia, float $volume, float $preco, string $cep, string $locationsList): string
+    private function montarPrompt(string $materia, float $volume, float $precoAlvo, string $cep, string $locationsList): string
     {
+        // CORREÇÃO AQUI: Instrução clara para separar Alvo de Mercado
         return <<<EOT
-Atue como um Especialista em Commodities Sênior. Gere uma análise estratégica para compra de: {$materia}.
-Dados: Volume {$volume} kg, Preço Alvo R$ {$preco}, CEP {$cep}.
+Atue como um Especialista Sênior em Commodities. Gere uma análise de mercado real para: {$materia}.
+DADOS DO USUÁRIO: 
+- Volume: {$volume} kg
+- Preço Alvo (Desejo de pagamento): R$ {$precoAlvo}
+- CEP: {$cep}
 
-TAREFA 1: TIMELINE DE PREÇOS
-Com base no preço alvo atual (R$ {$preco}), crie uma estimativa realista dos preços dos últimos 3 meses e projete os próximos 4 meses.
+TAREFA 1: PREÇO DE MERCADO REAL vs PREÇO ALVO
+Identifique o PREÇO MÉDIO REAL de mercado (BRL/kg) hoje para {$materia}.
+NÃO use o preço alvo do usuário como o preço atual, a menos que coincida com a realidade.
+Se o açúcar custa R$ 5,00 e o usuário quer pagar R$ 50,00, a timeline deve mostrar R$ 5,00 (realidade).
 
-TAREFA 2: RANKING DE LOCALIZAÇÕES
-Da lista abaixo, escolha as 3 MELHORES para compra AGORA.
-LISTA DISPONÍVEL: [{$locationsList}]
+TAREFA 2: TIMELINE
+Crie estimativa dos últimos 3 meses e próximos 4 meses baseada no MERCADO REAL.
 
-Retorne APENAS um JSON válido com esta estrutura exata (sem texto antes ou depois):
+TAREFA 3: RANKING
+Escolha as 3 melhores origens da lista: [{$locationsList}]
+
+Retorne APENAS JSON válido:
 {
   "timeline": {
     "preco_3_meses_anterior": 0.00,
     "preco_2_meses_anterior": 0.00,
     "preco_1_mes_anterior": 0.00,
-    "preco_mes_atual": {$preco},
+    "preco_mes_atual": 0.00, 
     "preco_1_mes_depois": 0.00,
     "preco_2_meses_depois": 0.00,
     "preco_3_meses_depois": 0.00,
@@ -148,12 +156,12 @@ Retorne APENAS um JSON válido com esta estrutura exata (sem texto antes ou depo
   },
   "mercados": [
     { 
-      "nome": "Nome Exato da Lista", 
+      "nome": "Nome da Lista", 
       "preco": 0.00, 
       "moeda": "BRL", 
-      "logistica_obs": "Resumo logístico detalhado",
-      "estabilidade_economica": "Alta/Media/Baixa",
-      "estabilidade_climatica": "Alta/Media/Baixa",
+      "logistica_obs": "Resumo",
+      "estabilidade_economica": "Alta",
+      "estabilidade_climatica": "Alta",
       "risco_geral": "Baixo"
     }
   ],
@@ -165,10 +173,10 @@ Retorne APENAS um JSON válido com esta estrutura exata (sem texto antes ou depo
   },
   "logistica": {
     "custo_estimado": 0.00, 
-    "melhor_rota": "Rota sugerida...", 
+    "melhor_rota": "Rota...", 
     "observacoes": "Obs..." 
   },
-  "recomendacao": "Texto analítico conclusivo explicando a tendência projetada na timeline e justificando a escolha dos mercados."
+  "recomendacao": "Explique a diferença entre o preço alvo do usuário e a realidade do mercado."
 }
 EOT;
     }
@@ -181,7 +189,10 @@ EOT;
         $ind = $structured['indicadores'] ?? [];
         $logistica = $structured['logistica'] ?? [];
         
-        $pAtual = $this->toFloat($timeline['preco_mes_atual'] ?? $precoAlvo);
+        // CORREÇÃO: Pega o preço da IA. Se vier 0 ou nulo, aí sim usa o Alvo como fallback desesperado
+        $precoMercadoIA = $this->toFloat($timeline['preco_mes_atual'] ?? 0);
+        $pAtual = ($precoMercadoIA > 0) ? $precoMercadoIA : $precoAlvo;
+
         $pAnt1 = $this->toFloat($timeline['preco_1_mes_anterior'] ?? 0);
         $variacao = ($pAnt1 > 0) ? round((($pAtual - $pAnt1) / $pAnt1) * 100, 2) : 0;
 
@@ -195,13 +206,13 @@ EOT;
             'preco_3_meses_anterior' => $this->toFloat($timeline['preco_3_meses_anterior'] ?? 0),
             'preco_2_meses_anterior' => $this->toFloat($timeline['preco_2_meses_anterior'] ?? 0),
             'preco_1_mes_anterior' => $pAnt1,
-            'preco_mes_atual' => $pAtual,
+            'preco_mes_atual' => $pAtual, // Aqui entra o preço real (ex: 5.00)
             'preco_1_mes_depois' => $this->toFloat($timeline['preco_1_mes_depois'] ?? 0),
             'preco_2_meses_depois' => $this->toFloat($timeline['preco_2_meses_depois'] ?? 0),
             'preco_3_meses_depois' => $this->toFloat($timeline['preco_3_meses_depois'] ?? 0),
             'preco_4_meses_depois' => $this->toFloat($timeline['preco_4_meses_depois'] ?? 0),
             'volume_compra_ton' => $volume / 1000,
-            'preco_alvo' => $precoAlvo,
+            'preco_alvo' => $precoAlvo, // Aqui fica o alvo (ex: 50.00) para calcular o GAP no front
             'preco_medio' => $media,
             'preco_medio_brasil' => $this->toFloat($ind['media_brasil'] ?? 0),
             'preco_medio_global' => $this->toFloat($ind['media_global'] ?? 0),
