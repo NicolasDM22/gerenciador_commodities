@@ -1,4 +1,4 @@
-ï»¿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -65,7 +65,7 @@
         .profile-info span { color: var(--gray-500); font-size: 0.95rem; }
         .top-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
 
-        /* BOTÃƒâ€¢ES */
+        /* BOTÕES */
         .button {
             border: none;
             border-radius: 12px;
@@ -204,7 +204,7 @@
             color: var(--gray-700); 
         }
 
-        /* AJUSTE PARA ALINHAR O FILTRO COM O TÃƒÂTULO */
+        /* AJUSTE PARA ALINHAR O FILTRO COM O TÍTULO */
         .dataTables_wrapper {
             position: relative;
         }
@@ -237,7 +237,7 @@
         table.dataTable thead th { background-color: var(--gray-50); color: var(--gray-700); }
         table.dataTable.no-footer { border-bottom: 1px solid var(--gray-200); }
 
-        /* Responsividade para o filtro nÃƒÂ£o sobrepor o tÃƒÂ­tulo em telas pequenas */
+        /* Responsividade para o filtro não sobrepor o título em telas pequenas */
         @media (max-width: 650px) {
             .dataTables_wrapper .dataTables_filter {
                 position: relative;
@@ -288,10 +288,10 @@
     <x-topbar :user="$user" :isAdmin="$isAdmin ?? false">
         
         @if($isAdmin ?? false)
-            <a href="{{ route('forecasts') }}" class="button button-secondary">Debug PrevisÃƒÂµes</a>
+            <a href="{{ route('forecasts') }}" class="button button-secondary">Debug Previsões</a>
         @endif
         
-        <button class="button button-outline" id="btnOpenFormsModal" type="button">Nova anÃƒÂ¡lise</button>
+        <button class="button button-outline" id="btnOpenFormsModal" type="button">Nova análise</button>
         <button class="button button-outline" id="btnOpenProfileModal" type="button">Atualizar perfil</button>
 
     </x-topbar>
@@ -299,7 +299,7 @@
     <main class="content">
                                 <div class="card">
 
-            <h2>Visualizar anÃ¡lises</h2>
+            <h2>Visualizar análises</h2>
 
             <table id="commoditiesTable" class="display" style="width:100%">
 
@@ -313,7 +313,7 @@
 
                         <th>Data/Hora Registro</th>
 
-                        <th>AÃ§Ã£o</th>
+                        <th>Ação</th>
 
                     </tr>
 
@@ -336,7 +336,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" style="text-align: center;">Nenhuma anÃ¡lise disponÃ­vel.</td>
+                            <td colspan="4" style="text-align: center;">Nenhuma análise disponível.</td>
                         </tr>
                     @endforelse
 
@@ -350,7 +350,7 @@
 
 
         <div class="card">
-            <h2>{{ $chartData['commodityName'] ?? 'HistÃƒÂ³rico de PreÃƒÂ§os (Geral)' }}</h2>
+            <h2>{{ $chartData['commodityName'] ?? 'Histórico de Preços (Geral)' }}</h2>
             <div class="chart-wrapper">
                 <canvas id="priceHistoryChart"></canvas>
             </div>
@@ -358,13 +358,13 @@
 
         @if(!empty($aiAnalyses) && count($aiAnalyses) > 0)
         <div class="card">
-            <h2>ÃƒÅ¡ltimas anÃƒÂ¡lises automÃƒÂ¡ticas</h2>
+            <h2>Últimas análises automáticas</h2>
             <table class="simple-table">
                 <thead>
                     <tr>
-                        <th>MatÃƒÂ©ria-prima</th>
+                        <th>Matéria-prima</th>
                         <th>Mercado recomendado</th>
-                        <th>PreÃƒÂ§o estimado</th>
+                        <th>Preço estimado</th>
                         <th>Prazo</th>
                         <th>Gerada em</th>
                     </tr>
@@ -421,7 +421,7 @@
                 <button class="button button-primary" type="button" id="javaWsSend" disabled>Enviar</button>
             </div>
             
-            <div class="ws-log" id="javaWsLog">Aguardando conexÃƒÂ£o...</div>
+            <div class="ws-log" id="javaWsLog">Aguardando conexão...</div>
         </div>
         @endif
 
@@ -438,7 +438,7 @@
         <form action="{{ route('profile.update') }}" method="POST" enctype="multipart/form-data">
             @csrf
             <div class="form-group">
-                <label for="usuario">UsuÃƒÂ¡rio</label>
+                <label for="usuario">Usuário</label>
                 <input id="usuario" name="usuario" type="text" value="{{ old('usuario', $user->usuario ?? '') }}" required>
             </div>
             
@@ -458,7 +458,7 @@
             </div>
             
             <div class="form-group">
-                <label for="endereco">EndereÃƒÂ§o</label>
+                <label for="endereco">Endereço</label>
                 <input id="endereco" name="endereco" type="text" value="{{ old('endereco', $user->endereco ?? '') }}">
             </div>
             
@@ -480,18 +480,18 @@
             
             <div class="modal-footer">
                 <button class="button button-outline" type="button" id="btnCancelProfileModal">Cancelar</button>
-                <button class="button button-primary" type="submit">Salvar alteraÃƒÂ§ÃƒÂµes</button>
+                <button class="button button-primary" type="submit">Salvar alterações</button>
             </div>
         </form>
     </div>
 </div>
 
 <script>
-    // Dados para o GrÃƒÂ¡fico (Do Controller ou Vazio)
+    // Dados para o Gráfico (Do Controller ou Vazio)
     const chartRawData = @json($chartData ?? null);
 
     $(document).ready(function() {
-        // 1. Inicializar DataTables com a ordenaÃƒÂ§ÃƒÂ£o automÃƒÂ¡tica
+        // 1. Inicializar DataTables com a ordenação automática
         $('#commoditiesTable').DataTable({
             pageLength: 5, 
             lengthChange: false, 
@@ -504,12 +504,12 @@
             ],
             language: {
                 search: "", 
-                searchPlaceholder: "Filtrar anÃƒÂ¡lises...",
-                info: "Mostrando _START_ atÃƒÂ© _END_ de _TOTAL_ registro(s)",
+                searchPlaceholder: "Filtrar análises...",
+                info: "Mostrando _START_ até _END_ de _TOTAL_ registro(s)",
                 infoFiltered: "(filtrado de _MAX_ registros no total)",
                 zeroRecords: "Nenhum registro encontrado",
-                infoEmpty: "NÃƒÂ£o hÃƒÂ¡ registros disponÃƒÂ­veis",
-                paginate: { first: "Primeiro", last: "ÃƒÅ¡ltimo", next: "PrÃƒÂ³ximo", previous: "Anterior" },
+                infoEmpty: "Não há registros disponíveis",
+                paginate: { first: "Primeiro", last: "Último", next: "Próximo", previous: "Anterior" },
                 loadingRecords: "Carregando...",
                 processing: "Processando...",
                 emptyTable: "Nenhum registro encontrado"
@@ -519,7 +519,7 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         
-        // 2. LÃƒÂ³gica dos Modais
+        // 2. Lógica dos Modais
         const profileModal = document.getElementById('profileModal');
         const toggleProfile = (show) => profileModal?.classList.toggle('active', show);
 
@@ -527,26 +527,26 @@
         document.getElementById('btnCloseProfileModal')?.addEventListener('click', () => toggleProfile(false));
         document.getElementById('btnCancelProfileModal')?.addEventListener('click', () => toggleProfile(false));
 
-        // ConexÃƒÂ£o com o Modal do Forms
+        // Conexão com o Modal do Forms
         const btnOpenForms = document.getElementById('btnOpenFormsModal');
         const formsModal = document.getElementById('formsModal'); 
         
         if (btnOpenForms) {
             btnOpenForms.addEventListener('click', () => {
                 if(formsModal) formsModal.classList.add('active');
-                else alert('Erro: Modal de forms nÃƒÂ£o encontrado no include.');
+                else alert('Erro: Modal de forms não encontrado no include.');
             });
         }
 
-        // 3. GrÃƒÂ¡fico RESTAURADO
+        // 3. Gráfico RESTAURADO
         const chartCanvas = document.getElementById('priceHistoryChart');
 
         if (chartCanvas && typeof Chart !== 'undefined') {
             
             let dataToUse = chartRawData;
-            // Se o controller nÃƒÂ£o encontrar dados reais, usa mock para evitar erro
+            // Se o controller não encontrar dados reais, usa mock para evitar erro
             if (!dataToUse || !dataToUse.labels || dataToUse.labels.length === 0) {
-                // Mock de 8 pontos de forecast/histÃƒÂ³rico
+                // Mock de 8 pontos de forecast/histórico
                 dataToUse = {
                     labels: ['Set/25', 'Out/25', 'Nov/25', 'Dez/25', 'Jan/26', 'Fev/26', 'Mar/26', 'Abr/26'],
                     prices: [50, 52, 51, 54, 55, 56, 57, 58]
@@ -559,7 +559,7 @@
                 data: {
                     labels: dataToUse.labels || [],
                     datasets: [{
-                        label: 'PreÃƒÂ§o MÃƒÂ©dio (R$/kg)',
+                        label: 'Preço Médio (R$/kg)',
                         data: dataToUse.prices || [],
                         // Cor da linha
                         borderColor: '#F97316', 
@@ -577,7 +577,7 @@
                     scales: {
                         y: {
                             beginAtZero: false,
-                            // Usa formataÃƒÂ§ÃƒÂ£o correta para BRL
+                            // Usa formatação correta para BRL
                             ticks: { color: '#4b5563', callback: v => 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 0 }) },
                             grid: { color: '#e5e7eb' }
                         },
@@ -588,7 +588,7 @@
                         tooltip: {
                             backgroundColor: '#374151', titleColor: '#fff', bodyColor: '#fff',
                             callbacks: {
-                                // Tooltip agora usa o preÃƒÂ§o formatado
+                                // Tooltip agora usa o preço formatado
                                 label: ctx => (ctx.dataset.label || '') + (ctx.parsed.y ? ': R$ ' + ctx.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '')
                             }
                         }
@@ -598,12 +598,12 @@
         }
 
         // -------------------------------------------------------
-        // 4. LÃƒâ€œGICA DO WEBSOCKET
+        // 4. LÓGICA DO WEBSOCKET
         // -------------------------------------------------------
         const wsUrl = "ws://localhost:3000"; 
         let websocket;
 
-        // ReferÃƒÂªncias aos elementos do DOM
+        // Referências aos elementos do DOM
         const btnConnect    = document.getElementById('javaWsConnect');
         const btnDisconnect = document.getElementById('javaWsDisconnect');
         const btnSend       = document.getElementById('javaWsSend');
@@ -613,7 +613,7 @@
         const statusLabel   = document.getElementById('javaWsStatus');
         const statusDot     = document.getElementById('javaWsIndicator');
 
-        // FunÃƒÂ§ÃƒÂ£o auxiliar de log
+        // Função auxiliar de log
         function writeLog(msg) {
             if(logArea) {
                 logArea.textContent += msg + "\n";
@@ -621,7 +621,7 @@
             }
         }
 
-        // Atualiza a UI (botÃƒÂµes e texto) conforme estado
+        // Atualiza a UI (botões e texto) conforme estado
         function updateState(isConnected) {
             if(statusLabel) statusLabel.textContent = isConnected ? "Conectado" : "Desconectado";
             if(statusDot) {
@@ -667,7 +667,7 @@
                 };
 
                 websocket.onerror = function(evt) {
-                    writeLog("Erro na conexÃƒÂ£o.");
+                    writeLog("Erro na conexão.");
                     updateState(false);
                 };
 
@@ -708,7 +708,7 @@
         
     });
 
-    // FunÃƒÂ§ÃƒÂ£o JS para criar o HTML do Toast
+    // Função JS para criar o HTML do Toast
     function showToast(message, type = 'default') {
         const container = document.getElementById('toast-container');
         if(!container) return; 
@@ -717,8 +717,8 @@
         toast.className = `toast-notification toast-${type}`;
         
         let icon = '';
-        if(type === 'success') icon = '<span style="margin-right: 8px">Ã¢Å“â€¦</span>';
-        if(type === 'error') icon = '<span style="margin-right: 8px">Ã¢ÂÅ’</span>';
+        if(type === 'success') icon = '<span style="margin-right: 8px">&#10003;</span>';
+        if(type === 'error') icon = '<span style="margin-right: 8px">&#10007;</span>';
 
         toast.innerHTML = `
             <div class="toast-content">${icon}${message}</div>
@@ -759,7 +759,3 @@
 @include('profile')
 </body>
 </html>
-
-
-
-
