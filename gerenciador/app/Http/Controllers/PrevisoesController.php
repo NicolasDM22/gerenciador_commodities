@@ -9,13 +9,7 @@ use Illuminate\Support\Str;
 
 class PrevisoesController extends Controller
 {
-    // Mapa manual de nomes
-    private $commodityMap = [
-        1 => 'Soja',
-        2 => 'Milho',
-        3 => 'Açúcar',
-        4 => 'Cacau',
-    ];
+    private $commodityMap = [1 => 'Soja', 2 => 'Milho', 3 => 'Açúcar', 4 => 'Cacau'];
 
     public function index(Request $request, $id = null)
     {
@@ -25,9 +19,7 @@ class PrevisoesController extends Controller
         $avatarUrl = $this->resolveAvatarUrl($user);
 
         $payload = $this->buildAnalysisPayload($id, $request->query('commodity_id'));
-        if (!$payload) {
-            return redirect()->route('home')->withErrors('Nenhuma análise disponível.');
-        }
+        if (!$payload) return redirect()->route('home')->withErrors('Nenhuma análise disponível.');
 
         return view('previ', [
             'user' => $user,
@@ -41,10 +33,6 @@ class PrevisoesController extends Controller
         ]);
     }
 
-    // --- MÉTODOS DE GRÁFICO E CONCLUSÃO TAMBÉM PRECISAM DE AJUSTE ---
-    // Eles devem receber o Commodity ID, mas se você quiser navegar entre ANÁLISES específicas,
-    // a lógica teria que mudar. Por enquanto, mantive eles focados na Commodity (padrão do dashboard).
-
     public function graficos(Request $request, $id = null)
     {
         $user = $this->getAuthenticatedUser($request);
@@ -52,9 +40,7 @@ class PrevisoesController extends Controller
         $avatarUrl = $this->resolveAvatarUrl($user);
 
         $payload = $this->buildAnalysisPayload($id ?? $request->query('analysis_id'), $request->query('commodity_id'));
-        if (!$payload) {
-            return redirect()->route('home')->withErrors('Nenhuma análise disponível para gerar gráficos.');
-        }
+        if (!$payload) return redirect()->route('home');
 
         return view('graficos', [
             'user' => $user,
@@ -63,7 +49,7 @@ class PrevisoesController extends Controller
             'analysisId' => $payload['analysis']->id,
             'chartData' => $payload['regionalComparisons'],
             'timelineSeries' => $payload['nationalForecasts'],
-            'locationComparison' => $payload['locationComparison'] ?? [],
+            'locationComparison' => [],
             'aiSummary' => $payload['aiSummary'],
         ]);
     }
@@ -75,9 +61,7 @@ class PrevisoesController extends Controller
         $avatarUrl = $this->resolveAvatarUrl($user);
 
         $payload = $this->buildAnalysisPayload($id ?? $request->query('analysis_id'), $request->query('commodity_id'));
-        if (!$payload) {
-            return redirect()->route('home')->withErrors('Nenhuma análise disponível.');
-        }
+        if (!$payload) return redirect()->route('home');
 
         return view('conclusao', [
             'user' => $user,
@@ -92,274 +76,133 @@ class PrevisoesController extends Controller
     public function exportarPdf($id)
     {
         $payload = $this->buildAnalysisPayload($id, null);
-        if (!$payload) {
-            abort(404);
-        }
-
-        $conclusionText = $payload['aiSummary']['recomendacao'] ?? 'Recomendação gerada automaticamente com base na última análise.';
-
+        if (!$payload) abort(404);
         return view('pdfs.relatorio_completo', [
-            'commodity'           => $payload['commodity'],
-            'descriptiveData'     => $payload['descriptiveData'],
-            'nationalForecasts'   => $payload['nationalForecasts'],
+            'commodity' => $payload['commodity'],
+            'descriptiveData' => $payload['descriptiveData'],
+            'nationalForecasts' => $payload['nationalForecasts'],
             'regionalComparisons' => $payload['regionalComparisons'],
-            'conclusionText'      => $conclusionText,
-            'date'                => date('d/m/Y H:i')
+            'conclusionText' => $payload['aiSummary']['recomendacao'] ?? '',
+            'date' => date('d/m/Y H:i')
         ]);
     }
 
-    // Auxiliares
-    private function getAuthenticatedUser(Request $request)
-    {
+    private function getAuthenticatedUser(Request $request) {
         $userId = $request->session()->get('auth_user_id');
-        if (!$userId) return null;
-        return DB::table('users')->where('id', $userId)->first();
-    }
-
-    private function calcDiffPerc($antigo, $novo) {
-        if(!$antigo || $antigo == 0) return 0;
-        return (($novo - $antigo) / $antigo) * 100;
+        return $userId ? DB::table('users')->where('id', $userId)->first() : null;
     }
 
     private function buildAnalysisPayload(?int $analysisId, ?int $commodityId): ?array
     {
         $analysis = $this->resolveAnalysis($analysisId, $commodityId);
-        if (!$analysis) {
-            return null;
-        }
+        if (!$analysis) return null;
 
         $commodity = DB::table('commodity_entrada')->where('commodity_id', $analysis->commodity_id)->first();
-        if (!$commodity) {
-            return null;
-        }
-
         $aiLog = $this->fetchAiLogForAnalysis($analysis);
-        $descriptiveData = $this->buildDescriptiveData($analysis, $commodity);
-        $timeline = $this->buildTimelineSeries($analysis);
-        $aiSummary = $this->buildAiSummary($analysis, $commodity, $aiLog);
-        $regional = $this->buildRegionalComparisons($aiSummary);
-        $locationComparison = $this->buildLocationComparison($analysis->commodity_id, $commodity->nome);
 
         return [
             'analysis' => $analysis,
             'commodity' => $commodity,
-            'descriptiveData' => $descriptiveData,
-            'nationalForecasts' => $timeline,
-            'regionalComparisons' => $regional,
-            'locationComparison' => $locationComparison,
-            'aiSummary' => $aiSummary,
+            'descriptiveData' => (object)[
+                'materia_prima' => $commodity->nome,
+                'referencia_mes' => $analysis->referencia_mes,
+                'volume_compra_ton' => $analysis->volume_compra_ton,
+                'preco_medio_brasil' => $analysis->preco_medio_brasil,
+                'preco_alvo' => $analysis->preco_alvo
+            ],
+            'nationalForecasts' => $this->buildTimelineSeries($analysis),
+            'aiSummary' => $this->buildAiSummary($analysis, $commodity, $aiLog),
+            'regionalComparisons' => $this->buildRegionalComparisons($aiLog)
         ];
     }
 
-    private function resolveAnalysis(?int $analysisId, ?int $commodityId): ?object
+    private function resolveAnalysis(?int $analysisId, ?int $commodityId)
     {
-        if ($analysisId) {
-            $analysis = DB::table('commodity_saida')
-                ->where('tipo_analise', 'PREVISAO_MENSAL')
-                ->where('id', $analysisId)
-                ->first();
-            if ($analysis) {
-                return $analysis;
-            }
-        }
-
-        if ($commodityId) {
-            $analysis = DB::table('commodity_saida')
-                ->where('tipo_analise', 'PREVISAO_MENSAL')
-                ->where('commodity_id', $commodityId)
-                ->orderByDesc('referencia_mes')
-                ->orderByDesc('updated_at')
-                ->first();
-            if ($analysis) {
-                return $analysis;
-            }
-        }
-
-        return DB::table('commodity_saida')
-            ->where('tipo_analise', 'PREVISAO_MENSAL')
-            ->orderByDesc('referencia_mes')
-            ->orderByDesc('updated_at')
-            ->first();
+        $q = DB::table('commodity_saida')->orderByDesc('updated_at');
+        if ($analysisId) $q->where('id', $analysisId);
+        elseif ($commodityId) $q->where('commodity_id', $commodityId);
+        return $q->first();
     }
 
     private function fetchAiLogForAnalysis(object $analysis): ?object
     {
-        $inicioMes = Carbon::parse($analysis->referencia_mes)->startOfMonth();
-        $fimMes = Carbon::parse($analysis->referencia_mes)->endOfMonth();
-
-        $log = DB::table('ai_analysis_logs')
-            ->where('commodity_id', $analysis->commodity_id)
-            ->whereBetween('created_at', [$inicioMes, $fimMes])
-            ->orderByDesc('created_at')
-            ->first();
-
-        if ($log) {
-            return $log;
+        // 1. Match EXATO pelo timestamp (visto que são criados na mesma transação)
+        // Isso resolve o problema de pegar log errado de análises próximas
+        if ($analysis->updated_at) {
+            $exactLog = DB::table('ai_analysis_logs')
+                ->where('commodity_id', $analysis->commodity_id)
+                ->where('updated_at', $analysis->updated_at)
+                ->first();
+            
+            if ($exactLog) return $exactLog;
         }
 
-        return DB::table('ai_analysis_logs')
+        // 2. Fallback: Proximidade de tempo (Janela de 1 min)
+        $log = DB::table('ai_analysis_logs')
             ->where('commodity_id', $analysis->commodity_id)
-            ->orderByDesc('created_at')
+            ->whereBetween('updated_at', [
+                Carbon::parse($analysis->updated_at)->subMinutes(1),
+                Carbon::parse($analysis->updated_at)->addMinutes(1)
+            ])
+            ->orderByDesc('id')
             ->first();
-    }
 
-    private function buildDescriptiveData(object $analysis, object $commodity): object
-    {
-        return (object) [
-            'materia_prima' => $commodity->nome,
-            'volume_compra_ton' => $analysis->volume_compra_ton ?? 0,
-            'preco_medio_global' => $analysis->preco_medio_global ?? 0,
-            'preco_medio_brasil' => $analysis->preco_medio_brasil ?? 0,
-            'preco_alvo' => $analysis->preco_alvo ?? 0,
-            'referencia_mes' => $analysis->referencia_mes,
-        ];
+        // 3. Último recurso: Pega o mais recente absoluto
+        return $log ?? DB::table('ai_analysis_logs')
+            ->where('commodity_id', $analysis->commodity_id)
+            ->orderByDesc('id')
+            ->first();
     }
 
     private function buildTimelineSeries(object $analysis)
     {
         $offsetMap = [
-            -3 => 'preco_3_meses_anterior',
-            -2 => 'preco_2_meses_anterior',
-            -1 => 'preco_1_mes_anterior',
+            -3 => 'preco_3_meses_anterior', -2 => 'preco_2_meses_anterior', -1 => 'preco_1_mes_anterior',
              0 => 'preco_mes_atual',
-             1 => 'preco_1_mes_depois',
-             2 => 'preco_2_meses_depois',
-             3 => 'preco_3_meses_depois',
-             4 => 'preco_4_meses_depois',
+             1 => 'preco_1_mes_depois', 2 => 'preco_2_meses_depois', 3 => 'preco_3_meses_depois', 4 => 'preco_4_meses_depois',
         ];
-
         $series = [];
         $ref = Carbon::parse($analysis->referencia_mes);
         $ultimaReferencia = null;
 
         foreach ($offsetMap as $offset => $field) {
             $valor = $analysis->{$field} ?? null;
-            if ($valor === null) {
-                continue;
-            }
-
+            if ($valor === null) continue;
             $mes = Str::ucfirst($ref->copy()->addMonths($offset)->locale('pt_BR')->translatedFormat('M/Y'));
-            $variacao = $ultimaReferencia && $ultimaReferencia > 0
-                ? round((($valor - $ultimaReferencia) / $ultimaReferencia) * 100, 2)
-                : 0;
-
-            $series[] = (object) [
-                'mes_ano' => $mes,
-                'preco_medio' => (float) $valor,
-                'variacao_perc' => $variacao,
-                'offset' => $offset,
-            ];
-
+            $variacao = ($ultimaReferencia && $ultimaReferencia > 0) ? round((($valor - $ultimaReferencia) / $ultimaReferencia) * 100, 2) : 0;
+            $series[] = (object) ['mes_ano' => $mes, 'preco_medio' => (float) $valor, 'variacao_perc' => $variacao];
             $ultimaReferencia = $valor;
         }
-
         return collect($series);
     }
 
     private function buildAiSummary(object $analysis, object $commodity, ?object $aiLog): array
     {
-        $summary = [
+        $parsed = ($aiLog && $aiLog->response) ? json_decode($aiLog->response, true) : [];
+        return [
             'materia_prima' => $commodity->nome,
-            'volume_ton' => $analysis->volume_compra_ton ?? 0,
-            'indicadores' => [
-                'media_brasil' => $analysis->preco_medio_brasil ?? 0,
-                'media_global' => $analysis->preco_medio_global ?? 0,
-                'risco' => $analysis->risco ?? '-',
-                'estabilidade' => $analysis->estabilidade ?? '-',
-            ],
-            'logistica' => [
-                'custo_estimado' => $analysis->logistica_perc,
-                'melhor_rota' => null,
-                'observacoes' => null,
-            ],
-            'mercados' => [],
-            'recomendacao' => null,
-            'registrada_em' => $analysis->updated_at
-                ? Carbon::parse($analysis->updated_at)->format('d/m/Y H:i')
-                : null,
+            'recomendacao' => $parsed['recomendacao'] ?? 'Sem recomendação disponível.',
+            'mercados' => $parsed['mercados'] ?? [],
+            'logistica' => array_merge(['custo_estimado' => $analysis->logistica_perc], $parsed['logistica'] ?? []),
+            'indicadores' => array_merge(['risco' => $analysis->risco], $parsed['indicadores'] ?? [])
         ];
-
-        if ($aiLog) {
-            $parsed = json_decode($aiLog->response ?? '', true);
-            if (is_array($parsed)) {
-                if (!empty($parsed['mercados']) && is_array($parsed['mercados'])) {
-                    $summary['mercados'] = $parsed['mercados'];
-                }
-                if (!empty($parsed['logistica']) && is_array($parsed['logistica'])) {
-                    $summary['logistica'] = array_merge($summary['logistica'], $parsed['logistica']);
-                }
-                if (!empty($parsed['indicadores']) && is_array($parsed['indicadores'])) {
-                    $summary['indicadores'] = array_merge($summary['indicadores'], $parsed['indicadores']);
-                }
-                if (!empty($parsed['recomendacao'])) {
-                    $summary['recomendacao'] = $parsed['recomendacao'];
-                }
-            }
-        }
-
-        return $summary;
     }
 
-    private function buildRegionalComparisons(array $aiSummary)
+    private function buildRegionalComparisons($aiLog)
     {
-        $mercados = $aiSummary['mercados'] ?? [];
-        $indicadores = $aiSummary['indicadores'] ?? [];
-        $logisticaDefault = $aiSummary['logistica']['custo_estimado'] ?? null;
+        $parsed = ($aiLog && $aiLog->response) ? json_decode($aiLog->response, true) : [];
+        $mercados = $parsed['mercados'] ?? [];
 
-        return collect($mercados)->map(function ($mercado, $index) use ($indicadores, $logisticaDefault) {
-            $preco = $mercado['preco'] ?? null;
+        return collect($mercados)->map(function ($m) {
             return (object) [
-                'pais' => $mercado['nome'] ?? ('Mercado ' . ($index + 1)),
-                'preco_medio' => $preco !== null ? (float) $preco : null,
-                'logistica_perc' => $mercado['logistica_perc'] ?? $logisticaDefault,
-                'risco' => $mercado['risco'] ?? ($indicadores['risco'] ?? '-'),
-                'estabilidade' => $mercado['estabilidade'] ?? ($indicadores['estabilidade'] ?? '-'),
-                'ranking' => $mercado['ranking'] ?? ($index + 1),
-                'prazo_estimado' => $mercado['prazo_estimado_dias'] ?? null,
-                'moeda' => $mercado['moeda'] ?? 'BRL',
+                'pais' => $m['nome'] ?? 'N/D',
+                'preco_medio' => $m['preco'] ?? 0,
+                'moeda' => $m['moeda'] ?? 'BRL',
+                'logistica_obs' => $m['logistica_obs'] ?? '-',
+                'estabilidade_economica' => $m['estabilidade_economica'] ?? '-',
+                'estabilidade_climatica' => $m['estabilidade_climatica'] ?? '-',
+                'risco' => $m['risco_geral'] ?? '-'
             ];
-        })->values();
-    }
-
-    private function buildLocationComparison(int $commodityId, string $commodityName): array
-    {
-        // Busca os dados da commodity_entrada agrupados por localização
-        $entries = DB::table('commodity_entrada as ce')
-            ->join('locations as l', 'ce.location_id', '=', 'l.id')
-            ->where('ce.commodity_id', $commodityId)
-            ->select(
-                'l.id as location_id',
-                'l.nome as location_name',
-                'l.estado',
-                'l.regiao',
-                'ce.price',
-                'ce.currency',
-                'ce.unidade',
-                'ce.last_updated'
-            )
-            ->orderBy('ce.price', 'asc')
-            ->get();
-
-        if ($entries->isEmpty()) {
-            return [];
-        }
-
-        // Converte os dados para o formato esperado pelos gráficos
-        $comparison = [];
-        foreach ($entries as $entry) {
-            $comparison[] = [
-                'location_id' => $entry->location_id,
-                'location_name' => $entry->location_name,
-                'estado' => $entry->estado,
-                'regiao' => $entry->regiao,
-                'price' => (float) $entry->price,
-                'currency' => $entry->currency,
-                'unidade' => $entry->unidade,
-                'last_updated' => $entry->last_updated,
-                'commodity_name' => $commodityName,
-            ];
-        }
-
-        return $comparison;
+        });
     }
 }

@@ -42,15 +42,16 @@ class HomeController extends Controller
 
         $analysis = collect();
         if ($hasCommoditySaidaTable) {
-        try {
+            try {
                 $analysis = DB::table('commodity_saida')
                     ->where('tipo_analise', 'PREVISAO_MENSAL')
-                    ->orderByDesc('referencia_mes')
+                    ->orderByDesc('updated_at')
                     ->select('id', 'commodity_id', 'referencia_mes', 'created_at', 'updated_at')
                     ->get()
                     ->map(function ($item) {
                         $item->commodity_nome = $this->commodityMap[$item->commodity_id] ?? 'Commodity #' . $item->commodity_id;
-                        $item->data_previsao = $item->referencia_mes ? Carbon::parse($item->referencia_mes)->format('d/m/Y H:i') : '-';
+                        $dataBase = $item->updated_at ?? $item->created_at ?? now();
+                        $item->data_previsao = Carbon::parse($dataBase)->format('d/m/Y H:i');
                         return $item;
                     });
             } catch (\Exception $e) {
@@ -58,7 +59,6 @@ class HomeController extends Controller
             }
         }
 
-        // GrÃ¡fico
         $defaultCommodityId = array_key_first($this->commodityMap) ?? 1;
         if ($hasCommoditySaidaTable) {
             try {
@@ -75,7 +75,7 @@ class HomeController extends Controller
             }
         }
 
-        $commodityName = $this->commodityMap[$defaultCommodityId] ?? 'HistÃ³rico Geral';
+        $commodityName = $this->commodityMap[$defaultCommodityId] ?? 'Histórico Geral';
         $chartData = ['labels' => [], 'prices' => [], 'commodityName' => $commodityName];
 
         if ($hasCommoditySaidaTable) {
@@ -141,7 +141,7 @@ class HomeController extends Controller
 
         return view('home', [
             'user' => $user,
-            'avatarUrl' => $avatarUrl,
+            'avatarUrl' => $this->resolveAvatarUrl($user),
             'chartData' => $chartData,
             'isAdmin' => $isAdmin,
             'adminData' => $adminData,

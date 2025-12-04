@@ -7,26 +7,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 class FormsController extends Controller
 {
-    private array $materiaPrimaMap = [
-        'soja' => ['nome' => 'Soja', 'id' => 1],
-        'acucar' => ['nome' => 'Acucar', 'id' => 3],
-        'milho' => ['nome' => 'Milho', 'id' => 2],
-        'cacau' => ['nome' => 'Cacau', 'id' => 4],
-    ];
-
     public function salvar(Request $request)
     {
         $userId = $request->session()->get('auth_user_id');
-        if (!$userId) {
-            return redirect()->route('login');
-        }
+        if (!$userId) return redirect()->route('login');
 
+        // 1. Validação dos Inputs
         $data = $request->validate([
-            'materia_prima' => ['required', Rule::in(array_keys($this->materiaPrimaMap))],
+            'materia_prima' => ['required', 'string', 'max:191'],
             'volume' => ['required', 'string', 'max:30'],
             'preco_alvo' => ['required', 'string', 'max:30'],
             'cep' => ['required', 'string', 'max:9'],
@@ -40,383 +31,204 @@ class FormsController extends Controller
             return back()->withErrors('Volume e preço alvo precisam ser maiores que zero.');
         }
 
-        $commodity = $this->resolveCommodity($data['materia_prima']);
-        if (!$commodity) {
-            return back()->withErrors('Matéria-prima não encontrada no banco de dados.');
+        // 2. Identificação/Criação da Matéria-Prima
+        $nomeMateria = Str::ucfirst(Str::lower(trim($data['materia_prima'])));
+        
+        try {
+            $commodityObj = $this->ensureCommodityExists($nomeMateria, $preco);
+        } catch (\Exception $e) {
+            return back()->withErrors('Erro ao processar commodity: ' . $e->getMessage());
         }
 
-        $contexto = $this->montarContexto($commodity->id);
-        $prompt = $this->montarPrompt($commodity->nome ?? Str::ucfirst($data['materia_prima']), $volume, $preco, $cep, $contexto);
+        // 3. Busca Localizações para a IA (Para preencher o ranking corretamente)
+        $locations = DB::table('locations')->select('nome', 'estado', 'regiao')->limit(30)->get();
+        $locationsList = $locations->isEmpty() 
+            ? "Nenhuma cadastrada (sugira as melhores globais)" 
+            : $locations->map(fn($l) => "{$l->nome} ({$l->estado})")->implode('; ');
 
+        // 4. Preparação para a IA
+        $prompt = $this->montarPrompt($commodityObj->nome, $volume, $preco, $cep, $locationsList);
+
+        // 5. Conexão com a IA
         $bridgeUrl = rtrim(config('services.java_ai_bridge.url', 'http://127.0.0.1:3100/analises'), '/');
         $payload = [
             'texto' => $prompt,
-            'contexto' => $contexto,
-            'meta' => [
-                'commodity_id' => $commodity->id,
-                'materia_prima' => $commodity->nome,
-                'usuario_id' => $userId,
-            ],
+            'contexto' => "Ref: R$ {$preco}. Locais disponíveis: {$locationsList}",
+            'meta' => ['commodity_id' => $commodityObj->id, 'usuario_id' => $userId],
         ];
 
         try {
-            $response = Http::timeout(45)->acceptJson()->post($bridgeUrl, $payload);
+            $response = Http::timeout(60)->acceptJson()->post($bridgeUrl, $payload);
         } catch (\Throwable $e) {
-            return back()->withErrors('Não foi possível se conectar ao servidor Java: ' . $e->getMessage());
+            return back()->withErrors('Erro na conexão IA: ' . $e->getMessage());
         }
 
-        if (!$response->successful()) {
-            return back()->withErrors('Servidor Java retornou erro ' . $response->status() . ': ' . $response->body());
-        }
+        if (!$response->successful()) return back()->withErrors('IA Error: ' . $response->status());
 
         $textoIA = trim((string) $response->json('conteudo', ''));
-        if ($textoIA === '') {
-            return back()->withErrors('Servidor Java respondeu sem conteúdo de análise.');
-        }
-
         $structured = $this->parseStructuredResponse($textoIA);
-        if (!$structured) {
-            return back()->withErrors('A IA retornou dados em formato inesperado. Tente novamente.');
-        }
 
+        if (!$structured) return back()->withErrors('A IA falhou em gerar os dados estruturados.');
+
+        // 6. Salva (Com Transaction)
         $now = now();
-        DB::transaction(function () use ($userId, $commodity, $volume, $preco, $cep, $prompt, $contexto, $structured, $now) {
+        
+        DB::transaction(function () use ($userId, $commodityObj, $volume, $preco, $cep, $prompt, $structured, $now) {
+            // Salva LOG
             DB::table('ai_analysis_logs')->insert([
                 'user_id' => $userId,
-                'commodity_id' => $commodity->id,
-                'materia_prima' => $commodity->nome,
+                'commodity_id' => $commodityObj->id,
+                'materia_prima' => $commodityObj->nome,
                 'volume_kg' => $volume,
                 'preco_alvo' => $preco,
                 'cep' => $cep,
                 'prompt' => $prompt,
-                'context_snapshot' => $contexto,
                 'response' => json_encode($structured, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 'status' => 'completed',
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
 
-            $this->persistCommoditySaida($commodity, $structured, $volume, $preco, $now);
+            // Salva SAÍDA (Tabela Principal para Gráficos)
+            $this->persistCommoditySaida($commodityObj, $structured, $volume, $preco, $now);
         });
 
-        return back()
-            ->with('status', 'Nova análise gerada com sucesso.')
-            ->with('analysis_structured', $structured);
+        return back()->with('status', "Análise criada! Confira na lista.");
     }
 
-    private function resolveCommodity(string $slug): ?object
+    private function ensureCommodityExists(string $nome, float $price): object
     {
-        $slug = Str::lower($slug);
-        $info = $this->materiaPrimaMap[$slug] ?? ['nome' => Str::title($slug), 'id' => null];
-        $nomeBusca = $info['nome'];
+        $dbCommodity = DB::table('commodity_entrada')->where('nome', $nome)->first();
+        if ($dbCommodity) return (object) ['id' => $dbCommodity->commodity_id, 'nome' => $dbCommodity->nome];
 
-        // Try to find by commodity_id first if available
-        if (!empty($info['id'])) {
-            $existeSaida = DB::table('commodity_saida')
-                ->where('commodity_id', $info['id'])
-                ->exists();
+        $maxId = DB::table('commodity_entrada')->max('commodity_id') ?? 0;
+        $newId = $maxId + 1;
 
-            if ($existeSaida) {
-                return (object) [
-                    'id' => $info['id'],
-                    'nome' => $nomeBusca,
-                ];
-            }
-        }
+        $loc = DB::table('locations')->first();
+        $locId = $loc ? $loc->id : DB::table('locations')->insertGetId([
+            'nome' => 'São Paulo (Auto)', 'estado' => 'SP', 'regiao' => 'Sudeste', 'created_at' => now(), 'updated_at' => now()
+        ]);
 
-        // Check commodity_entrada table for the name
-        $commodity = DB::table('commodity_entrada')
-            ->whereRaw('LOWER(nome) = ?', [Str::lower($nomeBusca)])
-            ->orderByDesc('updated_at')
-            ->first();
+        DB::table('commodity_entrada')->insert([
+            'commodity_id' => $newId, 'nome' => $nome, 'unidade' => 'ton',
+            'location_id' => $locId, 'price' => $price, 'currency' => 'BRL', 'source' => 'User',
+            'last_updated' => now(), 'created_at' => now(), 'updated_at' => now()
+        ]);
 
-        if ($commodity) {
-            return (object) [
-                'id' => $commodity->commodity_id,
-                'nome' => $commodity->nome,
-            ];
-        }
-
-        // Fallback to any commodity_saida record
-        $fallback = DB::table('commodity_saida')
-            ->select('commodity_id')
-            ->when($info['id'], fn ($query) => $query->where('commodity_id', $info['id']))
-            ->orderByDesc('referencia_mes')
-            ->first();
-
-        if ($fallback) {
-            return (object) [
-                'id' => $fallback->commodity_id,
-                'nome' => $nomeBusca,
-            ];
-        }
-
-        return null;
+        return (object) ['id' => $newId, 'nome' => $nome];
     }
 
-    private function montarContexto(int $commodityId): string
+    private function montarPrompt(string $materia, float $volume, float $preco, string $cep, string $locationsList): string
     {
-        $partes = [];
+        return <<<EOT
+Atue como um Especialista em Commodities Sênior. Gere uma análise estratégica para compra de: {$materia}.
+Dados: Volume {$volume} kg, Preço Alvo R$ {$preco}, CEP {$cep}.
 
-        $ultimaSaida = DB::table('commodity_saida')
-            ->where('commodity_id', $commodityId)
-            ->orderByDesc('referencia_mes')
-            ->first();
+TAREFA 1: TIMELINE DE PREÇOS
+Com base no preço alvo atual (R$ {$preco}), crie uma estimativa realista dos preços dos últimos 3 meses e projete os próximos 4 meses.
 
-        if ($ultimaSaida) {
-            $ref = $ultimaSaida->referencia_mes ? Carbon::parse($ultimaSaida->referencia_mes)->format('m/Y') : 'sem referência';
-            $partes[] = sprintf(
-                'Último registro (%s): preço atual R$ %.2f, média Brasil R$ %.2f e variação %.2f%%.',
-                $ref,
-                $ultimaSaida->preco_mes_atual ?? 0,
-                $ultimaSaida->preco_medio_brasil ?? 0,
-                $ultimaSaida->variacao_perc ?? 0
-            );
-        }
+TAREFA 2: RANKING DE LOCALIZAÇÕES
+Da lista abaixo, escolha as 3 MELHORES para compra AGORA.
+LISTA DISPONÍVEL: [{$locationsList}]
 
-        $ultimaIA = DB::table('ai_analysis_logs')
-            ->where('commodity_id', $commodityId)
-            ->whereNotNull('response')
-            ->orderByDesc('created_at')
-            ->first();
-
-        if ($ultimaIA) {
-            $partes[] = 'Conclusão anterior: ' . Str::limit($ultimaIA->response, 400);
-        }
-
-        return implode("\n\n", array_filter($partes));
-    }
-
-    private function montarPrompt(string $materia, float $volume, float $preco, string $cep, string $contexto): string
-    {
-        $prompt = "Considere os dados do cliente abaixo e gere uma análise tática de compra para {$materia}.";
-        $prompt .= "\n- Volume solicitado: " . number_format($volume, 2, ',', '.') . " kg";
-        $prompt .= "\n- Preço alvo: R$ " . number_format($preco, 2, ',', '.');
-        $prompt .= "\n- CEP para entrega: " . ($cep ?: 'não informado');
-
-        if (!empty($contexto)) {
-            $prompt .= "\n\nHistórico conhecido:\n" . $contexto;
-        }
-
-        $prompt .= <<<EOT
-
-Retorne APENAS JSON seguindo este formato (não inclua texto fora do JSON):
+Retorne APENAS um JSON válido com esta estrutura exata (sem texto antes ou depois):
 {
+  "timeline": {
+    "preco_3_meses_anterior": 0.00,
+    "preco_2_meses_anterior": 0.00,
+    "preco_1_mes_anterior": 0.00,
+    "preco_mes_atual": {$preco},
+    "preco_1_mes_depois": 0.00,
+    "preco_2_meses_depois": 0.00,
+    "preco_3_meses_depois": 0.00,
+    "preco_4_meses_depois": 0.00
+  },
   "mercados": [
-    {
-      "nome": "região ou país",
-      "preco": 0,
-      "moeda": "BRL",
-      "fonte": "ex: Cepea",
-      "prazo_estimado_dias": 0,
-      "justificativa": "texto objetivo de 1 frase"
+    { 
+      "nome": "Nome Exato da Lista", 
+      "preco": 0.00, 
+      "moeda": "BRL", 
+      "logistica_obs": "Resumo logístico detalhado",
+      "estabilidade_economica": "Alta/Media/Baixa",
+      "estabilidade_climatica": "Alta/Media/Baixa",
+      "risco_geral": "Baixo"
     }
   ],
   "indicadores": {
-    "media_brasil": 0,
-    "media_global": 0,
-    "risco": "Baixo|Medio|Alto",
-    "estabilidade": "Alta|Media|Baixa"
+    "media_brasil": 0.00,
+    "media_global": 0.00,
+    "risco": "Baixo",
+    "estabilidade": "Alta"
   },
   "logistica": {
-    "melhor_rota": "rota/resumida",
-    "custo_estimado": 0,
-    "observacoes": "texto curto"
+    "custo_estimado": 0.00, 
+    "melhor_rota": "Rota sugerida...", 
+    "observacoes": "Obs..." 
   },
-  "recomendacao": "máximo 3 frases com a decisão final"
+  "recomendacao": "Texto analítico conclusivo explicando a tendência projetada na timeline e justificando a escolha dos mercados."
 }
 EOT;
-
-        return $prompt;
     }
 
-    private function normalizeDecimal(?string $value): float
+    private function persistCommoditySaida(object $commodity, array $structured, float $volume, float $precoAlvo, Carbon $timestamp): void
     {
-        if ($value === null) {
-            return 0.0;
-        }
-
-        $clean = str_replace(['R$', 'r$', ' '], '', $value);
-        $clean = str_replace('.', '', $clean);
-        $clean = str_replace(',', '.', $clean);
-        $clean = preg_replace('/[^0-9.\-]/', '', $clean);
-
-        return (float) $clean;
-    }
-
-    private function parseStructuredResponse(string $payload): ?array
-    {
-        $candidate = $this->extractJson($payload);
-        if (!$candidate) {
-            return null;
-        }
-
-        $json = json_decode($candidate, true);
-        if (!is_array($json) || empty($json['mercados']) || !isset($json['indicadores'])) {
-            return null;
-        }
-
-        $json['mercados'] = array_values(array_filter(array_map(function ($mercado) {
-            if (!is_array($mercado)) {
-                return null;
-            }
-            return [
-                'nome' => $mercado['nome'] ?? 'Sem nome',
-                'preco' => (float) ($mercado['preco'] ?? 0),
-                'moeda' => $mercado['moeda'] ?? 'BRL',
-                'fonte' => $mercado['fonte'] ?? 'Desconhecida',
-                'prazo_estimado_dias' => (int) ($mercado['prazo_estimado_dias'] ?? 0),
-                'justificativa' => $mercado['justificativa'] ?? '',
-            ];
-        }, $json['mercados'])));
-
-        if (empty($json['mercados'])) {
-            return null;
-        }
-
-        return $json;
-    }
-
-    private function extractJson(string $payload): ?string
-    {
-        $payload = trim($payload);
-        if (str_starts_with($payload, '{') && str_ends_with($payload, '}')) {
-            return $payload;
-        }
-
-        if (preg_match('/\{.*\}/s', $payload, $matches)) {
-            return $matches[0];
-        }
-
-        return null;
-    }
-
-    private function persistCommoditySaida(object $commodity, array $structured, float $volumeKg, float $precoAlvo, Carbon $timestamp): void
-    {
-        $referencia = Carbon::now()->startOfMonth()->toDateString();
-
-        $currentRow = DB::table('commodity_saida')
-            ->where('commodity_id', $commodity->id)
-            ->where('referencia_mes', $referencia)
-            ->where('tipo_analise', 'PREVISAO_MENSAL')
-            ->first();
-
-        $previousRow = DB::table('commodity_saida')
-            ->where('commodity_id', $commodity->id)
-            ->where('referencia_mes', '<', $referencia)
-            ->where('tipo_analise', 'PREVISAO_MENSAL')
-            ->orderByDesc('referencia_mes')
-            ->first();
-
-        $timeline = $this->buildTimelinePayload($structured['mercados'] ?? [], $currentRow, $previousRow);
-        $indicadores = $structured['indicadores'] ?? [];
+        // Usa a data completa (Y-m-d) como referência
+        $referencia = Carbon::now()->toDateString(); 
+        
+        $timeline = $structured['timeline'] ?? [];
+        $ind = $structured['indicadores'] ?? [];
         $logistica = $structured['logistica'] ?? [];
+        
+        $pAtual = $this->toFloat($timeline['preco_mes_atual'] ?? $precoAlvo);
+        $pAnt1 = $this->toFloat($timeline['preco_1_mes_anterior'] ?? 0);
+        $variacao = ($pAnt1 > 0) ? round((($pAtual - $pAnt1) / $pAnt1) * 100, 2) : 0;
 
-        $payload = array_merge($timeline, [
+        $avg = array_filter([$pAtual, $this->toFloat($timeline['preco_1_mes_depois']??0)]);
+        $media = count($avg) ? round(array_sum($avg)/count($avg), 2) : $pAtual;
+
+        $payload = [
             'commodity_id' => $commodity->id,
             'referencia_mes' => $referencia,
             'tipo_analise' => 'PREVISAO_MENSAL',
-            'volume_compra_ton' => max($volumeKg / 1000, 0),
+            'preco_3_meses_anterior' => $this->toFloat($timeline['preco_3_meses_anterior'] ?? 0),
+            'preco_2_meses_anterior' => $this->toFloat($timeline['preco_2_meses_anterior'] ?? 0),
+            'preco_1_mes_anterior' => $pAnt1,
+            'preco_mes_atual' => $pAtual,
+            'preco_1_mes_depois' => $this->toFloat($timeline['preco_1_mes_depois'] ?? 0),
+            'preco_2_meses_depois' => $this->toFloat($timeline['preco_2_meses_depois'] ?? 0),
+            'preco_3_meses_depois' => $this->toFloat($timeline['preco_3_meses_depois'] ?? 0),
+            'preco_4_meses_depois' => $this->toFloat($timeline['preco_4_meses_depois'] ?? 0),
+            'volume_compra_ton' => $volume / 1000,
             'preco_alvo' => $precoAlvo,
-            'preco_medio' => $this->calculateAveragePrice($timeline),
-            'preco_medio_brasil' => $this->toFloat($indicadores['media_brasil'] ?? null),
-            'preco_medio_global' => $this->toFloat($indicadores['media_global'] ?? null),
-            'variacao_perc' => $this->calculateVariationPercent(
-                $timeline['preco_mes_atual'] ?? null,
-                $timeline['preco_1_mes_anterior'] ?? null
-            ),
-            'logistica_perc' => $this->toFloat($logistica['custo_estimado'] ?? ($logistica['perc'] ?? null)),
-            'risco' => $indicadores['risco'] ?? null,
-            'estabilidade' => $indicadores['estabilidade'] ?? null,
+            'preco_medio' => $media,
+            'preco_medio_brasil' => $this->toFloat($ind['media_brasil'] ?? 0),
+            'preco_medio_global' => $this->toFloat($ind['media_global'] ?? 0),
+            'variacao_perc' => $variacao,
+            'logistica_perc' => $this->toFloat($logistica['custo_estimado'] ?? 0),
+            'risco' => $ind['risco'] ?? 'N/A',
+            'estabilidade' => $ind['estabilidade'] ?? 'N/A',
             'ranking' => 1,
             'updated_at' => $timestamp,
-        ]);
+            'created_at' => $timestamp
+        ];
 
-        if ($currentRow) {
-            DB::table('commodity_saida')
-                ->where('id', $currentRow->id)
-                ->update($payload);
-        } else {
-            $payload['created_at'] = $timestamp;
+        // LÓGICA ALTERADA: Sempre insere um novo registro para criar histórico
+        // Se der erro de SQLSTATE[23000], significa que a constraint UNIQUE ainda existe.
+        try {
             DB::table('commodity_saida')->insert($payload);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Se for erro de duplicidade, instrui o usuário a rodar o SQL
+            if ($e->errorInfo[1] == 1062) {
+                throw new \Exception("Erro: O banco de dados está bloqueando análises repetidas no mesmo dia. Execute o SQL para remover o índice UNIQUE.");
+            }
+            throw $e;
         }
     }
 
-    private function buildTimelinePayload(array $mercados, ?object $currentRow, ?object $previousRow): array
-    {
-        $timeline = [
-            'preco_3_meses_anterior' => $currentRow->preco_3_meses_anterior ?? null,
-            'preco_2_meses_anterior' => $currentRow->preco_2_meses_anterior ?? null,
-            'preco_1_mes_anterior' => $currentRow->preco_1_mes_anterior ?? null,
-            'preco_mes_atual' => $currentRow->preco_mes_atual ?? null,
-            'preco_1_mes_depois' => $currentRow->preco_1_mes_depois ?? null,
-            'preco_2_meses_depois' => $currentRow->preco_2_meses_depois ?? null,
-            'preco_3_meses_depois' => $currentRow->preco_3_meses_depois ?? null,
-            'preco_4_meses_depois' => $currentRow->preco_4_meses_depois ?? null,
-        ];
-
-        if (!$currentRow && $previousRow) {
-            $timeline['preco_3_meses_anterior'] = $previousRow->preco_2_meses_anterior ?? null;
-            $timeline['preco_2_meses_anterior'] = $previousRow->preco_1_mes_anterior ?? null;
-            $timeline['preco_1_mes_anterior'] = $previousRow->preco_mes_atual ?? null;
-        }
-
-        $timeline['preco_mes_atual'] = $this->toFloat($mercados[0]['preco'] ?? $timeline['preco_mes_atual']);
-
-        $futuroCampos = [
-            'preco_1_mes_depois',
-            'preco_2_meses_depois',
-            'preco_3_meses_depois',
-            'preco_4_meses_depois',
-        ];
-
-        foreach ($futuroCampos as $index => $campo) {
-            $timeline[$campo] = $this->toFloat($mercados[$index + 1]['preco'] ?? $timeline[$campo]);
-        }
-
-        return $timeline;
+    private function parseStructuredResponse($payload) { 
+        if (preg_match('/\{.*\}/s', $payload, $m)) return json_decode($m[0], true);
+        return null; 
     }
-
-    private function calculateAveragePrice(array $timeline): ?float
-    {
-        $valores = array_filter([
-            $timeline['preco_mes_atual'] ?? null,
-            $timeline['preco_1_mes_depois'] ?? null,
-            $timeline['preco_2_meses_depois'] ?? null,
-        ], fn ($value) => $value !== null);
-
-        if (empty($valores)) {
-            return null;
-        }
-
-        return round(array_sum($valores) / count($valores), 2);
-    }
-
-    private function calculateVariationPercent(?float $atual, ?float $anterior): ?float
-    {
-        if ($atual === null || $anterior === null || $anterior == 0.0) {
-            return null;
-        }
-
-        return round((($atual - $anterior) / $anterior) * 100, 2);
-    }
-
-    private function toFloat($value): ?float
-    {
-        if ($value === null || $value === '') {
-            return null;
-        }
-        if (is_numeric($value)) {
-            return (float) $value;
-        }
-        if (is_string($value)) {
-            $clean = str_replace(['R$', 'r$', ' '], '', $value);
-            $clean = str_replace('.', '', $clean);
-            $clean = str_replace(',', '.', $clean);
-            $clean = preg_replace('/[^0-9.\-]/', '', $clean);
-            return $clean === '' ? null : (float) $clean;
-        }
-
-        return null;
-    }
+    private function normalizeDecimal($v) { return $v ? (float) preg_replace('/[^0-9.]/', '', str_replace(['.',','], ['','.'], $v)) : 0; }
+    private function toFloat($v) { return is_numeric($v) ? (float)$v : $this->normalizeDecimal((string)$v); }
 }
