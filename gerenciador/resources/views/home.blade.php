@@ -172,13 +172,42 @@
                 opacity: 0;
             }
         }
-
         /* --- CARD & DATATABLES CUSTOMIZATIONS --- */
         .card {
             background: var(--white); border-radius: 16px;
             padding: 1.5rem; box-shadow: 0 10px 25px -10px rgba(15, 23, 42, 0.1);
             position: relative; /* Necessário para posicionamento absoluto dos filhos se precisar */
         }
+
+        .card h2 { margin: 0 0 1.5rem 0; font-size: 1.15rem; font-weight: 600; color: var(--gray-700); }
+
+        /* DATA TABLE CUSTOMIZATION */
+        .dataTables_wrapper .dataTables_filter input {
+            border-radius: 20px; border: 1px solid var(--gray-300); padding: 5px 10px;
+        }
+        .dataTables_wrapper .dataTables_length select {
+            border-radius: 8px; border: 1px solid var(--gray-300); padding: 5px;
+        }
+        table.dataTable thead th { background-color: var(--gray-50); color: var(--gray-700); }
+
+        /* CHART */
+        .chart-wrapper { position: relative; min-height: 350px; width: 100%; }
+
+        /* WEBSOCKET ADMIN PANEL */
+        .ws-controls { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 1rem 0; }
+        .ws-field { display: flex; flex: 1; gap: 0.5rem; align-items: center; margin-top: 1rem; }
+        .ws-field input { flex: 1; padding: 0.6rem 0.8rem; border-radius: 10px; border: 1px solid var(--gray-300); }
+        .ws-log {
+            background: var(--gray-50); border-radius: 12px; padding: 1rem;
+            font-family: monospace; font-size: 0.85rem;
+            max-height: 200px; overflow-y: auto;
+            border: 1px solid var(--gray-200); white-space: pre-wrap; margin-top: 1rem;
+        }
+        .ws-status { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600; color: var(--gray-600); }
+        .ws-indicator { width: 10px; height: 10px; border-radius: 50%; background: var(--danger); transition: background 0.2s; }
+        .ws-indicator.active { background: var(--success); }
+
+
         
         .card h2 { 
             margin: 0 0 1.5rem 0; 
@@ -238,6 +267,7 @@
 
         /* CHART */
         .chart-wrapper { position: relative; min-height: 350px; width: 100%; }
+
 
         /* MODAL */
         .modal {
@@ -317,7 +347,26 @@
         </div>
 
         @if($isAdmin)
-            @include('server')
+        <div class="card" id="javaWsCard">
+            <h2>Servidor Java (WebSocket)</h2>
+            <p class="ws-status">
+                <span class="ws-indicator" id="javaWsIndicator"></span>
+                <span id="javaWsStatus">Desconectado</span>
+            </p>
+            
+            <div class="ws-controls">
+                <button class="button button-secondary" type="button" id="javaWsConnect">Conectar</button>
+                <button class="button button-outline" type="button" id="javaWsDisconnect" disabled>Desconectar</button>
+                <button class="button button-outline" type="button" id="javaWsSendExit" disabled>Enviar pedido de sair</button>
+            </div>
+            
+            <div class="ws-field">
+                <input type="text" id="javaWsMessage" placeholder='Mensagem JSON, ex: {"tipo":"echo"}' disabled>
+                <button class="button button-primary" type="button" id="javaWsSend" disabled>Enviar</button>
+            </div>
+            
+            <div class="ws-log" id="javaWsLog">Aguardando conexão...</div>
+        </div>
         @endif
 
     </main>
