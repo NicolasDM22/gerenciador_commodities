@@ -29,7 +29,6 @@ class HomeController extends Controller
         }
 
         $avatarUrl = $this->resolveAvatarUrl($user);
-
         // --- ALTERAÇÃO AQUI ---
         // Removemos o ->limit(5) para que o DataTables receba TUDO e possa filtrar corretamente.
         // Adicionamos orderBy para mostrar os mais recentes primeiro.
