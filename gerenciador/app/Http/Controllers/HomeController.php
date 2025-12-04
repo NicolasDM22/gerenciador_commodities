@@ -5,21 +5,16 @@ namespace App\Http\Controllers;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rule;
-use App\Http\Controllers\Controller;
 
 class HomeController extends Controller
 {
-    // USADO COMO FONTE MESTRA DE NOMES (Mapeamento Hardcode)
     private $commodityMap = [
         1 => 'Soja',
         2 => 'Milho',
         3 => 'Açúcar',
         4 => 'Cacau',
     ];
-    
-    // Função auxiliar para verificar se a tabela existe
+
     private function tableExists($tableName)
     {
         try {
@@ -28,76 +23,63 @@ class HomeController extends Controller
             return false;
         }
     }
-    
+
     public function index(Request $request)
     {
         $userId = $request->session()->get('auth_user_id');
-
-        if (!$userId) {
-            return redirect()->route('login');
-        }
+        if (!$userId) return redirect()->route('login');
 
         $user = DB::table('users')
             ->select('id', 'usuario', 'nome', 'email', 'telefone', 'endereco', 'foto_blob', 'foto_mime', 'is_admin', 'created_at', 'updated_at')
             ->where('id', $userId)
             ->first();
 
-        if (!$user) {
-            return redirect()->route('login');
-        }
+        if (!$user) return redirect()->route('login');
 
+        $isAdmin = (bool) ($user->is_admin ?? false);
         $avatarUrl = $this->resolveAvatarUrl($user);
-
         $hasCommoditySaidaTable = $this->tableExists('commodity_saida');
-        
-        // --- 1. DATATABLES (Análises Anteriores) ---
-        
-        $analysisQuery = DB::table('commodity_saida')
-            ->where('tipo_analise', 'PREVISAO_MENSAL')
-            ->orderByDesc('referencia_mes')
-            ->selectRaw('commodity_saida.id, commodity_saida.commodity_id, commodity_saida.referencia_mes, commodity_saida.created_at, commodity_saida.updated_at');
 
-        try {
-            $analysis = $analysisQuery->get()
-                ->map(function ($item) {
-                    $item->commodity_nome = $this->commodityMap[$item->commodity_id] ?? 'ID Desconhecido: ' . $item->commodity_id;
-                    $item->data_previsao = $item->referencia_mes ? Carbon::parse($item->referencia_mes)->format('d/m/Y') : '-';
-                    return $item;
-                });
-        } catch (\Exception $e) {
-            $analysis = collect();
-        }
-
-
-        // --- 2. GRÁFICO: Histórico/Forecast (Baseado no MAIOR ID de Análise) ---
-        
-        $defaultCommodityId = array_key_first($this->commodityMap) ?? 1; // Fallback para ID 1
-        
+        $analysis = collect();
         if ($hasCommoditySaidaTable) {
             try {
-                // Seleciona o registro de maior PK 'id' que seja do tipo PREVISAO_MENSAL
+                $analysis = DB::table('commodity_saida')
+                    ->where('tipo_analise', 'PREVISAO_MENSAL')
+                    ->orderByDesc('referencia_mes')
+                    ->select('id', 'commodity_id', 'referencia_mes', 'created_at', 'updated_at')
+                    ->get()
+                    ->map(function ($item) {
+                        $item->commodity_nome = $this->commodityMap[$item->commodity_id] ?? 'ID Desconhecido: ' . $item->commodity_id;
+                        $item->data_previsao = $item->referencia_mes ? Carbon::parse($item->referencia_mes)->format('d/m/Y H:i') : '-';
+                        return $item;
+                    });
+            } catch (\Exception $e) {
+                $analysis = collect();
+            }
+        }
+
+        // Gráfico
+        $defaultCommodityId = array_key_first($this->commodityMap) ?? 1;
+        if ($hasCommoditySaidaTable) {
+            try {
                 $maxIdAnalysis = DB::table('commodity_saida')
                     ->where('tipo_analise', 'PREVISAO_MENSAL')
-                    ->orderByDesc('id') 
+                    ->orderByDesc('id')
                     ->select('commodity_id', 'referencia_mes')
                     ->first();
 
                 if ($maxIdAnalysis) {
-                    // Define o ID da commodity a partir do registro mais recente
                     $defaultCommodityId = $maxIdAnalysis->commodity_id;
                 }
             } catch (\Exception $e) {
-                // Falha silenciosamente, usando o ID 1
             }
         }
-        
+
         $commodityName = $this->commodityMap[$defaultCommodityId] ?? 'Histórico Geral';
-        
         $chartData = ['labels' => [], 'prices' => [], 'commodityName' => $commodityName];
 
         if ($hasCommoditySaidaTable) {
             try {
-                // Puxa a análise mais recente para o commodity ID determinado acima
                 $analysisData = DB::table('commodity_saida')
                     ->where('commodity_id', $defaultCommodityId)
                     ->where('tipo_analise', 'PREVISAO_MENSAL')
@@ -114,7 +96,7 @@ class HomeController extends Controller
                     )
                     ->orderByDesc('referencia_mes')
                     ->first();
-                
+
                 if ($analysisData) {
                     $pricePoints = [
                         $analysisData->preco_3_meses_anterior,
@@ -128,26 +110,22 @@ class HomeController extends Controller
                     ];
 
                     $refDate = Carbon::parse($analysisData->referencia_mes);
-                    
                     $chartLabels = [];
                     for ($i = -3; $i <= 4; $i++) {
-                         $chartLabels[] = $refDate->copy()->addMonths($i)->format('M/y');
+                        $chartLabels[] = $refDate->copy()->addMonths($i)->format('M/y');
                     }
-                    
+
                     $chartData = [
                         'labels' => $chartLabels,
                         'prices' => array_map(fn($p) => $p ?? 0, $pricePoints),
-                        'commodityName' => $commodityName
+                        'commodityName' => $commodityName,
                     ];
                 }
             } catch (\Exception $e) {
-                // Ignora falha de leitura
             }
         }
-        
-        $isAdmin = (bool) ($user->is_admin ?? false);
-        $adminData = ['notifications' => collect()];
 
+        $adminData = ['notifications' => collect()];
         if ($isAdmin) {
             $adminData['notifications'] = DB::table('admin_notifications')
                 ->select('id', 'title', 'body', 'status', 'created_at')
@@ -168,6 +146,23 @@ class HomeController extends Controller
             'isAdmin' => $isAdmin,
             'adminData' => $adminData,
             'previousAnalyses' => $analysis,
+            'aiAnalyses' => $this->latestAiAnalyses($userId, $isAdmin),
         ]);
+    }
+
+    private function latestAiAnalyses(int $userId, bool $isAdmin)
+    {
+        $query = DB::table('ai_analysis_logs')->orderByDesc('created_at');
+        if (!$isAdmin) {
+            $query->where('user_id', $userId);
+        }
+
+        return $query->limit(5)
+            ->get()
+            ->map(function ($item) {
+                $item->parsed = json_decode($item->response ?? '', true) ?: null;
+                $item->created_at_formatted = $item->created_at ? Carbon::parse($item->created_at)->format('d/m/Y H:i') : '';
+                return $item;
+            });
     }
 }

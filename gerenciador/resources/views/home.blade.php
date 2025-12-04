@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ï»¿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -65,7 +65,7 @@
         .profile-info span { color: var(--gray-500); font-size: 0.95rem; }
         .top-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
 
-        /* BOTÕES */
+        /* BOTÃƒâ€¢ES */
         .button {
             border: none;
             border-radius: 12px;
@@ -107,6 +107,24 @@
         main.content {
             flex: 1; width: min(1180px, 100%); margin: 0 auto;
             padding: 2rem clamp(1rem, 2vw, 2.5rem) 3rem; display: grid; gap: 1.75rem;
+        }
+
+        .simple-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .simple-table thead {
+            background: var(--gray-50);
+        }
+        .simple-table th,
+        .simple-table td {
+            padding: 0.65rem 0.8rem;
+            border-bottom: 1px solid var(--gray-200);
+            text-align: left;
+            font-size: 0.9rem;
+        }
+        .simple-table tbody tr:last-child td {
+            border-bottom: none;
         }
 
         .toast-container {
@@ -186,7 +204,7 @@
             color: var(--gray-700); 
         }
 
-        /* AJUSTE PARA ALINHAR O FILTRO COM O TÍTULO */
+        /* AJUSTE PARA ALINHAR O FILTRO COM O TÃƒÂTULO */
         .dataTables_wrapper {
             position: relative;
         }
@@ -219,7 +237,7 @@
         table.dataTable thead th { background-color: var(--gray-50); color: var(--gray-700); }
         table.dataTable.no-footer { border-bottom: 1px solid var(--gray-200); }
 
-        /* Responsividade para o filtro não sobrepor o título em telas pequenas */
+        /* Responsividade para o filtro nÃƒÂ£o sobrepor o tÃƒÂ­tulo em telas pequenas */
         @media (max-width: 650px) {
             .dataTables_wrapper .dataTables_filter {
                 position: relative;
@@ -270,60 +288,119 @@
     <x-topbar :user="$user" :isAdmin="$isAdmin ?? false">
         
         @if($isAdmin ?? false)
-            <a href="{{ route('forecasts') }}" class="button button-secondary">Debug Previsões</a>
+            <a href="{{ route('forecasts') }}" class="button button-secondary">Debug PrevisÃƒÂµes</a>
         @endif
         
-        <button class="button button-outline" id="btnOpenFormsModal" type="button">Nova análise</button>
+        <button class="button button-outline" id="btnOpenFormsModal" type="button">Nova anÃƒÂ¡lise</button>
         <button class="button button-outline" id="btnOpenProfileModal" type="button">Atualizar perfil</button>
 
     </x-topbar>
 
     <main class="content">
-        <div class="card">
-            <h2>Visualizar análises</h2>
+                                <div class="card">
+
+            <h2>Visualizar anÃ¡lises</h2>
+
             <table id="commoditiesTable" class="display" style="width:100%">
+
                 <thead>
+
                     <tr>
+
                         <th>ID</th>
+
                         <th>Commodity</th>
-                        <th>Data/Hora Registro</th> <th>Ação</th>
+
+                        <th>Data/Hora Registro</th>
+
+                        <th>AÃ§Ã£o</th>
+
                     </tr>
+
                 </thead>
+
                 <tbody>
+
                     @forelse($previousAnalyses ?? [] as $analysis)
                         <tr>
                             <td>{{ $analysis->id ?? '-' }}</td>
                             <td>{{ $analysis->commodity_nome ?? 'N/A' }}</td>
-                            
                             <td data-order="{{ !empty($analysis->updated_at) ? strtotime($analysis->updated_at) : 0 }}">
-                                @if(!empty($analysis->updated_at))
-                                    {{ date('d/m/Y H:i:s', strtotime($analysis->updated_at)) }}
-                                @else
-                                    -
-                                @endif
+                                {{ $analysis->data_previsao ?? '-' }}
                             </td>
-
                             <td>
-                                <a href="{{ url('/previsoes/' . $analysis->id) }}" style="color: var(--link-color); font-weight: 600; text-decoration: none;">
+                                <a href="{{ route('previsoes.show', $analysis->id ?? 0) }}" style="color: var(--link-color); font-weight: 600; text-decoration: none;">
                                     Ver Detalhes
                                 </a>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" style="text-align: center;">Nenhuma análise disponível.</td>
+                            <td colspan="4" style="text-align: center;">Nenhuma anÃ¡lise disponÃ­vel.</td>
                         </tr>
                     @endforelse
+
                 </tbody>
+
             </table>
+
         </div>
 
+
+
+
         <div class="card">
-            <h2>{{ $chartData['commodityName'] ?? 'Histórico de Preços (Geral)' }}</h2>
+            <h2>{{ $chartData['commodityName'] ?? 'HistÃƒÂ³rico de PreÃƒÂ§os (Geral)' }}</h2>
             <div class="chart-wrapper">
                 <canvas id="priceHistoryChart"></canvas>
             </div>
         </div>
+
+        @if(!empty($aiAnalyses) && count($aiAnalyses) > 0)
+        <div class="card">
+            <h2>ÃƒÅ¡ltimas anÃƒÂ¡lises automÃƒÂ¡ticas</h2>
+            <table class="simple-table">
+                <thead>
+                    <tr>
+                        <th>MatÃƒÂ©ria-prima</th>
+                        <th>Mercado recomendado</th>
+                        <th>PreÃƒÂ§o estimado</th>
+                        <th>Prazo</th>
+                        <th>Gerada em</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($aiAnalyses as $log)
+                        @php
+                            $parsed = is_array($log->parsed) ? $log->parsed : [];
+                            $mercados = $parsed['mercados'] ?? [];
+                            $mercado = $mercados[0] ?? null;
+                        @endphp
+                        <tr>
+                            <td>{{ $log->materia_prima ?? 'N/D' }}</td>
+                            <td>{{ $mercado['nome'] ?? 'N/D' }}</td>
+                            <td>
+                                @if($mercado)
+                                    {{ $mercado['moeda'] ?? 'BRL' }}
+                                    {{ number_format($mercado['preco'] ?? 0, 2, ',', '.') }}
+                                @else
+                                    N/D
+                                @endif
+                            </td>
+                            <td>
+                                @if($mercado && !empty($mercado['prazo_estimado_dias']))
+                                    {{ $mercado['prazo_estimado_dias'] }} dias
+                                @else
+                                    -
+                                @endif
+                            </td>
+                            <td>{{ $log->created_at_formatted }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        @endif
 
         @if($isAdmin)
         <div class="card" id="javaWsCard">
@@ -344,7 +421,7 @@
                 <button class="button button-primary" type="button" id="javaWsSend" disabled>Enviar</button>
             </div>
             
-            <div class="ws-log" id="javaWsLog">Aguardando conexão...</div>
+            <div class="ws-log" id="javaWsLog">Aguardando conexÃƒÂ£o...</div>
         </div>
         @endif
 
@@ -361,7 +438,7 @@
         <form action="{{ route('profile.update') }}" method="POST" enctype="multipart/form-data">
             @csrf
             <div class="form-group">
-                <label for="usuario">Usuário</label>
+                <label for="usuario">UsuÃƒÂ¡rio</label>
                 <input id="usuario" name="usuario" type="text" value="{{ old('usuario', $user->usuario ?? '') }}" required>
             </div>
             
@@ -381,7 +458,7 @@
             </div>
             
             <div class="form-group">
-                <label for="endereco">Endereço</label>
+                <label for="endereco">EndereÃƒÂ§o</label>
                 <input id="endereco" name="endereco" type="text" value="{{ old('endereco', $user->endereco ?? '') }}">
             </div>
             
@@ -403,18 +480,18 @@
             
             <div class="modal-footer">
                 <button class="button button-outline" type="button" id="btnCancelProfileModal">Cancelar</button>
-                <button class="button button-primary" type="submit">Salvar alterações</button>
+                <button class="button button-primary" type="submit">Salvar alteraÃƒÂ§ÃƒÂµes</button>
             </div>
         </form>
     </div>
 </div>
 
 <script>
-    // Dados para o Gráfico (Do Controller ou Vazio)
+    // Dados para o GrÃƒÂ¡fico (Do Controller ou Vazio)
     const chartRawData = @json($chartData ?? null);
 
     $(document).ready(function() {
-        // 1. Inicializar DataTables com a ordenação automática
+        // 1. Inicializar DataTables com a ordenaÃƒÂ§ÃƒÂ£o automÃƒÂ¡tica
         $('#commoditiesTable').DataTable({
             pageLength: 5, 
             lengthChange: false, 
@@ -427,12 +504,12 @@
             ],
             language: {
                 search: "", 
-                searchPlaceholder: "Filtrar análises...",
-                info: "Mostrando _START_ até _END_ de _TOTAL_ registro(s)",
+                searchPlaceholder: "Filtrar anÃƒÂ¡lises...",
+                info: "Mostrando _START_ atÃƒÂ© _END_ de _TOTAL_ registro(s)",
                 infoFiltered: "(filtrado de _MAX_ registros no total)",
                 zeroRecords: "Nenhum registro encontrado",
-                infoEmpty: "Não há registros disponíveis",
-                paginate: { first: "Primeiro", last: "Último", next: "Próximo", previous: "Anterior" },
+                infoEmpty: "NÃƒÂ£o hÃƒÂ¡ registros disponÃƒÂ­veis",
+                paginate: { first: "Primeiro", last: "ÃƒÅ¡ltimo", next: "PrÃƒÂ³ximo", previous: "Anterior" },
                 loadingRecords: "Carregando...",
                 processing: "Processando...",
                 emptyTable: "Nenhum registro encontrado"
@@ -442,7 +519,7 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         
-        // 2. Lógica dos Modais
+        // 2. LÃƒÂ³gica dos Modais
         const profileModal = document.getElementById('profileModal');
         const toggleProfile = (show) => profileModal?.classList.toggle('active', show);
 
@@ -450,26 +527,26 @@
         document.getElementById('btnCloseProfileModal')?.addEventListener('click', () => toggleProfile(false));
         document.getElementById('btnCancelProfileModal')?.addEventListener('click', () => toggleProfile(false));
 
-        // Conexão com o Modal do Forms
+        // ConexÃƒÂ£o com o Modal do Forms
         const btnOpenForms = document.getElementById('btnOpenFormsModal');
         const formsModal = document.getElementById('formsModal'); 
         
         if (btnOpenForms) {
             btnOpenForms.addEventListener('click', () => {
                 if(formsModal) formsModal.classList.add('active');
-                else alert('Erro: Modal de forms não encontrado no include.');
+                else alert('Erro: Modal de forms nÃƒÂ£o encontrado no include.');
             });
         }
 
-        // 3. Gráfico RESTAURADO
+        // 3. GrÃƒÂ¡fico RESTAURADO
         const chartCanvas = document.getElementById('priceHistoryChart');
 
         if (chartCanvas && typeof Chart !== 'undefined') {
             
             let dataToUse = chartRawData;
-            // Se o controller não encontrar dados reais, usa mock para evitar erro
+            // Se o controller nÃƒÂ£o encontrar dados reais, usa mock para evitar erro
             if (!dataToUse || !dataToUse.labels || dataToUse.labels.length === 0) {
-                // Mock de 8 pontos de forecast/histórico
+                // Mock de 8 pontos de forecast/histÃƒÂ³rico
                 dataToUse = {
                     labels: ['Set/25', 'Out/25', 'Nov/25', 'Dez/25', 'Jan/26', 'Fev/26', 'Mar/26', 'Abr/26'],
                     prices: [50, 52, 51, 54, 55, 56, 57, 58]
@@ -482,7 +559,7 @@
                 data: {
                     labels: dataToUse.labels || [],
                     datasets: [{
-                        label: 'Preço Médio (R$/kg)',
+                        label: 'PreÃƒÂ§o MÃƒÂ©dio (R$/kg)',
                         data: dataToUse.prices || [],
                         // Cor da linha
                         borderColor: '#F97316', 
@@ -500,7 +577,7 @@
                     scales: {
                         y: {
                             beginAtZero: false,
-                            // Usa formatação correta para BRL
+                            // Usa formataÃƒÂ§ÃƒÂ£o correta para BRL
                             ticks: { color: '#4b5563', callback: v => 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 0 }) },
                             grid: { color: '#e5e7eb' }
                         },
@@ -511,7 +588,7 @@
                         tooltip: {
                             backgroundColor: '#374151', titleColor: '#fff', bodyColor: '#fff',
                             callbacks: {
-                                // Tooltip agora usa o preço formatado
+                                // Tooltip agora usa o preÃƒÂ§o formatado
                                 label: ctx => (ctx.dataset.label || '') + (ctx.parsed.y ? ': R$ ' + ctx.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '')
                             }
                         }
@@ -521,12 +598,12 @@
         }
 
         // -------------------------------------------------------
-        // 4. LÓGICA DO WEBSOCKET
+        // 4. LÃƒâ€œGICA DO WEBSOCKET
         // -------------------------------------------------------
         const wsUrl = "ws://localhost:3000"; 
         let websocket;
 
-        // Referências aos elementos do DOM
+        // ReferÃƒÂªncias aos elementos do DOM
         const btnConnect    = document.getElementById('javaWsConnect');
         const btnDisconnect = document.getElementById('javaWsDisconnect');
         const btnSend       = document.getElementById('javaWsSend');
@@ -536,7 +613,7 @@
         const statusLabel   = document.getElementById('javaWsStatus');
         const statusDot     = document.getElementById('javaWsIndicator');
 
-        // Função auxiliar de log
+        // FunÃƒÂ§ÃƒÂ£o auxiliar de log
         function writeLog(msg) {
             if(logArea) {
                 logArea.textContent += msg + "\n";
@@ -544,7 +621,7 @@
             }
         }
 
-        // Atualiza a UI (botões e texto) conforme estado
+        // Atualiza a UI (botÃƒÂµes e texto) conforme estado
         function updateState(isConnected) {
             if(statusLabel) statusLabel.textContent = isConnected ? "Conectado" : "Desconectado";
             if(statusDot) {
@@ -590,7 +667,7 @@
                 };
 
                 websocket.onerror = function(evt) {
-                    writeLog("Erro na conexão.");
+                    writeLog("Erro na conexÃƒÂ£o.");
                     updateState(false);
                 };
 
@@ -631,7 +708,7 @@
         
     });
 
-    // Função JS para criar o HTML do Toast
+    // FunÃƒÂ§ÃƒÂ£o JS para criar o HTML do Toast
     function showToast(message, type = 'default') {
         const container = document.getElementById('toast-container');
         if(!container) return; 
@@ -640,8 +717,8 @@
         toast.className = `toast-notification toast-${type}`;
         
         let icon = '';
-        if(type === 'success') icon = '<span style="margin-right: 8px">✅</span>';
-        if(type === 'error') icon = '<span style="margin-right: 8px">❌</span>';
+        if(type === 'success') icon = '<span style="margin-right: 8px">Ã¢Å“â€¦</span>';
+        if(type === 'error') icon = '<span style="margin-right: 8px">Ã¢ÂÅ’</span>';
 
         toast.innerHTML = `
             <div class="toast-content">${icon}${message}</div>
@@ -662,6 +739,14 @@
     @if (session('status'))
         showToast("{{ session('status') }}", 'success');
     @endif
+    @if (session('analysis_structured'))
+        const structured = @json(session('analysis_structured'));
+        if (structured && Array.isArray(structured.mercados) && structured.mercados.length) {
+            const recomendada = structured.mercados[0];
+            const preco = Number(recomendada.preco || 0).toFixed(2);
+            showToast(`Mercado recomendado: ${recomendada.nome} - ${recomendada.moeda || 'BRL'} ${preco}`, 'success');
+        }
+    @endif
 
     @if ($errors->any())
         @foreach ($errors->all() as $error)
@@ -674,3 +759,7 @@
 @include('profile')
 </body>
 </html>
+
+
+
+
