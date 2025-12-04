@@ -12,6 +12,9 @@ class FormsController extends Controller
 {
     public function salvar(Request $request)
     {
+        // Aumenta o tempo limite de execução para 2 minutos (120 segundos)
+        set_time_limit(120);
+
         $userId = $request->session()->get('auth_user_id');
         if (!$userId) return redirect()->route('login');
 
@@ -40,7 +43,7 @@ class FormsController extends Controller
             return back()->withErrors('Erro ao processar commodity: ' . $e->getMessage());
         }
 
-        // 3. Busca Localizações para a IA (Para preencher o ranking corretamente)
+        // 3. Busca Localizações para a IA
         $locations = DB::table('locations')->select('nome', 'estado', 'regiao')->limit(30)->get();
         $locationsList = $locations->isEmpty() 
             ? "Nenhuma cadastrada (sugira as melhores globais)" 
@@ -172,7 +175,6 @@ EOT;
 
     private function persistCommoditySaida(object $commodity, array $structured, float $volume, float $precoAlvo, Carbon $timestamp): void
     {
-        // Usa a data completa (Y-m-d) como referência
         $referencia = Carbon::now()->toDateString(); 
         
         $timeline = $structured['timeline'] ?? [];
@@ -212,12 +214,9 @@ EOT;
             'created_at' => $timestamp
         ];
 
-        // LÓGICA ALTERADA: Sempre insere um novo registro para criar histórico
-        // Se der erro de SQLSTATE[23000], significa que a constraint UNIQUE ainda existe.
         try {
             DB::table('commodity_saida')->insert($payload);
         } catch (\Illuminate\Database\QueryException $e) {
-            // Se for erro de duplicidade, instrui o usuário a rodar o SQL
             if ($e->errorInfo[1] == 1062) {
                 throw new \Exception("Erro: O banco de dados está bloqueando análises repetidas no mesmo dia. Execute o SQL para remover o índice UNIQUE.");
             }

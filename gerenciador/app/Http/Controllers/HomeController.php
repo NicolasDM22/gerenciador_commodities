@@ -8,13 +8,6 @@ use Illuminate\Support\Facades\DB;
 
 class HomeController extends Controller
 {
-    private $commodityMap = [
-        1 => 'Soja',
-        2 => 'Milho',
-        3 => 'Açúcar',
-        4 => 'Cacau',
-    ];
-
     private function tableExists($tableName)
     {
         try {
@@ -40,91 +33,101 @@ class HomeController extends Controller
         $avatarUrl = $this->resolveAvatarUrl($user);
         $hasCommoditySaidaTable = $this->tableExists('commodity_saida');
 
+        // --- 1. CONFIGURAÇÃO PADRÃO (VAZIO) ---
+        $chartData = [
+            'labels' => [], 
+            'prices' => [], 
+            'commodityName' => 'Ainda não existem análises'
+        ];
+        
         $analysis = collect();
+
+        // --- 2. BUSCA DINÂMICA (Se houver tabelas) ---
         if ($hasCommoditySaidaTable) {
             try {
-                $analysis = DB::table('commodity_saida')
+                // A. Identifica a ÚLTIMA commodity analisada (ID mais alto inserido)
+                $latestAnalysis = DB::table('commodity_saida')
                     ->where('tipo_analise', 'PREVISAO_MENSAL')
-                    ->orderByDesc('updated_at')
-                    ->select('id', 'commodity_id', 'referencia_mes', 'created_at', 'updated_at')
+                    ->orderByDesc('id') // Pega a última inserção real
+                    ->first();
+
+                if ($latestAnalysis) {
+                    $targetCommodityId = $latestAnalysis->commodity_id;
+
+                    // B. Busca o NOME real dessa commodity na tabela de entrada (Sem mapa fixo)
+                    $metaCommodity = DB::table('commodity_entrada')
+                        ->where('commodity_id', $targetCommodityId)
+                        ->select('nome')
+                        ->first();
+                    
+                    $realName = $metaCommodity ? $metaCommodity->nome : 'Commodity #' . $targetCommodityId;
+
+                    // C. Busca os DADOS para o gráfico desta commodity específica
+                    $analysisData = DB::table('commodity_saida')
+                        ->where('commodity_id', $targetCommodityId)
+                        ->where('tipo_analise', 'PREVISAO_MENSAL')
+                        ->select(
+                            'referencia_mes',
+                            'preco_3_meses_anterior', 'preco_2_meses_anterior', 'preco_1_mes_anterior',
+                            'preco_mes_atual',
+                            'preco_1_mes_depois', 'preco_2_meses_depois', 'preco_3_meses_depois', 'preco_4_meses_depois'
+                        )
+                        ->orderByDesc('referencia_mes')
+                        ->first();
+
+                    // D. Monta o gráfico se houver dados
+                    if ($analysisData) {
+                        $pricePoints = [
+                            $analysisData->preco_3_meses_anterior,
+                            $analysisData->preco_2_meses_anterior,
+                            $analysisData->preco_1_mes_anterior,
+                            $analysisData->preco_mes_atual,
+                            $analysisData->preco_1_mes_depois,
+                            $analysisData->preco_2_meses_depois,
+                            $analysisData->preco_3_meses_depois,
+                            $analysisData->preco_4_meses_depois,
+                        ];
+
+                        $refDate = Carbon::parse($analysisData->referencia_mes);
+                        $chartLabels = [];
+                        for ($i = -3; $i <= 4; $i++) {
+                            $chartLabels[] = $refDate->copy()->addMonths($i)->format('M/y');
+                        }
+
+                        $chartData = [
+                            'labels' => $chartLabels,
+                            'prices' => array_map(fn($p) => $p ?? 0, $pricePoints),
+                            'commodityName' => $realName, // Nome vindo do banco
+                        ];
+                    }
+                }
+
+                // E. Lista de Histórico (Para a tabela abaixo do gráfico)
+                $analysis = DB::table('commodity_saida')
+                    ->join('commodity_entrada', 'commodity_saida.commodity_id', '=', 'commodity_entrada.commodity_id')
+                    ->where('commodity_saida.tipo_analise', 'PREVISAO_MENSAL')
+                    ->orderByDesc('commodity_saida.updated_at')
+                    ->select(
+                        'commodity_saida.id', 
+                        'commodity_saida.commodity_id', 
+                        'commodity_saida.referencia_mes', 
+                        'commodity_saida.created_at', 
+                        'commodity_saida.updated_at',
+                        'commodity_entrada.nome as commodity_nome' // Nome direto do join
+                    )
                     ->get()
                     ->map(function ($item) {
-                        $item->commodity_nome = $this->commodityMap[$item->commodity_id] ?? 'Commodity #' . $item->commodity_id;
                         $dataBase = $item->updated_at ?? $item->created_at ?? now();
                         $item->data_previsao = Carbon::parse($dataBase)->format('d/m/Y H:i');
                         return $item;
                     });
+
             } catch (\Exception $e) {
-                $analysis = collect();
+                // Silencia erro e mantém "Ainda não existem análises"
             }
         }
 
-        $defaultCommodityId = array_key_first($this->commodityMap) ?? 1;
-        if ($hasCommoditySaidaTable) {
-            try {
-                $maxIdAnalysis = DB::table('commodity_saida')
-                    ->where('tipo_analise', 'PREVISAO_MENSAL')
-                    ->orderByDesc('id')
-                    ->select('commodity_id', 'referencia_mes')
-                    ->first();
-
-                if ($maxIdAnalysis) {
-                    $defaultCommodityId = $maxIdAnalysis->commodity_id;
-                }
-            } catch (\Exception $e) {
-            }
-        }
-
-        $commodityName = $this->commodityMap[$defaultCommodityId] ?? 'Histórico Geral';
-        $chartData = ['labels' => [], 'prices' => [], 'commodityName' => $commodityName];
-
-        if ($hasCommoditySaidaTable) {
-            try {
-                $analysisData = DB::table('commodity_saida')
-                    ->where('commodity_id', $defaultCommodityId)
-                    ->where('tipo_analise', 'PREVISAO_MENSAL')
-                    ->select(
-                        'referencia_mes',
-                        'preco_3_meses_anterior',
-                        'preco_2_meses_anterior',
-                        'preco_1_mes_anterior',
-                        'preco_mes_atual',
-                        'preco_1_mes_depois',
-                        'preco_2_meses_depois',
-                        'preco_3_meses_depois',
-                        'preco_4_meses_depois'
-                    )
-                    ->orderByDesc('referencia_mes')
-                    ->first();
-
-                if ($analysisData) {
-                    $pricePoints = [
-                        $analysisData->preco_3_meses_anterior,
-                        $analysisData->preco_2_meses_anterior,
-                        $analysisData->preco_1_mes_anterior,
-                        $analysisData->preco_mes_atual,
-                        $analysisData->preco_1_mes_depois,
-                        $analysisData->preco_2_meses_depois,
-                        $analysisData->preco_3_meses_depois,
-                        $analysisData->preco_4_meses_depois,
-                    ];
-
-                    $refDate = Carbon::parse($analysisData->referencia_mes);
-                    $chartLabels = [];
-                    for ($i = -3; $i <= 4; $i++) {
-                        $chartLabels[] = $refDate->copy()->addMonths($i)->format('M/y');
-                    }
-
-                    $chartData = [
-                        'labels' => $chartLabels,
-                        'prices' => array_map(fn($p) => $p ?? 0, $pricePoints),
-                        'commodityName' => $commodityName,
-                    ];
-                }
-            } catch (\Exception $e) {
-            }
-        }
-
+        // --- 3. NOTIFICAÇÕES (Mantido igual) ---
         $adminData = ['notifications' => collect()];
         if ($isAdmin) {
             $adminData['notifications'] = DB::table('admin_notifications')
