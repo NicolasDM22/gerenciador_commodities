@@ -168,7 +168,6 @@
                         <th>Matéria-prima</th>
                         <th>Mercado recomendado</th>
                         <th>Preço estimado</th>
-                        <th>Prazo</th>
                         <th>Gerada em</th>
                     </tr>
                 </thead>
@@ -188,7 +187,6 @@
                                     N/D
                                 @endif
                             </td>
-                            <td>{{ $mercado['prazo_estimado_dias'] ?? '-' }} dias</td>
                             <td>{{ $log->created_at_formatted }}</td>
                         </tr>
                     @endforeach
