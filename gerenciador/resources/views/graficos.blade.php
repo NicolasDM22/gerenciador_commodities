@@ -150,10 +150,12 @@
 
     <main class="content">
         <section class="card">
-            <div class="header-row">
-                <div style="display: gap: 10px;">
-                    <a href="{{ route('previsoes.show', ['id' => $commodityId]) }}" class="button" title="Voltar para Descritiva">&larr; Voltar</a>
-                    <a href="{{ route('previsoes.conclusao.show', ['id' => $commodityId]) }}" class="button" style="border-color: var(--primary); color: var(--primary);">Conclusão &rarr;</a>
+            <div class="analysis-header">
+                <div class="nav-buttons">
+                    <a href="{{ route('previsoes.show', ['id' => $analysisId ?? $commodityId]) }}" 
+                       class="button button-secondary button-icon" title="Voltar">&larr;</a>
+                    <a href="{{ route('previsoes.conclusao.show', ['id' => $analysisId ?? $commodityId]) }}" 
+                       class="button button-secondary button-icon" title="Ir para Conclusão">&rarr;</a>
                 </div>
                 <h2>Gráficos: {{ $commodityName }}</h2>
                 <a href="{{ route('home') }}" class="button" style="padding: 0.5rem 0.8rem;">&times;</a>
@@ -163,16 +165,29 @@
                 
                 {{-- COLUNA 1: Legenda Interativa --}}
                 <aside class="legend-sidebar">
-                    <div class="legend-title">Filtro de Países</div>
-                    <div id="legendContainer">
-                        <div style="color:#666; font-size:0.9rem;">Carregando...</div>
+                    <div class="legend-title">Países/Regiões(Clique para filtrar)</div>
+                    <div id="dynamicLegend">
+                        <span style="font-size: 0.9rem; color: #666;">Carregando...</span>
+                    </div>
+
+                    {{-- NOVA SEÇÃO: Filtro de Localizações --}}
+                    <div class="legend-title" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--gray-200);">
+                        Localizações
+                    </div>
+                    <div id="locationFilters">
+                        <span style="font-size: 0.9rem; color: #666;">Carregando...</span>
                     </div>
                 </aside>
 
-                {{-- COLUNA 2: Gráficos (Scrollável) --}}
-                <div class="charts-scroll-area">
-                    
-                    <div class="chart-box">
+                {{-- MAIN: Gráficos (Scroll aqui dentro) --}}
+                <div class="charts-container">
+                    <!-- 0. Gráfico de Comparação por Localização (NOVO) -->
+                    <div class="chart-wrapper">
+                        <canvas id="chartLocationPrice"></canvas>
+                    </div>
+
+                    <!-- 1. Gráfico de Preços -->
+                    <div class="chart-wrapper">
                         <canvas id="chartPrice"></canvas>
                     </div>
 
@@ -198,14 +213,24 @@
     document.addEventListener('DOMContentLoaded', function() {
         // 1. Recebe dados do Controller
         const rawData = @json($chartData ?? []);
-        
-        // Estado: quais países estão visíveis (inicia todos true)
+        const locationData = @json($locationComparison ?? []);
+
+        if (!rawData || rawData.length === 0) {
+            document.getElementById('dynamicLegend').innerHTML = '<span style="color:red; padding: 0.5rem;">Sem dados disponíveis.</span>';
+            return;
+        }
+
+        // Estado de visibilidade
         let visibilityState = {};
         rawData.forEach(d => visibilityState[d.pais] = true);
 
-        // --- Helpers ---
-        
-        // Gera cor consistente baseada no nome (Brasil sempre verde)
+        // Estado de visibilidade para localizações
+        let locationVisibilityState = {};
+        if (locationData && locationData.length > 0) {
+            locationData.forEach(loc => locationVisibilityState[loc.location_id] = true);
+        }
+
+        // 2. Cores
         function getColor(country) {
             if(country.toLowerCase().includes('brasil')) return '#10b981'; // Emerald 500
             if(country.toLowerCase().includes('china')) return '#ef4444';
@@ -230,10 +255,27 @@
         // Instâncias dos gráficos
         let charts = {};
 
-        // --- Função Principal de Renderização ---
-        function renderCharts() {
+        // 3. CÁLCULO DOS VALORES MÁXIMOS E MÍNIMOS GLOBAIS (BASE ESTÁTICA)
+        // Isso garante que a escala não mude quando filtramos países
+        const allPrices = rawData.map(d => parseFloat(d.preco_medio ?? 0));
+        const allLogistics = rawData.map(d => parseFloat(d.logistica_perc ?? 0));
+
+        // Se só houver 1 item, evita NaN/Zero
+        const globalMaxPrice = allPrices.length ? Math.max(...allPrices) : 1;
+        const globalMinPrice = allPrices.length ? Math.min(...allPrices) : 0;
+        
+        const globalMaxLogistics = allLogistics.length ? Math.max(...allLogistics) : 1;
+        const globalMinLogistics = allLogistics.length ? Math.min(...allLogistics) : 0;
+
+        // Inicialização
+        let chartPrice, chartLogistics, chartStability, chartRadar, chartLocationPrice;
+
+        function initCharts() {
             const activeData = rawData.filter(d => visibilityState[d.pais]);
             const labels = activeData.map(d => d.pais);
+            const prices = activeData.map(d => parseFloat(d.preco_medio ?? 0));
+            const logistics = activeData.map(d => parseFloat(d.logistica_perc ?? 0));
+            const stability = activeData.map(d => getStabilityScore(d.estabilidade));
             const bgColors = labels.map(l => getColor(l));
 
             // Configuração comum
@@ -247,9 +289,58 @@
                 }
             };
 
-            // 1. CHART PREÇO
-            if(charts.price) charts.price.destroy();
-            charts.price = new Chart(document.getElementById('chartPrice'), {
+            const barOptions = { maxBarThickness: 40, borderRadius: 4 };
+
+            // --- 0. COMPARAÇÃO POR LOCALIZAÇÃO (NOVO) ---
+            if (locationData && locationData.length > 0) {
+                const ctxLocation = document.getElementById('chartLocationPrice').getContext('2d');
+                if(chartLocationPrice) chartLocationPrice.destroy();
+
+                const locationLabels = locationData.map(loc => `${loc.location_name} (${loc.regiao})`);
+                const locationPrices = locationData.map(loc => parseFloat(loc.price));
+                const locationColors = locationLabels.map((_, idx) => {
+                    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
+                    return colors[idx % colors.length];
+                });
+
+                const optLocation = JSON.parse(JSON.stringify(commonOptions));
+                optLocation.plugins.title = { 
+                    display: true, 
+                    text: `0. Comparativo de Preços por Localização - ${locationData[0]?.commodity_name || 'Commodity'}`, 
+                    font: {size: 16, weight: '700'} 
+                };
+                optLocation.plugins.tooltip = {
+                    callbacks: {
+                        label: function(context) {
+                            const loc = locationData[context.dataIndex];
+                            return `${loc.price.toFixed(2)} ${loc.currency}/${loc.unidade}`;
+                        }
+                    }
+                };
+
+                chartLocationPrice = new Chart(ctxLocation, {
+                    type: 'bar',
+                    data: {
+                        labels: locationLabels,
+                        datasets: [{ 
+                            label: 'Preço', 
+                            data: locationPrices, 
+                            backgroundColor: locationColors, 
+                            ...barOptions 
+                        }]
+                    },
+                    options: optLocation
+                });
+            }
+
+            // --- 1. PREÇO ---
+            const ctxPrice = document.getElementById('chartPrice').getContext('2d');
+            if(chartPrice) chartPrice.destroy();
+            
+            const optPrice = JSON.parse(JSON.stringify(commonOptions));
+            optPrice.plugins.title = { display: true, text: '1. Comparativo de Preços (R$/kg)', font: {size: 16, weight: '700'} };
+            
+            chartPrice = new Chart(ctxPrice, {
                 type: 'bar',
                 data: {
                     labels: labels,
@@ -315,11 +406,9 @@
             const radarDatasets = activeData.map(d => {
                 const color = getColor(d.pais);
                 
-                // Normaliza Preço (Inverso: Preço menor = nota maior)
-                const priceScore = d.preco_medio > 0 ? Math.min(100, (1000 / d.preco_medio) * 8) : 50; 
-                
-                // Normaliza Logística (Inverso: Custo menor = nota maior)
-                const logScore = Math.max(0, 100 - (d.logistica_perc * 5));
+                const valPrice = parseFloat(d.preco_medio ?? 0);
+                const valLog = parseFloat(d.logistica_perc ?? 0);
+                const valStab = getStabilityScore(d.estabilidade);
 
                 // Normaliza Estabilidade
                 const stabScore = getStabilityScore(d.estabilidade) * 33;
@@ -379,13 +468,57 @@
             });
         }
 
-        // Inicialização
-        if(rawData.length > 0) {
-            renderLegend();
-            renderCharts();
-        } else {
-            document.getElementById('legendContainer').innerHTML = "Sem dados.";
+        function renderLocationFilters() {
+            const container = document.getElementById('locationFilters');
+            
+            if (!locationData || locationData.length === 0) {
+                container.innerHTML = '<span style="font-size: 0.85rem; color: #999;">Nenhuma localização disponível</span>';
+                return;
+            }
+
+            container.innerHTML = '';
+
+            locationData.forEach((loc, idx) => {
+                const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
+                const color = colors[idx % colors.length];
+                const isVisible = locationVisibilityState[loc.location_id];
+                
+                const itemDiv = document.createElement('div');
+                itemDiv.className = `legend-item ${!isVisible ? 'hidden-item' : ''}`;
+                itemDiv.innerHTML = `<div class="legend-color" style="background-color: ${color}"></div> ${loc.location_name}`;
+                
+                itemDiv.addEventListener('click', () => {
+                    locationVisibilityState[loc.location_id] = !locationVisibilityState[loc.location_id];
+                    renderLocationFilters();
+                    updateLocationChart();
+                });
+
+                container.appendChild(itemDiv);
+            });
         }
+
+        function updateLocationChart() {
+            if (!locationData || locationData.length === 0 || !chartLocationPrice) return;
+
+            const activeLocations = locationData.filter(loc => locationVisibilityState[loc.location_id]);
+            const locationLabels = activeLocations.map(loc => `${loc.location_name} (${loc.regiao})`);
+            const locationPrices = activeLocations.map(loc => parseFloat(loc.price));
+            
+            const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
+            const locationColors = activeLocations.map((_, idx) => {
+                const originalIdx = locationData.indexOf(_);
+                return colors[originalIdx % colors.length];
+            });
+
+            chartLocationPrice.data.labels = locationLabels;
+            chartLocationPrice.data.datasets[0].data = locationPrices;
+            chartLocationPrice.data.datasets[0].backgroundColor = locationColors;
+            chartLocationPrice.update();
+        }
+
+        renderLegend();
+        renderLocationFilters();
+        initCharts();
     });
 </script>
 </body>

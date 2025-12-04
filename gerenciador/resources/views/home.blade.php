@@ -109,6 +109,24 @@
             padding: 2rem clamp(1rem, 2vw, 2.5rem) 3rem; display: grid; gap: 1.75rem;
         }
 
+        .simple-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .simple-table thead {
+            background: var(--gray-50);
+        }
+        .simple-table th,
+        .simple-table td {
+            padding: 0.65rem 0.8rem;
+            border-bottom: 1px solid var(--gray-200);
+            text-align: left;
+            font-size: 0.9rem;
+        }
+        .simple-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
         .toast-container {
             position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
             z-index: 9999; display: flex; flex-direction: column; align-items: center;
@@ -279,32 +297,39 @@
     </x-topbar>
 
     <main class="content">
-        <div class="card">
+                                <div class="card">
+
             <h2>Visualizar análises</h2>
+
             <table id="commoditiesTable" class="display" style="width:100%">
+
                 <thead>
+
                     <tr>
+
                         <th>ID</th>
+
                         <th>Commodity</th>
-                        <th>Data/Hora Registro</th> <th>Ação</th>
+
+                        <th>Data/Hora Registro</th>
+
+                        <th>Ação</th>
+
                     </tr>
+
                 </thead>
+
                 <tbody>
+
                     @forelse($previousAnalyses ?? [] as $analysis)
                         <tr>
                             <td>{{ $analysis->id ?? '-' }}</td>
                             <td>{{ $analysis->commodity_nome ?? 'N/A' }}</td>
-                            
                             <td data-order="{{ !empty($analysis->updated_at) ? strtotime($analysis->updated_at) : 0 }}">
-                                @if(!empty($analysis->updated_at))
-                                    {{ date('d/m/Y H:i:s', strtotime($analysis->updated_at)) }}
-                                @else
-                                    -
-                                @endif
+                                {{ $analysis->data_previsao ?? '-' }}
                             </td>
-
                             <td>
-                                <a href="{{ url('/previsoes/' . $analysis->id) }}" style="color: var(--link-color); font-weight: 600; text-decoration: none;">
+                                <a href="{{ route('previsoes.show', $analysis->id ?? 0) }}" style="color: var(--link-color); font-weight: 600; text-decoration: none;">
                                     Ver Detalhes
                                 </a>
                             </td>
@@ -314,9 +339,15 @@
                             <td colspan="4" style="text-align: center;">Nenhuma análise disponível.</td>
                         </tr>
                     @endforelse
+
                 </tbody>
+
             </table>
+
         </div>
+
+
+
 
         <div class="card">
             <h2>{{ $chartData['commodityName'] ?? 'Histórico de Preços (Geral)' }}</h2>
@@ -324,6 +355,52 @@
                 <canvas id="priceHistoryChart"></canvas>
             </div>
         </div>
+
+        @if(!empty($aiAnalyses) && count($aiAnalyses) > 0)
+        <div class="card">
+            <h2>Últimas análises automáticas</h2>
+            <table class="simple-table">
+                <thead>
+                    <tr>
+                        <th>Matéria-prima</th>
+                        <th>Mercado recomendado</th>
+                        <th>Preço estimado</th>
+                        <th>Prazo</th>
+                        <th>Gerada em</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($aiAnalyses as $log)
+                        @php
+                            $parsed = is_array($log->parsed) ? $log->parsed : [];
+                            $mercados = $parsed['mercados'] ?? [];
+                            $mercado = $mercados[0] ?? null;
+                        @endphp
+                        <tr>
+                            <td>{{ $log->materia_prima ?? 'N/D' }}</td>
+                            <td>{{ $mercado['nome'] ?? 'N/D' }}</td>
+                            <td>
+                                @if($mercado)
+                                    {{ $mercado['moeda'] ?? 'BRL' }}
+                                    {{ number_format($mercado['preco'] ?? 0, 2, ',', '.') }}
+                                @else
+                                    N/D
+                                @endif
+                            </td>
+                            <td>
+                                @if($mercado && !empty($mercado['prazo_estimado_dias']))
+                                    {{ $mercado['prazo_estimado_dias'] }} dias
+                                @else
+                                    -
+                                @endif
+                            </td>
+                            <td>{{ $log->created_at_formatted }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        @endif
 
         @if($isAdmin)
         <div class="card" id="javaWsCard">
@@ -640,8 +717,8 @@
         toast.className = `toast-notification toast-${type}`;
         
         let icon = '';
-        if(type === 'success') icon = '<span style="margin-right: 8px">✅</span>';
-        if(type === 'error') icon = '<span style="margin-right: 8px">❌</span>';
+        if(type === 'success') icon = '<span style="margin-right: 8px">&#10003;</span>';
+        if(type === 'error') icon = '<span style="margin-right: 8px">&#10007;</span>';
 
         toast.innerHTML = `
             <div class="toast-content">${icon}${message}</div>
@@ -661,6 +738,14 @@
 
     @if (session('status'))
         showToast("{{ session('status') }}", 'success');
+    @endif
+    @if (session('analysis_structured'))
+        const structured = @json(session('analysis_structured'));
+        if (structured && Array.isArray(structured.mercados) && structured.mercados.length) {
+            const recomendada = structured.mercados[0];
+            const preco = Number(recomendada.preco || 0).toFixed(2);
+            showToast(`Mercado recomendado: ${recomendada.nome} - ${recomendada.moeda || 'BRL'} ${preco}`, 'success');
+        }
     @endif
 
     @if ($errors->any())

@@ -39,4 +39,8 @@ return [
         'url' => env('JAVA_WS_URL', ''),
     ],
 
+    'java_ai_bridge' => [
+        'url' => env('JAVA_AI_HTTP_URL', 'http://127.0.0.1:3100/analises'),
+    ],
+
 ];

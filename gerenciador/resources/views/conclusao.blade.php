@@ -167,12 +167,13 @@
 
     <main class="content">
         <section class="card">
-            
-            {{-- CABEÇALHO DE NAVEGAÇÃO --}}
-            <div class="header-row">
-                <div style="display:flex; gap: 10px;">
-                    <a href="{{ route('previsoes.graficos.show', ['id' => $commodityId]) }}" class="button button-secondary" title="Voltar aos Gráficos">
-                        &larr; Voltar
+            <div class="analysis-header">
+                <div class="nav-buttons">
+                    {{-- Botão Esquerda: Volta para Gráficos --}}
+                    <a href="{{ route('previsoes.graficos.show', ['id' => $analysisId ?? $commodityId]) }}" 
+                       class="button button-secondary button-icon" 
+                       title="Voltar para Gráficos">
+                    &larr;
                     </a>
                     <button class="button button-secondary" disabled>&rarr;</button>
                 </div>
@@ -184,21 +185,37 @@
                 </a>
             </div>
 
-            {{-- CORPO DA CONCLUSÃO --}}
-            <div class="conclusion-body">
+            @php
+                $recomendacao = $aiSummary['recomendacao'] ?? 'Recomendação automática indisponível.';
+                $logistica = $aiSummary['logistica'] ?? [];
+                $indicadores = $aiSummary['indicadores'] ?? [];
+                $timelineLabels = ($timelineSeries ?? collect())->pluck('mes_ano');
+                $timelineValues = ($timelineSeries ?? collect())->pluck('preco_medio');
+                $chartMin = $timelineValues->count() ? max(min($timelineValues->toArray()) - 5, 0) : 0;
+                $chartMax = $timelineValues->count() ? max($timelineValues->toArray()) + 5 : 100;
+            @endphp
+
+            <div class="conclusion-container">
                 
-                <div class="text-block">
+                <div class="conclusion-text">
+                    <p>{{ $recomendacao }}</p>
+                    @if(!empty($logistica['melhor_rota']))
+                        <p><strong>Melhor rota logística:</strong> {{ $logistica['melhor_rota'] }}</p>
+                    @endif
+                    @if(isset($logistica['custo_estimado']))
+                        <p><strong>Custo logístico estimado:</strong> {{ number_format($logistica['custo_estimado'], 2, ',', '.') }}%</p>
+                    @endif
+                    @if(!empty($logistica['observacoes']))
+                        <p>{{ $logistica['observacoes'] }}</p>
+                    @endif
                     <p>
-                        Com base na análise dos dados históricos e nas projeções de curto prazo das tabelas de <strong>Entrada e Saída</strong>, identificamos um cenário de <strong style="color: #ea580c;">Alta Volatilidade</strong> para os próximos trimestres.
+                        Indicadores atuais: média Brasil em 
+                        <strong>R${{ number_format($indicadores['media_brasil'] ?? 0, 2, ',', '.') }}/kg</strong>,
+                        média global em 
+                        <strong>R${{ number_format($indicadores['media_global'] ?? 0, 2, ',', '.') }}/kg</strong>,
+                        risco <strong>{{ $indicadores['risco'] ?? '-' }}</strong> e
+                        estabilidade <strong>{{ $indicadores['estabilidade'] ?? '-' }}</strong>.
                     </p>
-                    <p>
-                        A tendência de <strong>custos logísticos</strong> aponta para um crescimento gradual, impactando a margem operacional se não houver travamento de preços.
-                    </p>
-                    
-                    <div class="highlight-box">
-                        <h4>Recomendação Final: MANUTENÇÃO / HEDGE</h4>
-                        <p>Sugerimos manter os estoques atuais e realizar operações de Hedge para cobrir a exposição cambial prevista para o próximo mês.</p>
-                    </div>
                 </div>
 
                 <div class="chart-container">
@@ -207,12 +224,15 @@
 
             </div>
 
-            {{-- RODAPÉ COM EXPORTAÇÃO --}}
-            <div class="footer-actions">
-                <span id="loadingMsg">📄 Gerando PDF, aguarde...</span>
-                
-                <button id="btnExportar" class="button button-export" data-url="{{ route('previsoes.exportarPdf', ['id' => $commodityId]) }}">
-                    Baixar Relatório PDF
+            <div class="actions-footer">
+                {{-- MENSAGEM DE LOADING (oculta por padrão) --}}
+                <span id="msgLoading" style="display:none; color: var(--gray-500); font-weight: 600;">Gerando PDF...</span>
+
+                {{-- BOTÃO EXPORTAR PDF (Via JavaScript + Iframe) --}}
+                <button id="btnExportar" 
+                        class="button button-export" 
+                        data-url="{{ route('previsoes.exportarPdf', ['id' => $analysisId ?? $commodityId]) }}">
+                    Exportar PDF
                 </button>
             </div>
 
@@ -222,14 +242,28 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        
-        // 1. INICIALIZAÇÃO DO GRÁFICO DE PROJEÇÃO
-        const ctx = document.getElementById('projectionChart').getContext('2d');
-        
-        // Gradiente para o gráfico ficar bonito
-        let gradient = ctx.createLinearGradient(0, 0, 0, 400);
-        gradient.addColorStop(0, 'rgba(37, 99, 235, 0.2)'); // Azul claro transparente
-        gradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
+        const chartLabels = @json($timelineLabels->toArray());
+        const chartValues = @json($timelineValues->toArray());
+        const ctx = document.getElementById('finalChart').getContext('2d');
+        const finalLabels = chartLabels.length ? chartLabels : ['Sem dados'];
+        const finalValues = chartValues.length ? chartValues : [0];
+
+        const data = {
+            labels: finalLabels,
+            datasets: [{
+                label: 'Preço Médio (R$/kg)',
+                data: finalValues,
+                borderColor: '#f97316',
+                backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                borderWidth: 2,
+                pointBackgroundColor: '#ffffff',
+                pointBorderColor: '#f97316',
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                fill: true,
+                tension: 0.3
+            }]
+        };
 
         new Chart(ctx, {
             type: 'line',
@@ -267,8 +301,12 @@
                 },
                 scales: {
                     y: {
-                        beginAtZero: false, // Foca na variação
-                        grid: { borderDash: [5, 5] }
+                        beginAtZero: false,
+                        min: {{ $chartMin }},
+                        max: {{ $chartMax }},
+                        title: { display: true, text: 'Previsão de Preço (R$/kg)', color: '#4b5563', font: { weight: 'bold' } },
+                        grid: { display: false, drawBorder: true },
+                        border: { display: true, width: 2, color: '#9ca3af' }
                     },
                     x: {
                         grid: { display: false }

@@ -1,4 +1,4 @@
-# Guia de instalacao e uso (Windows)
+﻿# Guia de instalacao e uso (Windows)
 
 Este documento resume tudo que voce precisa para clonar, configurar e executar o projeto **Gerenciador de Commodities** em um ambiente Windows 10 ou 11 de desenvolvimento.
 
@@ -123,6 +123,19 @@ Agora existem duas formas de trabalhar:
 
 O script `composer run dev` segue disponível e inicia `php artisan serve`, `php artisan queue:listen --tries=1` e `npm run dev`. Se optar por ele, suba o proxy separadamente para manter o WebSocket no mesmo host/porta.
 
+#### 7.1 Integracao Gemini (Google AI)
+
+- Crie uma chave em https://aistudio.google.com/app/apikey e exporte antes de iniciar o servidor Java `($env:GOOGLE_AI_KEY = 'sua-chave')`.
+- Variaveis suportadas:
+  - `GOOGLE_AI_KEY` (obrigatoria)
+  - `GOOGLE_AI_MODEL` (padrao `gemini-1.5-flash`)
+  - `GOOGLE_SYSTEM_PROMPT` (texto fixo para guiar as respostas)
+  - `AI_BRIDGE_PORT` (porta da ponte HTTP, padrao `porta_websocket + 100`, isto e, 3100 quando o WS estiver em 3000)
+- O servidor Java continua expondo:
+  - WebSocket (`ws://127.0.0.1:3000`) consumido pelo painel administrativo.
+  - Ponte HTTP (`http://127.0.0.1:3100/analises`) usada pelo Laravel. Ajuste `JAVA_AI_HTTP_URL` se publicar em outro host.
+- O Laravel consome somente essa ponte HTTP; basta manter `JAVA_WS_URL` e `JAVA_AI_HTTP_URL` configurados no `.env`.
+
 ### 8. Fila e armazenamento
 
 - O driver de fila padrao e `database`. Execute `php artisan queue:table` e `php artisan migrate` (ja incluso no passo de migracoes) para garantir a existencia da tabela `jobs`.
@@ -186,4 +199,5 @@ java -cp ".;lib/*;bin" ServidorWebSocket 3000
 # 4 - roda o npm run dev
 
 npm run dev:full
+
 
