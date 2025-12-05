@@ -133,7 +133,7 @@ public class ServidorWebSocket extends WebSocketServer {
         // --- ATENCAO: SUA CHAVE FOI BLOQUEADA POR SEGURANCA ---
         // 1. Gere uma nova chave em: https://aistudio.google.com/app/apikey
         // 2. Cole a nova chave abaixo substituindo o texto entre aspas.
-        String apiKey = "AIzaSyAhbGPZwMskBS4F-Qq_KBSgi6PI5xDqLdk"; 
+        String apiKey = ""; 
         
         if (apiKey == null || apiKey.trim().isEmpty() || apiKey.contains("COLOQUE_SUA_NOVA_KEY")) {
             // Tenta pegar da variável de ambiente se não foi definida no código

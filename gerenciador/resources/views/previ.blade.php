@@ -16,6 +16,10 @@
         * { box-sizing: border-box; }
         body { margin: 0; background: var(--gray-100); font-family: "Segoe UI", Arial, sans-serif; color: var(--gray-900); height: 100vh; overflow: hidden; }
         .page { height: 100%; display: flex; flex-direction: column; }
+        .page > header,
+        .page > x-topbar {
+            flex-shrink: 0;
+        }
 
         /* HEADER & BOTOES */
         .button { border: none; border-radius: 12px; padding: 0.75rem 1.4rem; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: 0.15s; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; text-decoration: none; }
@@ -58,11 +62,49 @@
         .badge-good { background: #d1fae5; color: #065f46; }
         .badge-mid { background: #ffedd5; color: #9a3412; }
         .badge-bad { background: #fee2e2; color: #991b1b; }
+        /* TOP BAR */
+        .top-bar { 
+            background: var(--white); 
+            padding: 1.5rem clamp(1.5rem, 3vw, 3rem); 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            gap: 1.5rem; 
+            box-shadow: 0 4px 22px rgba(15, 23, 42, 0.08); 
+            flex-shrink: 0;
+        }
+        .profile { 
+            display: flex; 
+            align-items: center; 
+            gap: 1rem; 
+        }
+        .avatar { 
+            width: 64px; 
+            height: 64px; 
+            border-radius: 18px; 
+            object-fit: cover; 
+            border: 3px solid var(--gray-200); 
+        }
+        .profile-info strong { 
+            font-size: 1.25rem; 
+            display: block; 
+        }
+        .profile-info span { 
+            color: var(--gray-500); 
+            font-size: 0.95rem; 
+        }
+        .top-actions { 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 0.75rem; 
+            align-items: center; 
+        }
     </style>
 </head>
 <body>
 <div class="page">
-    <x-topbar :user="$user" />
+    <x-topbar :user="$user">
+    </x-topbar>
 
     <main class="content">
         @if (session('status'))
