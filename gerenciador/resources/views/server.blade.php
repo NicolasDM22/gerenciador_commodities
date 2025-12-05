@@ -1,3 +1,5 @@
+<!--by Gustavo Cavalheiro, Nicolas Duran e Matias Amma-->
+
 {{-- server.blade.php - Card do Servidor Java WebSocket --}}
 <style>
     .server-card {

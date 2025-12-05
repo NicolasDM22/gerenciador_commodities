@@ -1,6 +1,6 @@
 <?php
 /**
- * LoginController.php by Nicolas Duran Munhos
+ * LoginController.php by Nicolas Duran Munhos e Joao Pedro de Moura
  */
 namespace App\Http\Controllers;
 

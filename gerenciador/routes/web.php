@@ -11,7 +11,7 @@ use App\Http\Controllers\UserAnalysisController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/login');
-// by Nicolas Duran Munhos & Matias Amma 
+// by Nicolas Duran Munhos, Matias Amma e Gustavo Cavalheiro
 // // Rotas públicas (login/registro)
 Route::controller(LoginController::class)->group(function () {
     Route::get('/login', 'show')->name('login');
