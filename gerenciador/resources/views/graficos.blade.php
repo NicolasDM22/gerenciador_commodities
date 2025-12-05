@@ -33,15 +33,13 @@
             flex-direction: column;
         }
 
-        .topbar {
-            background: var(--white);
-            border-bottom: 1px solid var(--gray-200);
-            padding: 0.75rem 1.5rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .logo { font-weight: bold; font-size: 1.1rem; color: var(--primary); }
+        /* TOP BAR (Estilo Painel Principal) */
+        .top-bar { background: var(--white); padding: 1.5rem clamp(1.5rem, 3vw, 3rem); display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; box-shadow: 0 4px 22px rgba(15, 23, 42, 0.08); }
+        .profile { display: flex; align-items: center; gap: 1rem; }
+        .avatar { width: 64px; height: 64px; border-radius: 18px; object-fit: cover; border: 3px solid var(--gray-200); }
+        .profile-info strong { font-size: 1.25rem; display: block; }
+        .profile-info span { color: var(--gray-500); font-size: 0.95rem; }
+        .top-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
 
         .button {
             border: none; border-radius: 12px; padding: 0.6rem 1.2rem;
@@ -53,6 +51,11 @@
         }
         .button:hover { transform: translateY(-1px); background: var(--gray-50); }
         .button-primary { border-color: var(--primary); color: var(--primary); }
+        
+        /* Estilos adicionais para botões de navegação (setas) */
+        .button-secondary { background: var(--white); border: 1px solid var(--gray-300); color: var(--gray-700); }
+        .button-secondary:hover { background: var(--gray-50); }
+        .button-icon { padding: 0.6rem 0.8rem; line-height: 1; font-size: 1.2rem; }
 
         main.content {
             flex: 1;
@@ -82,8 +85,8 @@
             border-bottom: 1px solid var(--gray-200);
             flex-shrink: 0;
         }
-        .header-row h2 { margin: 0; color: var(--gray-700); font-size: 1.4rem; }
-        .nav-group { display: flex; gap: 10px; }
+        .header-row h2 { margin: 0; color: var(--gray-700); font-size: 1.4rem; font-weight: 700; }
+        .nav-group { display: flex; gap: 0.5rem; }
 
         .dashboard-grid {
             display: grid;
@@ -158,25 +161,22 @@
 </head>
 <body>
 <div class="page">
-    <div class="topbar">
-        <div class="logo">AgroAnalytics</div>
-        <div style="font-size: 0.9rem; color: var(--gray-600);">
-            Olá, {{ $user->name ?? 'Usuário' }}
-            <img src="{{ $avatarUrl }}" alt="Avatar" style="width:24px; height:24px; border-radius:50%; vertical-align:middle; margin-left:8px;">
-        </div>
-    </div>
+    
+    <x-topbar :user="$user" :isAdmin="$isAdmin ?? false">
+        <!-- Botões adicionais específicos desta tela, se necessário -->
+    </x-topbar>
 
     <main class="content">
         <section class="card">
             <div class="header-row">
                 <div class="nav-group">
-                    <a href="{{ route('previsoes.show', ['id' => $analysisId, 'commodity_id' => $commodityId]) }}" class="button" title="Voltar para Descritiva">&larr; Voltar</a>
+                    <a href="{{ route('previsoes.show', ['id' => $analysisId, 'commodity_id' => $commodityId]) }}" class="button button-secondary button-icon" title="Voltar para Descritiva">&larr;</a>
                     
-                    <a href="{{ route('previsoes.conclusao.show', ['id' => $analysisId, 'commodity_id' => $commodityId]) }}" class="button button-primary">Conclusão &rarr;</a>
+                    <a href="{{ route('previsoes.conclusao.show', ['id' => $analysisId, 'commodity_id' => $commodityId]) }}" class="button button-secondary button-icon" title="Ir para Conclusão">&rarr;</a>
                 </div>
                 
                 <h2 id="pageTitle">Gráficos: {{ $nomeCommodity }}</h2>
-                <a href="{{ route('home') }}" class="button" style="padding: 0.5rem 0.8rem;">&times;</a>
+                <a href="{{ route('home') }}" class="button button-secondary button-icon" style="font-size: 1.2rem; line-height: 0.8;" title="Voltar">&times;</a>
             </div>
 
             @if(isset($chartData) && count($chartData) > 0)
@@ -303,6 +303,32 @@
                 }
             };
 
+            // Plugin Simples para desenhar valores em cima das barras
+            const barValuesPlugin = {
+                id: 'barValuesPlugin',
+                afterDatasetsDraw(chart) {
+                    const { ctx } = chart;
+                    chart.data.datasets.forEach((dataset, i) => {
+                        const meta = chart.getDatasetMeta(i);
+                        if (meta.hidden) return;
+                        
+                        meta.data.forEach((element, index) => {
+                            const value = dataset.data[index];
+                            if (value !== null && value !== undefined) {
+                                ctx.save();
+                                ctx.font = 'bold 11px "Segoe UI", sans-serif';
+                                ctx.fillStyle = '#4b5563'; 
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'bottom';
+                                // Exibe apenas o número (Score), sem %
+                                ctx.fillText(value.toFixed(1), element.x, element.y - 5);
+                                ctx.restore();
+                            }
+                        });
+                    });
+                }
+            };
+
             // 1. CHART PREÇO
             if(this.charts.price) this.charts.price.destroy();
             this.charts.price = new Chart(document.getElementById('chartPrice'), {
@@ -319,27 +345,62 @@
                 },
                 options: { 
                     ...commonConfig, 
-                    plugins: { title: { display: true, text: 'Comparativo de Preços (Base BRL)', font: {size:16} }, legend: {display:false} }
+                    scales: {
+                        y: { 
+                            beginAtZero: true, 
+                            ticks: { callback: v => 'R$ ' + v },
+                            grid: { color: '#f3f4f6' } 
+                        },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: { 
+                        title: { display: true, text: 'Comparativo de Preços (Base BRL)', font: {size:16} }, 
+                        legend: {display:false},
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => ctx.dataset.label + ': R$ ' + ctx.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+                            }
+                        }
+                    }
                 }
             });
 
-            // 2. CHART LOGÍSTICA
+            // 2. CHART LOGÍSTICA (Alterado para Eficiência - Score 0 a 100)
             if(this.charts.logistics) this.charts.logistics.destroy();
             this.charts.logistics = new Chart(document.getElementById('chartLogistics'), {
                 type: 'bar',
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Custo Logístico (%)',
-                        data: activeData.map(d => d.logistica_perc),
+                        label: 'Eficiência Logística (Score)',
+                        // Lógica idêntica ao Radar: 100 - (custo * 4), mínimo 0
+                        data: activeData.map(d => Math.max(0, 100 - (d.logistica_perc * 4))),
                         backgroundColor: bgColors.map(c => c + 'AA'),
                         borderRadius: 6,
                         barPercentage: 0.6
                     }]
                 },
+                plugins: [barValuesPlugin], 
                 options: { 
-                    ...commonConfig, 
-                    plugins: { title: { display: true, text: 'Custo Logístico Estimado (%)', font: {size:16} }, legend: {display:false} }
+                    ...commonConfig,
+                    scales: {
+                        y: { 
+                            beginAtZero: true, 
+                            max: 100, // Score máximo é 100
+                            ticks: { callback: v => v }, // Sem símbolo %
+                            grid: { color: '#f3f4f6' } 
+                        },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: { 
+                        title: { display: true, text: 'Eficiência Logística (Score 0-100)', font: {size:16} }, 
+                        legend: {display:false},
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1)
+                            }
+                        }
+                    }
                 }
             });
 

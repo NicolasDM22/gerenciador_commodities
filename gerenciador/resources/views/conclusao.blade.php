@@ -6,7 +6,6 @@
     <title>Recomendação Final - Análise</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     
-    {{-- Importação do Chart.js --}}
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     
     <style>
@@ -21,6 +20,14 @@
         }
 
         * { box-sizing: border-box; }
+
+                /* TOP BAR (Estilo Painel Principal) */
+        .top-bar { background: var(--white); padding: 1.5rem clamp(1.5rem, 3vw, 3rem); display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; box-shadow: 0 4px 22px rgba(15, 23, 42, 0.08); }
+        .profile { display: flex; align-items: center; gap: 1rem; }
+        .avatar { width: 64px; height: 64px; border-radius: 18px; object-fit: cover; border: 3px solid var(--gray-200); }
+        .profile-info strong { font-size: 1.25rem; display: block; }
+        .profile-info span { color: var(--gray-500); font-size: 0.95rem; }
+        .top-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
 
         body {
             margin: 0;
@@ -55,11 +62,7 @@
         .button-secondary:hover { background: var(--gray-50); }
         .button-secondary[disabled] { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 
-        .button-primary {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: var(--white);
-            border: none;
-        }
+        .button-icon { padding: 0.6rem 0.8rem; line-height: 1; font-size: 1.2rem; }
 
         .button-export {
             background-color: #374151; /* Cinza Escuro */
@@ -71,12 +74,12 @@
         .button-export:hover { background-color: #1f2937; }
         .button-export:disabled { background-color: #9ca3af; cursor: wait; transform: none; }
 
-        /* --- LAYOUT PRINCIPAL --- */
+        /* --- LAYOUT PRINCIPAL (padronizado) --- */
         main.content {
             flex: 1;
-            width: min(1200px, 100%);
+            width: min(1280px, 100%); /* Largura padronizada */
             margin: 0 auto;
-            padding: 2rem;
+            padding: 1.5rem; /* Padding padronizado */
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -93,22 +96,25 @@
             overflow: hidden;
         }
 
-        /* Cabeçalho */
+        /* Cabeçalho (padronizado) */
         .header-row {
             display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 2rem; padding-bottom: 1rem;
+            margin-bottom: 1.5rem; padding-bottom: 1rem;
             border-bottom: 1px solid var(--gray-200);
             flex-shrink: 0;
         }
-        .header-row h2 { margin: 0; color: var(--gray-600); font-size: 1.6rem; font-weight: 700; }
+        .header-row h2 { margin: 0; color: var(--gray-700); font-size: 1.4rem; font-weight: 700; }
+        .nav-group { display: flex; gap: 0.5rem; }
 
-        /* Conteúdo dividido (Texto e Gráfico) */
-        .conclusion-body {
+
+        /* Conteúdo dividido (Corpo da Análise) */
+        /* Renomeado para analysis-body para consistência */
+        .analysis-body {
             display: grid;
-            grid-template-columns: 1fr 1.2fr; /* Texto ocupa menos, gráfico mais */
+            grid-template-columns: 1fr 1.2fr;
             gap: 3rem;
             align-items: center;
-            flex: 1; /* Ocupa altura disponível */
+            flex: 1; 
             overflow-y: auto;
             padding-right: 1rem;
         }
@@ -131,12 +137,12 @@
             background: #fff;
             border: 1px solid var(--gray-200);
             border-radius: 16px;
-            padding: 1.5rem;
+            padding: 15px; /* Padding padronizado */
             height: 380px;
             position: relative;
         }
 
-        /* Rodapé de Ações */
+        /* Rodapé de Ações (padronizado) */
         .footer-actions {
             margin-top: 2rem;
             padding-top: 1rem;
@@ -148,14 +154,14 @@
             flex-shrink: 0;
         }
 
-        #loadingMsg { font-weight: 600; color: var(--primary); display: none; animation: pulse 1.5s infinite; }
+        #msgLoading { font-weight: 600; color: var(--primary); display: none; animation: pulse 1.5s infinite; }
 
         @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
 
         @media (max-width: 900px) {
             body { overflow: auto; height: auto; }
             .card { height: auto; overflow: visible; }
-            .conclusion-body { grid-template-columns: 1fr; height: auto; overflow: visible; }
+            .analysis-body { grid-template-columns: 1fr; height: auto; overflow: visible; padding-right: 0; }
             .chart-container { height: 300px; }
             .footer-actions { justify-content: center; flex-wrap: wrap; }
         }
@@ -167,21 +173,22 @@
 
     <main class="content">
         <section class="card">
-            <div class="analysis-header">
-                <div class="nav-buttons">
+            <div class="header-row">
+                <div class="nav-group">
                     {{-- Botão Esquerda: Volta para Gráficos --}}
                     <a href="{{ route('previsoes.graficos.show', ['id' => $analysisId ?? $commodityId]) }}" 
                        class="button button-secondary button-icon" 
                        title="Voltar para Gráficos">
                     &larr;
                     </a>
-                    <button class="button button-secondary" disabled>&rarr;</button>
+                    {{-- Botão Direita: Desabilitado (final da navegação) --}}
+                    <button class="button button-secondary button-icon" disabled>&rarr;</button>
                 </div>
                 
                 <h2>Recomendação Estratégica</h2>
                 
-                <a href="{{ route('home') }}" class="button button-secondary" style="padding: 0.6rem 1rem;">
-                    &times; Fechar
+                <a href="{{ route('home') }}" class="button button-secondary button-icon" title="Voltar para Home">
+                    &times;
                 </a>
             </div>
 
@@ -195,26 +202,35 @@
                 $chartMax = $timelineValues->count() ? max($timelineValues->toArray()) + 5 : 100;
             @endphp
 
-            <div class="conclusion-container">
+            <div class="analysis-body">
                 
-                <div class="conclusion-text">
+                <div class="text-block">
                     <p>{{ $recomendacao }}</p>
-                    @if(!empty($logistica['melhor_rota']))
-                        <p><strong>Melhor rota logística:</strong> {{ $logistica['melhor_rota'] }}</p>
+
+                    @if(!empty($logistica['melhor_rota']) || isset($logistica['custo_estimado']) || !empty($logistica['observacoes']))
+                        <div class="highlight-box">
+                            <h4>Resumo Logístico</h4>
+                            @if(!empty($logistica['melhor_rota']))
+                                <p><strong>Melhor rota:</strong> {{ $logistica['melhor_rota'] }}</p>
+                            @endif
+                            @if(isset($logistica['custo_estimado']))
+                                <p><strong>Custo estimado:</strong> {{ number_format($logistica['custo_estimado'], 2, ',', '.') }}% (do valor do produto)</p>
+                            @endif
+                            @if(!empty($logistica['observacoes']))
+                                <p>{{ $logistica['observacoes'] }}</p>
+                            @endif
+                        </div>
                     @endif
-                    @if(isset($logistica['custo_estimado']))
-                        <p><strong>Custo logístico estimado:</strong> {{ number_format($logistica['custo_estimado'], 2, ',', '.') }}%</p>
-                    @endif
-                    @if(!empty($logistica['observacoes']))
-                        <p>{{ $logistica['observacoes'] }}</p>
-                    @endif
-                    <p>
-                        Indicadores atuais: média Brasil em 
+
+                    <p style="margin-top: 2rem;">
+                        <span style="font-size: 0.9rem; color: var(--gray-500);">
+                        Indicadores de Contexto: Média Brasil 
                         <strong>R${{ number_format($indicadores['media_brasil'] ?? 0, 2, ',', '.') }}/kg</strong>,
-                        média global em 
-                        <strong>R${{ number_format($indicadores['media_global'] ?? 0, 2, ',', '.') }}/kg</strong>,
-                        risco <strong>{{ $indicadores['risco'] ?? '-' }}</strong> e
-                        estabilidade <strong>{{ $indicadores['estabilidade'] ?? '-' }}</strong>.
+                        Média Global 
+                        <strong>R${{ number_format($indicadores['media_global'] ?? 0, 2, ',', '.') }}/kg</strong>.
+                        Risco <strong>{{ $indicadores['risco'] ?? '-' }}</strong> e
+                        Estabilidade <strong>{{ $indicadores['estabilidade'] ?? '-' }}</strong>.
+                        </span>
                     </p>
                 </div>
 
@@ -224,15 +240,15 @@
 
             </div>
 
-            <div class="actions-footer">
+            <div class="footer-actions">
                 {{-- MENSAGEM DE LOADING (oculta por padrão) --}}
-                <span id="msgLoading" style="display:none; color: var(--gray-500); font-weight: 600;">Gerando PDF...</span>
+                <span id="msgLoading" style="display:none; color: var(--primary); font-weight: 600;">Gerando PDF...</span>
 
                 {{-- BOTÃO EXPORTAR PDF (Via JavaScript + Iframe) --}}
                 <button id="btnExportar" 
                         class="button button-export" 
                         data-url="{{ route('previsoes.exportarPdf', ['id' => $analysisId ?? $commodityId]) }}">
-                    Exportar PDF
+                    Exportar Relatório em PDF
                 </button>
             </div>
 
@@ -242,45 +258,42 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const chartLabels = @json($timelineLabels->toArray());
-        const chartValues = @json($timelineValues->toArray());
-        const ctx = document.getElementById('finalChart').getContext('2d');
-        const finalLabels = chartLabels.length ? chartLabels : ['Sem dados'];
-        const finalValues = chartValues.length ? chartValues : [0];
+        const ctx = document.getElementById('projectionChart').getContext('2d');
+        
+        // Dados do Controller (TimelineSeries)
+        const timelineValues = @json($timelineValues->toArray());
+        const timelineLabels = @json($timelineLabels->toArray());
+        
+        // Estilos e Configurações replicadas da Home:
+        const homeBorderColor = '#F97316';
+        const homeBackgroundColor = 'rgba(249, 115, 22, 0.1)';
+        const homeTension = 0.1; // Linha mais reta/suave
+        
+        // Valores min/max calculados no PHP, garantindo o zoom nos valores.
+        const chartMin = {{ $chartMin }};
+        const chartMax = {{ $chartMax }};
 
-        const data = {
-            labels: finalLabels,
-            datasets: [{
-                label: 'Preço Médio (R$/kg)',
-                data: finalValues,
-                borderColor: '#f97316',
-                backgroundColor: 'rgba(249, 115, 22, 0.1)',
-                borderWidth: 2,
-                pointBackgroundColor: '#ffffff',
-                pointBorderColor: '#f97316',
-                pointRadius: 4,
-                pointHoverRadius: 6,
-                fill: true,
-                tension: 0.3
-            }]
-        };
+        // Usa os dados do backend.
+        const finalValues = timelineValues.length > 0 ? timelineValues : [0, 0];
+        const finalLabels = timelineLabels.length > 0 ? timelineLabels : ['N/A', 'N/A'];
 
         new Chart(ctx, {
             type: 'line',
             data: {
-                labels: ['Mês Atual', '+1 Mês', '+2 Meses', '+3 Meses', '+4 Meses'],
+                labels: finalLabels.slice(0, finalValues.length),
                 datasets: [{
-                    label: 'Projeção de Preço (R$/kg)',
-                    data: [148.50, 150.00, 152.50, 155.00, 156.00], // Dados simulados (Mock da projeção)
-                    borderColor: '#2563eb', // Primary Blue
-                    borderWidth: 3,
-                    backgroundColor: gradient,
+                    label: 'Preço Médio (R$/kg)',
+                    data: finalValues,
+                    // ESTILOS IGUAIS AO GRÁFICO HOME (Laranja, Linha Reta)
+                    borderColor: homeBorderColor,
+                    backgroundColor: homeBackgroundColor,
+                    borderWidth: 2, 
                     fill: true,
-                    tension: 0.4, // Curva suave
-                    pointBackgroundColor: '#ffffff',
-                    pointBorderColor: '#2563eb',
-                    pointRadius: 5,
-                    pointHoverRadius: 7
+                    tension: homeTension, // Corrigido para 0.1 (linha suave)
+                    pointBackgroundColor: homeBorderColor,
+                    pointBorderColor: '#ffffff',
+                    pointRadius: 4,
+                    pointHoverRadius: 6
                 }]
             },
             options: {
@@ -288,24 +301,25 @@
                 maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false },
-                    title: { display: true, text: 'Tendência Projetada (Curto Prazo)', font: { size: 16 } },
+                    title: { display: true, text: 'Tendência Histórica e Projetada', font: { size: 16 } },
                     tooltip: {
                         mode: 'index', intersect: false,
                         backgroundColor: '#1e293b',
                         callbacks: {
-                            label: function(context) {
-                                return 'R$ ' + context.parsed.y.toFixed(2);
-                            }
+                            // Callbacks da Home/Geral
+                            label: ctx => (ctx.dataset.label || '') + (ctx.parsed.y ? ': R$ ' + ctx.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '')
                         }
                     }
                 },
                 scales: {
                     y: {
                         beginAtZero: false,
-                        min: {{ $chartMin }},
-                        max: {{ $chartMax }},
-                        title: { display: true, text: 'Previsão de Preço (R$/kg)', color: '#4b5563', font: { weight: 'bold' } },
-                        grid: { display: false, drawBorder: true },
+                        // ESCALA DINÂMICA (Baseada nos valores do PHP)
+                        min: chartMin,
+                        max: chartMax,
+                        ticks: { color: '#4b5563', callback: v => 'R$ ' + v.toLocaleString('pt-BR') }, // Ticks da Home
+                        title: { display: true, text: 'Preço (R$/kg)', color: '#4b5563', font: { weight: 'bold' } },
+                        grid: { display: true, color: '#e5e7eb' }, 
                         border: { display: true, width: 2, color: '#9ca3af' }
                     },
                     x: {
@@ -315,23 +329,21 @@
             }
         });
 
-        // 2. LÓGICA DE EXPORTAÇÃO PDF (IFRAME INVISÍVEL)
+        // 2. LÓGICA DE EXPORTAÇÃO PDF
         const btnExport = document.getElementById('btnExportar');
-        const msgLoading = document.getElementById('loadingMsg');
+        const msgLoading = document.getElementById('msgLoading');
 
         if (btnExport) {
             btnExport.addEventListener('click', function() {
                 const url = this.getAttribute('data-url');
                 
-                // Feedback Visual
                 this.disabled = true;
                 this.style.opacity = '0.7';
                 msgLoading.style.display = 'inline-block';
 
-                // Cria o iframe fora da tela
                 const iframe = document.createElement('iframe');
                 iframe.style.position = 'fixed';
-                iframe.style.left = '-9999px'; // Move para fora da visão
+                iframe.style.left = '-9999px'; 
                 iframe.style.top = '0';
                 iframe.style.width = '1px';
                 iframe.style.height = '1px';
@@ -339,23 +351,20 @@
 
                 document.body.appendChild(iframe);
 
-                // Timeout de segurança para reativar o botão
-                // (O ideal seria o servidor retornar um cookie de confirmação, mas timeout funciona bem para UX simples)
                 setTimeout(() => {
                     this.disabled = false;
                     this.style.opacity = '1';
                     msgLoading.style.display = 'none';
                     
-                    // Limpa o iframe do DOM após um tempo seguro
                     setTimeout(() => {
                         if(document.body.contains(iframe)) {
                             document.body.removeChild(iframe);
                         }
                     }, 2000);
-                }, 5000); // 5 segundos de "loading" simulado enquanto o browser baixa o arquivo
+                }, 5000); 
             });
         }
     });
 </script>
 </body>
-</html>
+</html> 
