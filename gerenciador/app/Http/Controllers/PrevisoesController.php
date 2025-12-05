@@ -45,8 +45,10 @@ class PrevisoesController extends Controller
         return view('graficos', [
             'user' => $user,
             'avatarUrl' => $avatarUrl,
-            'commodityId' => $payload['commodity']->id,
+            'commodityId' => $payload['analysis']->commodity_id,
+            'nomeCommodity' => $payload['commodity']->nome ?? 'Commodity',
             'analysisId' => $payload['analysis']->id,
+            'analise' => $payload['analysis'], 
             'chartData' => $payload['regionalComparisons'],
             'timelineSeries' => $payload['nationalForecasts'],
             'locationComparison' => [],
@@ -66,7 +68,7 @@ class PrevisoesController extends Controller
         return view('conclusao', [
             'user' => $user,
             'avatarUrl' => $avatarUrl,
-            'commodityId' => $payload['commodity']->id,
+            'commodityId' => $payload['analysis']->commodity_id,
             'analysisId' => $payload['analysis']->id,
             'aiSummary' => $payload['aiSummary'],
             'timelineSeries' => $payload['nationalForecasts'],
@@ -97,7 +99,18 @@ class PrevisoesController extends Controller
         $analysis = $this->resolveAnalysis($analysisId, $commodityId);
         if (!$analysis) return null;
 
-        $commodity = DB::table('commodity_entrada')->where('commodity_id', $analysis->commodity_id)->first();
+        $commodity = DB::table('commodity_entrada')
+            ->where('commodity_id', $analysis->commodity_id)
+            ->orderByDesc('last_updated')
+            ->first();
+            
+        if (!$commodity) {
+            $commodity = (object)[
+                'nome' => $this->commodityMap[$analysis->commodity_id] ?? 'Produto #' . $analysis->commodity_id,
+                'commodity_id' => $analysis->commodity_id
+            ];
+        }
+
         $aiLog = $this->fetchAiLogForAnalysis($analysis);
 
         return [
@@ -108,11 +121,14 @@ class PrevisoesController extends Controller
                 'referencia_mes' => $analysis->referencia_mes,
                 'volume_compra_ton' => $analysis->volume_compra_ton,
                 'preco_medio_brasil' => $analysis->preco_medio_brasil,
-                'preco_alvo' => $analysis->preco_alvo
+                'preco_alvo' => $analysis->preco_alvo,
+                'logistica_perc' => $analysis->logistica_perc,
+                'risco' => $analysis->risco,
+                'estabilidade' => $analysis->estabilidade
             ],
             'nationalForecasts' => $this->buildTimelineSeries($analysis),
             'aiSummary' => $this->buildAiSummary($analysis, $commodity, $aiLog),
-            'regionalComparisons' => $this->buildRegionalComparisons($aiLog)
+            'regionalComparisons' => $this->buildRegionalComparisons($analysis)
         ];
     }
 
@@ -126,8 +142,6 @@ class PrevisoesController extends Controller
 
     private function fetchAiLogForAnalysis(object $analysis): ?object
     {
-        // 1. Match EXATO pelo timestamp (visto que são criados na mesma transação)
-        // Isso resolve o problema de pegar log errado de análises próximas
         if ($analysis->updated_at) {
             $exactLog = DB::table('ai_analysis_logs')
                 ->where('commodity_id', $analysis->commodity_id)
@@ -137,7 +151,6 @@ class PrevisoesController extends Controller
             if ($exactLog) return $exactLog;
         }
 
-        // 2. Fallback: Proximidade de tempo (Janela de 1 min)
         $log = DB::table('ai_analysis_logs')
             ->where('commodity_id', $analysis->commodity_id)
             ->whereBetween('updated_at', [
@@ -147,7 +160,6 @@ class PrevisoesController extends Controller
             ->orderByDesc('id')
             ->first();
 
-        // 3. Último recurso: Pega o mais recente absoluto
         return $log ?? DB::table('ai_analysis_logs')
             ->where('commodity_id', $analysis->commodity_id)
             ->orderByDesc('id')
@@ -188,20 +200,65 @@ class PrevisoesController extends Controller
         ];
     }
 
-    private function buildRegionalComparisons($aiLog)
+    private function buildRegionalComparisons(object $analysis)
     {
-        $parsed = ($aiLog && $aiLog->response) ? json_decode($aiLog->response, true) : [];
-        $mercados = $parsed['mercados'] ?? [];
+        $nomeReferencia = DB::table('commodity_entrada')
+            ->where('commodity_id', $analysis->commodity_id)
+            ->value('nome');
 
-        return collect($mercados)->map(function ($m) {
+        if (!$nomeReferencia) return collect([]);
+
+        $dados = DB::table('commodity_entrada')
+            ->join('locations', 'locations.id', '=', 'commodity_entrada.location_id')
+            ->where('commodity_entrada.nome', $nomeReferencia)
+            ->where('commodity_entrada.source', 'AI_RANKING') // Filtra para mostrar apenas sugestões da IA
+            ->orderByDesc('commodity_entrada.last_updated')
+            ->select(
+                'locations.nome as local',
+                'locations.regiao',
+                'commodity_entrada.price',
+                'commodity_entrada.currency',
+                'commodity_entrada.last_updated'
+            )
+            ->get()
+            ->unique('local')
+            ->take(3); // Garante pegar apenas as top 3
+
+        return $dados->map(function ($item) use ($analysis) {
+            // Remove "(Auto)" do nome para exibição (limpeza de segurança)
+            $nomeLocal = str_replace(' (Auto)', '', $item->local);
+
+            $priceBrl = $item->price;
+            switch($item->currency) {
+                case 'USD': $priceBrl *= 5.00; break;
+                case 'CNY': $priceBrl *= 0.70; break;
+                case 'EUR': $priceBrl *= 5.40; break;
+                case 'GBP': $priceBrl *= 6.30; break;
+            }
+
+            $logistica = $analysis->logistica_perc ?? 10;
+            if ($item->regiao === 'Centro-Oeste') $logistica += 5;
+            if ($item->regiao === 'Sul' || $item->regiao === 'Sudeste') $logistica -= 2;
+            if ($item->regiao === 'EUA') $logistica -= 3;
+            if ($item->regiao === 'China') $logistica += 4;
+
+            $estabilidade = $analysis->estabilidade ?? 'Média';
+            if (in_array($item->local, ['EUA', 'Brasil', 'Santos', 'Chicago'])) $estabilidade = 'Alta';
+            if (in_array($item->local, ['Ucrânia', 'Rússia'])) $estabilidade = 'Baixa';
+
             return (object) [
-                'pais' => $m['nome'] ?? 'N/D',
-                'preco_medio' => $m['preco'] ?? 0,
-                'moeda' => $m['moeda'] ?? 'BRL',
-                'logistica_obs' => $m['logistica_obs'] ?? '-',
-                'estabilidade_economica' => $m['estabilidade_economica'] ?? '-',
-                'estabilidade_climatica' => $m['estabilidade_climatica'] ?? '-',
-                'risco' => $m['risco_geral'] ?? '-'
+                'pais' => $nomeLocal, 
+                'preco_medio' => round($priceBrl, 2),
+                'moeda' => $item->currency,
+                'currency_orig' => $item->currency,
+                'logistica_perc' => max(0, $logistica),
+                'estabilidade' => $estabilidade,
+                'risco' => $analysis->risco ?? 'Médio',
+                
+                'logistica_obs' => 'Estimativa regional',
+                'estabilidade_economica' => $estabilidade,
+                'estabilidade_climatica' => '-',
+                'risco_geral' => $analysis->risco
             ];
         });
     }

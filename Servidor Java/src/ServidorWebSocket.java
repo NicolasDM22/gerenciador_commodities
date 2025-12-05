@@ -1,4 +1,5 @@
 import java.net.InetSocketAddress;
+import java.util.Scanner; 
 
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
@@ -9,7 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
- * Servidor WebSocket que expA5e integraAAo com a API Gemini (Google AI).
+ * Servidor WebSocket que expõe integração com a API Gemini (Google AI).
  */
 public class ServidorWebSocket extends WebSocketServer {
 
@@ -129,10 +130,21 @@ public class ServidorWebSocket extends WebSocketServer {
             porta = 3000;
         }
 
-        String apiKey = System.getenv("GOOGLE_AI_KEY");
-        if (apiKey == null || apiKey.trim().isEmpty()) {
-            System.err.println("ERRO: defina GOOGLE_AI_KEY para usar o Gemini.");
-            return;
+        // --- ATENCAO: SUA CHAVE FOI BLOQUEADA POR SEGURANCA ---
+        // 1. Gere uma nova chave em: https://aistudio.google.com/app/apikey
+        // 2. Cole a nova chave abaixo substituindo o texto entre aspas.
+        String apiKey = "AIzaSyAhbGPZwMskBS4F-Qq_KBSgi6PI5xDqLdk"; 
+        
+        if (apiKey == null || apiKey.trim().isEmpty() || apiKey.contains("COLOQUE_SUA_NOVA_KEY")) {
+            // Tenta pegar da variável de ambiente se não foi definida no código
+            String envKey = System.getenv("GOOGLE_AI_KEY");
+            if (envKey != null && !envKey.isEmpty()) {
+                apiKey = envKey;
+            } else {
+                System.err.println("ERRO CRITICO: Voce precisa definir uma API Key valida.");
+                System.err.println("Edite o arquivo ServidorWebSocket.java e coloque sua chave na linha 134.");
+                return;
+            }
         }
 
         String model = System.getenv().getOrDefault("GOOGLE_AI_MODEL", "gemini-1.5-flash");
@@ -142,6 +154,26 @@ public class ServidorWebSocket extends WebSocketServer {
         );
 
         GoogleAIClient chatClient = new GoogleAIClient(apiKey, model, systemPrompt);
+
+        // --- DIAGNÓSTICO DE INICIALIZAÇÃO ---
+        System.out.println("------------------------------------------------");
+        System.out.println("DIAGNOSTICO DE INICIALIZACAO:");
+        System.out.println("1. API Key detectada (tamanho): " + apiKey.length() + " chars");
+        System.out.println("2. Testando conexao com Google Gemini...");
+        
+        try {
+            // Teste rápido para validar a chave antes de subir o servidor
+            String teste = chatClient.ask("Responda apenas com a palavra OK se estiver me ouvindo.", null);
+            System.out.println("3. RESPOSTA DO GOOGLE: " + teste);
+            System.out.println(">>> SUCESSO: A IA ESTA OPERACIONAL! <<<");
+        } catch (Exception e) {
+            System.err.println(">>> FALHA CRITICA NO TESTE DA IA <<<");
+            System.err.println("Erro: " + e.getMessage());
+            System.err.println("Causa provavel: API Key invalida, sem quota ou sem internet.");
+            System.err.println("O servidor vai iniciar, mas o PHP recebera erro 500/Instavel.");
+        }
+        System.out.println("------------------------------------------------");
+        // ------------------------------------
 
         ServidorWebSocket servidor = new ServidorWebSocket(porta, chatClient);
         servidor.start();
@@ -157,6 +189,8 @@ public class ServidorWebSocket extends WebSocketServer {
         }
 
         System.out.println("Servidor escutando na porta: " + porta);
+        
+        Scanner scanner = new Scanner(System.in);
 
         for (;;) {
             System.out.println("O servidor esta ativo! Para desativa-lo,");
@@ -165,7 +199,9 @@ public class ServidorWebSocket extends WebSocketServer {
 
             String comando = null;
             try {
-                comando = Teclado.getUmString();
+                if (scanner.hasNextLine()) {
+                    comando = scanner.nextLine();
+                }
             } catch (Exception erro) {
                 continue;
             }
@@ -185,6 +221,7 @@ public class ServidorWebSocket extends WebSocketServer {
                 }
 
                 System.out.println("O servidor foi desativado");
+                scanner.close();
                 System.exit(0);
             } else {
                 System.err.println("Comando invalido!\n");
