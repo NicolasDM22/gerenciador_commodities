@@ -16,3 +16,5 @@ O objetivo é oferecer uma solução completa para empresas que trabalham com ne
 🕓 Histórico de Transações — Registre negociações e movimentações de commodities ao longo do tempo.
 
 Tecnologias Utilizadas: PHP, Laravel, MYSQL e JAVA
+
+Equipe: Nicolas Duran Munhos, Matias Amma, Gustavo Cavalheiro, João Pedro de Moura e Otavio Maldonado
