@@ -21,7 +21,7 @@
 
         * { box-sizing: border-box; }
 
-                /* TOP BAR (Estilo Painel Principal) */
+        /* TOP BAR (Estilo Painel Principal) */
         .top-bar { background: var(--white); padding: 1.5rem clamp(1.5rem, 3vw, 3rem); display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; box-shadow: 0 4px 22px rgba(15, 23, 42, 0.08); }
         .profile { display: flex; align-items: center; gap: 1rem; }
         .avatar { width: 64px; height: 64px; border-radius: 18px; object-fit: cover; border: 3px solid var(--gray-200); }
@@ -172,13 +172,14 @@
     <x-topbar :user="$user" />
 
     <main class="content">
-        <section class="card">
+        {{-- CARD PRINCIPAL: Adicionado ID para ser o ALVO da captura PDF --}}
+        <section class="card" id="relatorioCard">
             <div class="header-row">
                 <div class="nav-group">
                     {{-- Botão Esquerda: Volta para Gráficos --}}
                     <a href="{{ route('previsoes.graficos.show', ['id' => $analysisId ?? $commodityId]) }}" 
-                       class="button button-secondary button-icon" 
-                       title="Voltar para Gráficos">
+                        class="button button-secondary button-icon" 
+                        title="Voltar para Gráficos">
                     &larr;
                     </a>
                     {{-- Botão Direita: Desabilitado (final da navegação) --}}
@@ -214,14 +215,13 @@
 
             </div>
 
-            <div class="footer-actions">
+            <div class="footer-actions" id="footerActions">
                 {{-- MENSAGEM DE LOADING (oculta por padrão) --}}
                 <span id="msgLoading" style="display:none; color: var(--primary); font-weight: 600;">Gerando PDF...</span>
 
-                {{-- BOTÃO EXPORTAR PDF (Via JavaScript + Iframe) --}}
+                {{-- BOTÃO EXPORTAR PDF --}}
                 <button id="btnExportar" 
-                        class="button button-export" 
-                        data-url="{{ route('previsoes.exportarPdf', ['id' => $analysisId ?? $commodityId]) }}">
+                        class="button button-export">
                     Exportar Relatório em PDF
                 </button>
             </div>
@@ -305,42 +305,81 @@
                 }
             }
         });
-
-        const btnExport = document.getElementById('btnExportar');
-        const msgLoading = document.getElementById('msgLoading');
-
-        if (btnExport) {
-            btnExport.addEventListener('click', function() {
-                const url = this.getAttribute('data-url');
-                
-                this.disabled = true;
-                this.style.opacity = '0.7';
-                msgLoading.style.display = 'inline-block';
-
-                const iframe = document.createElement('iframe');
-                iframe.style.position = 'fixed';
-                iframe.style.left = '-9999px'; 
-                iframe.style.top = '0';
-                iframe.style.width = '1px';
-                iframe.style.height = '1px';
-                iframe.src = url;
-
-                document.body.appendChild(iframe);
-
-                setTimeout(() => {
-                    this.disabled = false;
-                    this.style.opacity = '1';
-                    msgLoading.style.display = 'none';
-                    
-                    setTimeout(() => {
-                        if(document.body.contains(iframe)) {
-                            document.body.removeChild(iframe);
-                        }
-                    }, 2000);
-                }, 5000); 
-            });
-        }
     });
+
+document.getElementById("btnExportar").addEventListener("click", async () => {
+
+    const btnExport = document.getElementById('btnExportar');
+    const msgLoading = document.getElementById('msgLoading');
+    const relatorioCard = document.getElementById('relatorioCard');
+    const footerActions = document.getElementById('footerActions');
+    
+    // 1. Inicia o loading e desabilita o botão
+    btnExport.disabled = true;
+    msgLoading.style.display = 'inline-block';
+
+    // 2. Remove temporariamente o rodapé de ações antes da captura
+    relatorioCard.removeChild(footerActions);
+
+    const { jsPDF } = window.jspdf;
+
+    // Garante que não tem scroll travando a captura
+    window.scrollTo(0, 0);
+
+    // 3. O alvo é o card principal (agora sem o rodapé de ações)
+    const alvo = relatorioCard; 
+
+    // 4. Captura da tela com html2canvas
+    const canvas = await html2canvas(alvo, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff' // Garante que o fundo do card seja branco
+    });
+
+    const imgData = canvas.toDataURL("image/png");
+    // Cria novo documento PDF A4 em retrato (p) e unidades em mm
+    const pdf = new jsPDF("p", "mm", "a4");
+
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    const imgWidth = pageWidth - 20; // Diminui para adicionar margem (10mm de cada lado)
+    const imgHeight = canvas.height * (imgWidth / canvas.width);
+    const marginX = 10;
+    const marginY = 10;
+    
+    // 5. Adiciona a imagem ao PDF (com tratamento de múltiplas páginas)
+    if (imgHeight < pageHeight) {
+        // Centraliza e adiciona margem
+        pdf.addImage(imgData, "PNG", marginX, marginY, imgWidth, imgHeight);
+    } else {
+        // Quebra automática em múltiplas páginas
+        let heightLeft = imgHeight;
+        let y = 0;
+
+        pdf.addImage(imgData, "PNG", marginX, y + marginY, imgWidth, imgHeight);
+        heightLeft -= (pageHeight - marginY);
+
+        while (heightLeft > 0) {
+            y = heightLeft - imgHeight; // Calcula o novo deslocamento Y para a próxima página
+            pdf.addPage();
+            pdf.addImage(imgData, "PNG", marginX, y + marginY, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+        }
+    }
+
+    pdf.save("Relatorio-Previsao.pdf");
+    
+    // 6. Recoloca o rodapé de ações no DOM
+    relatorioCard.appendChild(footerActions);
+
+    // 7. Habilita o botão e esconde o loading após a conclusão
+    btnExport.disabled = false;
+    msgLoading.style.display = 'none';
+});
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </body>
-</html> 
+</html>
