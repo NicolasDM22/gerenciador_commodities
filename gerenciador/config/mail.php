@@ -16,6 +16,7 @@ return [
     |
     */
 
+    // Mailer padrao usado ao enviar emails.
     'default' => env('MAIL_MAILER', 'log'),
 
     /*
@@ -39,6 +40,7 @@ return [
 
     'mailers' => [
 
+        // SMTP tradicional (host/porta/credenciais).
         'smtp' => [
             'transport' => 'smtp',
             'scheme' => env('MAIL_SCHEME'),
@@ -51,10 +53,12 @@ return [
             'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
         ],
 
+        // AWS SES.
         'ses' => [
             'transport' => 'ses',
         ],
 
+        // Postmark.
         'postmark' => [
             'transport' => 'postmark',
             // 'message_stream_id' => env('POSTMARK_MESSAGE_STREAM_ID'),
@@ -63,24 +67,29 @@ return [
             // ],
         ],
 
+        // Resend.
         'resend' => [
             'transport' => 'resend',
         ],
 
+        // Envio via sendmail local.
         'sendmail' => [
             'transport' => 'sendmail',
             'path' => env('MAIL_SENDMAIL_PATH', '/usr/sbin/sendmail -bs -i'),
         ],
 
+        // Loga emails em arquivo (nao envia).
         'log' => [
             'transport' => 'log',
             'channel' => env('MAIL_LOG_CHANNEL'),
         ],
 
+        // Armazena emails em array (tests).
         'array' => [
             'transport' => 'array',
         ],
 
+        // Failover: tenta na ordem definida.
         'failover' => [
             'transport' => 'failover',
             'mailers' => [
@@ -90,6 +99,7 @@ return [
             'retry_after' => 60,
         ],
 
+        // Round-robin entre mailers configurados.
         'roundrobin' => [
             'transport' => 'roundrobin',
             'mailers' => [
@@ -112,6 +122,7 @@ return [
     |
     */
 
+    // Endereco/nome padrao para o remetente global.
     'from' => [
         'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
         'name' => env('MAIL_FROM_NAME', 'Example'),

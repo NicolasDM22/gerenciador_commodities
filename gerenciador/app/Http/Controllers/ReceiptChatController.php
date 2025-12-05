@@ -10,7 +10,8 @@ use Illuminate\Validation\ValidationException;
 class ReceiptChatController extends Controller
 {
     /**
-     * Store a message or receipt proof from the authenticated user.
+     * Recebe mensagem ou comprovante do usuario autenticado: valida entrada,
+     * armazena anexo em base64 e cria notificaçao para administradores.
      */
     public function store(Request $request)
     {
@@ -74,7 +75,8 @@ class ReceiptChatController extends Controller
     }
 
     /**
-     * Admin can reply to a user's receipt chat thread.
+     * Permite o admin responder ao chat de comprovantes de um usuario,
+     * registrando mensagem e atualizando status da notificaçao.
      */
     public function reply(Request $request, int $userId)
     {

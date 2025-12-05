@@ -10,6 +10,9 @@ use Illuminate\Support\Facades\DB;
 
 class HomeController extends Controller
 {
+    /**
+     * Verifica de forma segura se uma tabela existe, retornando false em caso de erro de conexao.
+     */
     private function tableExists($tableName)
     {
         try {
@@ -19,6 +22,10 @@ class HomeController extends Controller
         }
     }
 
+    /**
+     * Renderiza dashboard inicial: valida sessao, busca usuario, monta grafico da
+     * ultima commodity analisada, lista historico e notificacoes administrativas.
+     */
     public function index(Request $request)
     {
         $userId = $request->session()->get('auth_user_id');
@@ -155,6 +162,10 @@ class HomeController extends Controller
         ]);
     }
 
+    /**
+     * Retorna as analises da IA mais recentes (limit 5), filtrando por usuario se nao admin,
+     * e adicionando campos convertidos para exibir no frontend.
+     */
     private function latestAiAnalyses(int $userId, bool $isAdmin)
     {
         $query = DB::table('ai_analysis_logs')->orderByDesc('created_at');

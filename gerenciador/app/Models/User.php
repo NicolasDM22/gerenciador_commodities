@@ -36,9 +36,7 @@ class User extends Authenticatable
     ];
 
     /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
+     * Define casts: data de verificacao como datetime e senha como hashed.
      */
     protected function casts(): array
     {

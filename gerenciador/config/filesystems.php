@@ -15,6 +15,7 @@ return [
     |
     */
 
+    // Disco de filesystem padrao usado pelo framework.
     'default' => env('FILESYSTEM_DISK', 'local'),
 
     /*
@@ -32,6 +33,7 @@ return [
 
     'disks' => [
 
+        // Disco local privado (armazenamento interno).
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
@@ -40,6 +42,7 @@ return [
             'report' => false,
         ],
 
+        // Disco local publico (exposto via /storage).
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
@@ -49,6 +52,7 @@ return [
             'report' => false,
         ],
 
+        // Disco S3 (ou compatível) configuravel por variaveis de ambiente.
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
@@ -75,6 +79,7 @@ return [
     |
     */
 
+    // Links simbolicos criados pelo comando storage:link.
     'links' => [
         public_path('storage') => storage_path('app/public'),
     ],

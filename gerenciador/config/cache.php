@@ -17,6 +17,7 @@ return [
     |
     */
 
+    // Store de cache padrao usado quando nenhum outro for especificado.
     'default' => env('CACHE_STORE', 'database'),
 
     /*
@@ -35,11 +36,13 @@ return [
 
     'stores' => [
 
+        // Cache em array (nao persistente), bom para testes.
         'array' => [
             'driver' => 'array',
             'serialize' => false,
         ],
 
+        // Cache em tabela de banco.
         'database' => [
             'driver' => 'database',
             'connection' => env('DB_CACHE_CONNECTION'),
@@ -48,12 +51,14 @@ return [
             'lock_table' => env('DB_CACHE_LOCK_TABLE'),
         ],
 
+        // Cache em arquivos locais.
         'file' => [
             'driver' => 'file',
             'path' => storage_path('framework/cache/data'),
             'lock_path' => storage_path('framework/cache/data'),
         ],
 
+        // Cache via Memcached (opcional: auth SASL e options).
         'memcached' => [
             'driver' => 'memcached',
             'persistent_id' => env('MEMCACHED_PERSISTENT_ID'),
@@ -73,12 +78,14 @@ return [
             ],
         ],
 
+        // Cache via Redis (com conexoes separadas para lock).
         'redis' => [
             'driver' => 'redis',
             'connection' => env('REDIS_CACHE_CONNECTION', 'cache'),
             'lock_connection' => env('REDIS_CACHE_LOCK_CONNECTION', 'default'),
         ],
 
+        // Cache via DynamoDB.
         'dynamodb' => [
             'driver' => 'dynamodb',
             'key' => env('AWS_ACCESS_KEY_ID'),
@@ -105,6 +112,7 @@ return [
     |
     */
 
+    // Prefixo aplicado a todas as chaves de cache para evitar colisao entre apps.
     'prefix' => env('CACHE_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')).'-cache-'),
 
 ];

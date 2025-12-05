@@ -20,6 +20,7 @@ return [
     |
     */
 
+    // Canal de log padrao (stack por default).
     'default' => env('LOG_CHANNEL', 'stack'),
 
     /*
@@ -33,6 +34,7 @@ return [
     |
     */
 
+    // Canal e opcao de stack trace para logs de depreciacao.
     'deprecations' => [
         'channel' => env('LOG_DEPRECATIONS_CHANNEL', 'null'),
         'trace' => env('LOG_DEPRECATIONS_TRACE', false),
@@ -54,12 +56,14 @@ return [
 
     'channels' => [
 
+        // Agrupa outros canais (default).
         'stack' => [
             'driver' => 'stack',
             'channels' => explode(',', (string) env('LOG_STACK', 'single')),
             'ignore_exceptions' => false,
         ],
 
+        // Log unico em arquivo.
         'single' => [
             'driver' => 'single',
             'path' => storage_path('logs/laravel.log'),
@@ -67,6 +71,7 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // Log rotativo diario.
         'daily' => [
             'driver' => 'daily',
             'path' => storage_path('logs/laravel.log'),
@@ -75,6 +80,7 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // Envio para Slack via webhook.
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),
@@ -84,6 +90,7 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // Papertrail via handler Monolog.
         'papertrail' => [
             'driver' => 'monolog',
             'level' => env('LOG_LEVEL', 'debug'),
@@ -96,6 +103,7 @@ return [
             'processors' => [PsrLogMessageProcessor::class],
         ],
 
+        // Saida para STDERR (CLI/containers).
         'stderr' => [
             'driver' => 'monolog',
             'level' => env('LOG_LEVEL', 'debug'),
@@ -107,6 +115,7 @@ return [
             'processors' => [PsrLogMessageProcessor::class],
         ],
 
+        // Log no syslog do sistema.
         'syslog' => [
             'driver' => 'syslog',
             'level' => env('LOG_LEVEL', 'debug'),
@@ -114,17 +123,20 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // Usa error_log do PHP.
         'errorlog' => [
             'driver' => 'errorlog',
             'level' => env('LOG_LEVEL', 'debug'),
             'replace_placeholders' => true,
         ],
 
+        // Descarta logs (null handler).
         'null' => [
             'driver' => 'monolog',
             'handler' => NullHandler::class,
         ],
 
+        // Canal de emergencia se outros falharem.
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
         ],

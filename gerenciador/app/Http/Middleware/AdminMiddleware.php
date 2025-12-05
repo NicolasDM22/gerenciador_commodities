@@ -9,6 +9,10 @@ use Illuminate\Support\Facades\DB;
 
 class AdminMiddleware
 {
+    /**
+     * Restringe acesso a rotas de previsoes/admin: passa direto para outras rotas,
+     * exige sessao e flag de admin, senao redireciona para login ou home com erro.
+     */
     public function handle(Request $request, Closure $next): Response
     {
         // Só roda se for rota de previsões ou admin

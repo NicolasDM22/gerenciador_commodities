@@ -14,6 +14,7 @@ class AdminNotificationController extends Controller
      */
     public function index(Request $request)
     {
+        // Exibe painel com notificações e conversas de usuários para administradores autenticados.
         $authUserId = $request->session()->get('auth_user_id');
         $isAdmin = (bool) $request->session()->get('auth_is_admin', false);
 
@@ -95,6 +96,7 @@ class AdminNotificationController extends Controller
      */
     public function markAsRead(Request $request, int $notificationId)
     {
+        // Marca uma notificação específica como lida para administradores autenticados.
         $authUserId = $request->session()->get('auth_user_id');
         $isAdmin = (bool) $request->session()->get('auth_is_admin', false);
 

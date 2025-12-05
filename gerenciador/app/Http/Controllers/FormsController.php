@@ -11,6 +11,10 @@ use Illuminate\Support\Str;
 
 class FormsController extends Controller
 {
+    /**
+     * Fluxo principal do formulario: valida entrada, normaliza valores,
+     * aciona a IA (com fallback), e persiste logs, ranking de mercados e analise de saida.
+     */
     public function salvar(Request $request)
     {
         set_time_limit(120);
@@ -138,6 +142,10 @@ class FormsController extends Controller
 
     // --- Métodos Auxiliares ---
 
+    /**
+     * Garante que a commodity informada exista na tabela de entrada, criando
+     * registro (e local padrao) quando necessario e retornando seu id/nome.
+     */
     private function ensureCommodityExists(string $nome, float $price): object
     {
         $dbCommodity = DB::table('commodity_entrada')->where('nome', $nome)->where('source', 'User')->first();

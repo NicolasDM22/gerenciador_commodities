@@ -15,6 +15,7 @@ return [
     |
     */
 
+    // Nome exibido em notificacoes e areas da UI.
     'name' => env('APP_NAME', 'Laravel'),
 
     /*
@@ -28,6 +29,7 @@ return [
     |
     */
 
+    // Ambiente atual (production, local, staging etc.) usado para toggles de comportamento.
     'env' => env('APP_ENV', 'production'),
 
     /*
@@ -41,6 +43,7 @@ return [
     |
     */
 
+    // Liga/desliga detalhamento de erros com stack trace.
     'debug' => (bool) env('APP_DEBUG', false),
 
     /*
@@ -54,6 +57,7 @@ return [
     |
     */
 
+    // URL base usada em comandos Artisan e geracao de links.
     'url' => env('APP_URL', 'http://localhost'),
 
     /*
@@ -67,6 +71,7 @@ return [
     |
     */
 
+    // Fuso horario padrão do app (usado por funcoes de data).
     'timezone' => 'UTC',
 
     /*
@@ -80,10 +85,13 @@ return [
     |
     */
 
+    // Locale principal da aplicacao.
     'locale' => env('APP_LOCALE', 'en'),
 
+    // Locale de fallback caso a principal nao exista.
     'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
 
+    // Locale usado pelo Faker em seeds/tests.
     'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),
 
     /*
@@ -97,10 +105,13 @@ return [
     |
     */
 
+    // Algoritmo e chave para criptografia interna do Laravel.
     'cipher' => 'AES-256-CBC',
 
+    // Chave principal carregada do .env.
     'key' => env('APP_KEY'),
 
+    // Chaves anteriores para rotaçao (permite decifrar dados antigos).
     'previous_keys' => [
         ...array_filter(
             explode(',', (string) env('APP_PREVIOUS_KEYS', ''))
@@ -120,6 +131,7 @@ return [
     |
     */
 
+    // Driver e store usados para modo de manutencao distribuido.
     'maintenance' => [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
         'store' => env('APP_MAINTENANCE_STORE', 'database'),

@@ -12,7 +12,7 @@ use Illuminate\Validation\Rule;
 class LoginController extends Controller
 {
     /**
-     * Display the login form.
+     * Exibe o formulario de login; se ja houver sessao autenticada redireciona para home.
      */
     public function show(Request $request)
     {
@@ -24,7 +24,8 @@ class LoginController extends Controller
     }
 
     /**
-     * Handle an incoming authentication request.
+     * Autentica o usuario: valida credenciais, compara senha (hash ou texto puro),
+     * cria sessao e sinaliza permissoes de admin; retorna erro se nao corresponder.
      */
     public function authenticate(Request $request)
     {
@@ -62,7 +63,7 @@ class LoginController extends Controller
     }
 
     /**
-     * Display the registration form.
+     * Exibe o formulario de cadastro; se ja autenticado, volta para home.
      */
     public function create(Request $request)
     {
@@ -74,7 +75,8 @@ class LoginController extends Controller
     }
 
     /**
-     * Handle a new user registration.
+     * Registra novo usuario: valida campos, normaliza telefone/endereco,
+     * salva no banco com senha hash e abre sessao logada.
      */
     public function store(Request $request)
     {
@@ -137,7 +139,7 @@ class LoginController extends Controller
     }
 
     /**
-     * Destroy the authenticated session.
+     * Encerra a sessao autenticada, invalida CSRF e redireciona ao login.
      */
     public function logout(Request $request)
     {
@@ -149,6 +151,9 @@ class LoginController extends Controller
             ->with('status', 'Sessao encerrada com sucesso.');
     }
 
+    /**
+     * Compara senha informada com o hash armazenado (ou texto plano legado) de forma segura.
+     */
     private function passwordMatches(string $plainPassword, string $storedPassword): bool
     {
         if (Hash::info($storedPassword)['algo'] !== null) {
