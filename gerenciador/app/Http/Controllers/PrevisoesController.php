@@ -77,6 +77,24 @@ class PrevisoesController extends Controller
         ]);
     }
 
+    public function destroy(Request $request, int $id)
+    {
+        $user = $this->getAuthenticatedUser($request);
+        if (!$user) return redirect()->route('login');
+
+        try {
+            $deleted = DB::table('commodity_saida')->where('id', $id)->delete();
+        } catch (\Throwable $e) {
+            return back()->withErrors('Erro ao excluir a anA­lise: ' . $e->getMessage());
+        }
+
+        if (!$deleted) {
+            return back()->withErrors('AnA­lise nA�o encontrada ou jA¡ removida.');
+        }
+
+        return redirect()->route('home')->with('status', 'AnA­lise removida com sucesso.');
+    }
+
     public function exportarPdf($id)
     {
         $payload = $this->buildAnalysisPayload($id, null);

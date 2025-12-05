@@ -45,6 +45,9 @@ Route::group([], function () {
     Route::get('/previsoes/{id}', [PrevisoesController::class, 'index'])
         ->where('id', '[0-9]+')
         ->name('previsoes.show');
+    Route::delete('/previsoes/{id}', [PrevisoesController::class, 'destroy'])
+        ->where('id', '[0-9]+')
+        ->name('previsoes.destroy');
 
     Route::get('/previsoes/graficos', [PrevisoesController::class, 'graficos'])->name('previsoes.graficos');
     Route::get('/previsoes/graficos/{id}', [PrevisoesController::class, 'graficos'])

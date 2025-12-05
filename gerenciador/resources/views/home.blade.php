@@ -116,10 +116,18 @@
 
     <main class="content">
         <div class="card">
-            <h2>Visualizar análises</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                <h2 style="margin:0">Visualizar análises</h2>
+                <button class="button button-outline" type="button" id="deleteAnalysisButton" disabled>Excluir selecionada</button>
+            </div>
+            <form id="deleteAnalysisForm" method="POST" style="display:none;">
+                @csrf
+                @method('DELETE')
+            </form>
             <table id="commoditiesTable" class="display" style="width:100%">
                 <thead>
                     <tr>
+                        <th>Selecionar</th>
                         <th>ID</th>
                         <th>Commodity</th>
                         <th>Data/Hora Registro</th>
@@ -129,6 +137,11 @@
                 <tbody>
                     @foreach($previousAnalyses ?? [] as $analysis)
                         <tr>
+                            <td>
+                                @if(!empty($analysis->id))
+                                    <input type="radio" name="selected_analysis" value="{{ $analysis->id }}" data-name="{{ $analysis->commodity_nome ?? '' }}">
+                                @endif
+                            </td>
                             <td>{{ $analysis->id ?? '-' }}</td>
                             <td>{{ $analysis->commodity_nome ?? 'N/A' }}</td>
                             <td data-order="{{ !empty($analysis->updated_at) ? strtotime($analysis->updated_at) : 0 }}">
@@ -216,10 +229,9 @@
         // DataTables
         $('#commoditiesTable').DataTable({
             pageLength: 5, lengthChange: false, responsive: true,
-            order: [[2, 'desc']], // Ordena pela coluna de data (índice 2)
+            order: [[3, 'desc']], // Ordena pela coluna de data (índice 3 após inserir seleção)
             columnDefs: [
-                { targets: [0], orderable: false, searchable: false },
-                { targets: [3], orderable: false, searchable: false }  
+                { targets: [0, 4], orderable: false, searchable: false }  
             ],
             language: {
                 search: "", searchPlaceholder: "Filtrar análises...",
@@ -234,6 +246,32 @@
     });
 
     document.addEventListener('DOMContentLoaded', function() {
+        // Exclusão de análise selecionada
+        const deleteButton = document.getElementById('deleteAnalysisButton');
+        const deleteForm = document.getElementById('deleteAnalysisForm');
+        const deleteBaseUrl = "{{ url('/previsoes') }}";
+        let selectedAnalysisId = null;
+        let selectedAnalysisName = '';
+
+        const analysisRadios = document.querySelectorAll('input[name="selected_analysis"]');
+        analysisRadios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                selectedAnalysisId = radio.value;
+                selectedAnalysisName = radio.dataset.name || '';
+                if (deleteButton) deleteButton.disabled = !selectedAnalysisId;
+            });
+        });
+
+        deleteButton?.addEventListener('click', () => {
+            if (!selectedAnalysisId || !deleteForm) return;
+            const message = selectedAnalysisName
+                ? `Deseja excluir a análise de "${selectedAnalysisName}"?`
+                : 'Deseja excluir a análise selecionada?';
+            if (!confirm(message)) return;
+            deleteForm.action = `${deleteBaseUrl}/${selectedAnalysisId}`;
+            deleteForm.submit();
+        });
+
         // Modais
         const profileModal = document.getElementById('profileModal');
         const toggleProfile = (show) => profileModal?.classList.toggle('active', show);
