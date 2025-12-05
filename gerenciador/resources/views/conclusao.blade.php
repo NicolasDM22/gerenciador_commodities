@@ -206,32 +206,6 @@
                 
                 <div class="text-block">
                     <p>{{ $recomendacao }}</p>
-
-                    @if(!empty($logistica['melhor_rota']) || isset($logistica['custo_estimado']) || !empty($logistica['observacoes']))
-                        <div class="highlight-box">
-                            <h4>Resumo Logístico</h4>
-                            @if(!empty($logistica['melhor_rota']))
-                                <p><strong>Melhor rota:</strong> {{ $logistica['melhor_rota'] }}</p>
-                            @endif
-                            @if(isset($logistica['custo_estimado']))
-                                <p><strong>Custo estimado:</strong> {{ number_format($logistica['custo_estimado'], 2, ',', '.') }}% (do valor do produto)</p>
-                            @endif
-                            @if(!empty($logistica['observacoes']))
-                                <p>{{ $logistica['observacoes'] }}</p>
-                            @endif
-                        </div>
-                    @endif
-
-                    <p style="margin-top: 2rem;">
-                        <span style="font-size: 0.9rem; color: var(--gray-500);">
-                        Indicadores de Contexto: Média Brasil 
-                        <strong>R${{ number_format($indicadores['media_brasil'] ?? 0, 2, ',', '.') }}/kg</strong>,
-                        Média Global 
-                        <strong>R${{ number_format($indicadores['media_global'] ?? 0, 2, ',', '.') }}/kg</strong>.
-                        Risco <strong>{{ $indicadores['risco'] ?? '-' }}</strong> e
-                        Estabilidade <strong>{{ $indicadores['estabilidade'] ?? '-' }}</strong>.
-                        </span>
-                    </p>
                 </div>
 
                 <div class="chart-container">
@@ -260,20 +234,19 @@
     document.addEventListener('DOMContentLoaded', function() {
         const ctx = document.getElementById('projectionChart').getContext('2d');
         
+        // Estilos e Configurações replicadas da Home/Previsão (Laranja, Linha Suave)
+        const homeBorderColor = '#F97316';
+        const homeBackgroundColor = 'rgba(249, 115, 22, 0.1)';
+        const homeTension = 0.1; 
+        
+        // Valores min/max injetados do PHP (para controle do ZOOM)
+        const chartMin = {{ $chartMin }};
+        const chartMax = {{ $chartMax }};
+
         // Dados do Controller (TimelineSeries)
         const timelineValues = @json($timelineValues->toArray());
         const timelineLabels = @json($timelineLabels->toArray());
         
-        // Estilos e Configurações replicadas da Home:
-        const homeBorderColor = '#F97316';
-        const homeBackgroundColor = 'rgba(249, 115, 22, 0.1)';
-        const homeTension = 0.1; // Linha mais reta/suave
-        
-        // Valores min/max calculados no PHP, garantindo o zoom nos valores.
-        const chartMin = {{ $chartMin }};
-        const chartMax = {{ $chartMax }};
-
-        // Usa os dados do backend.
         const finalValues = timelineValues.length > 0 ? timelineValues : [0, 0];
         const finalLabels = timelineLabels.length > 0 ? timelineLabels : ['N/A', 'N/A'];
 
@@ -282,14 +255,13 @@
             data: {
                 labels: finalLabels.slice(0, finalValues.length),
                 datasets: [{
-                    label: 'Preço Médio (R$/kg)',
+                    label: 'Projeção de Preço (R$/kg)',
                     data: finalValues,
-                    // ESTILOS IGUAIS AO GRÁFICO HOME (Laranja, Linha Reta)
                     borderColor: homeBorderColor,
                     backgroundColor: homeBackgroundColor,
                     borderWidth: 2, 
                     fill: true,
-                    tension: homeTension, // Corrigido para 0.1 (linha suave)
+                    tension: homeTension, // Linha suave
                     pointBackgroundColor: homeBorderColor,
                     pointBorderColor: '#ffffff',
                     pointRadius: 4,
@@ -306,7 +278,6 @@
                         mode: 'index', intersect: false,
                         backgroundColor: '#1e293b',
                         callbacks: {
-                            // Callbacks da Home/Geral
                             label: ctx => (ctx.dataset.label || '') + (ctx.parsed.y ? ': R$ ' + ctx.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '')
                         }
                     }
@@ -314,14 +285,20 @@
                 scales: {
                     y: {
                         beginAtZero: false,
-                        // ESCALA DINÂMICA (Baseada nos valores do PHP)
-                        min: chartMin,
-                        max: chartMax,
-                        ticks: { color: '#4b5563', callback: v => 'R$ ' + v.toLocaleString('pt-BR') }, // Ticks da Home
-                        title: { display: true, text: 'Preço (R$/kg)', color: '#4b5563', font: { weight: 'bold' } },
-                        grid: { display: true, color: '#e5e7eb' }, 
+                        ticks: {
+                            color: '#4b5563',
+                            callback: v => 'R$ ' + v.toLocaleString('pt-BR')
+                        },
+                        title: {
+                            display: true,
+                            text: 'Preço (R$/kg)',
+                            color: '#4b5563',
+                            font: { weight: 'bold' }
+                        },
+                        grid: { display: true, color: '#e5e7eb' },
                         border: { display: true, width: 2, color: '#9ca3af' }
                     },
+
                     x: {
                         grid: { display: false }
                     }
@@ -329,7 +306,6 @@
             }
         });
 
-        // 2. LÓGICA DE EXPORTAÇÃO PDF
         const btnExport = document.getElementById('btnExportar');
         const msgLoading = document.getElementById('msgLoading');
 
