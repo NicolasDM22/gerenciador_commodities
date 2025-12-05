@@ -1,5 +1,7 @@
 <?php
-
+/**
+ * LoginController.php by Nicolas Duran Munhos
+ */
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
