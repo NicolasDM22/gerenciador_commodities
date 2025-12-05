@@ -176,7 +176,7 @@
                     </div>
                 </div>
 
-                {{-- NOVA TABELA: COMPARATIVO REGIONAL (BASEADO NA ESCOLHA DA IA) --}}
+                {{-- NOVA TABELA: COMPARATIVO REGIONAL (COM CORREÇÕES DE VARIAVEIS) --}}
                 <div class="analysis-section">
                     <h3>Comparativo Regional (Top 3 Selecionados pela IA)</h3>
                     <div class="table-wrapper">
@@ -185,7 +185,7 @@
                                 <tr>
                                     <th>Localização Recomendada</th>
                                     <th>Preço Estimado</th>
-                                    <th>Logística / Obs</th>
+                                    <th>Logística / Custo %</th>
                                     <th>Estabilidade Econômica</th>
                                     <th>Estabilidade Climática</th>
                                 </tr>
@@ -194,27 +194,52 @@
                                 {{-- Usamos $regionalComparisons que contém os dados escolhidos e enriquecidos pela IA --}}
                                 @forelse ($regionalComparisons ?? [] as $market)
                                     <tr>
-                                        <td><strong>{{ $market->pais }}</strong></td>
-                                        <td>{{ $market->moeda }} {{ number_format($market->preco_medio, 2, ',', '.') }}</td>
-                                        <td style="font-size: 0.85rem;">{{ $market->logistica_obs }}</td>
+                                        <td>
+                                            <div style="display:flex; align-items:center; gap:8px;">
+                                                <div style="width:8px; height:8px; border-radius:50%; background-color: #6b7280;"></div>
+                                                <strong>{{ $market->pais }}</strong>
+                                            </div>
+                                        </td>
+                                        
+                                        <td>
+                                            {{ $market->currency ?? 'BRL' }} {{ number_format($market->price ?? $market->preco_medio, 2, ',', '.') }}
+                                        </td>
+
+                                        <td>
+                                            <div style="display:flex; flex-direction:column;">
+                                                <span style="font-weight:700; color:#4b5563;">
+                                                    {{ number_format($market->logistica_perc, 1, ',', '.') }}%
+                                                </span>
+                                                <span style="font-size:0.75rem; color:#9ca3af;">do valor da carga</span>
+                                            </div>
+                                        </td>
+
                                         <td>
                                             @php 
-                                                $eco = mb_strtolower($market->estabilidade_economica);
+                                                // Corrigido para acessar a variável salva no DB como 'estabilidade_economica' (ou um fallback, já que o controller salva apenas 'estabilidade' geral)
+                                                $eco = mb_strtolower($market->estabilidade_economica ?? 'média');
                                                 $classEco = str_contains($eco, 'alta') ? 'badge-good' : (str_contains($eco, 'baixa') ? 'badge-bad' : 'badge-mid');
                                             @endphp
-                                            <span class="badge {{ $classEco }}">{{ $market->estabilidade_economica }}</span>
+                                            <span class="badge {{ $classEco }}">{{ ucfirst($market->estabilidade_economica ?? 'Média') }}</span>
                                         </td>
+
                                         <td>
                                             @php 
-                                                $clim = mb_strtolower($market->estabilidade_climatica);
-                                                $classClim = str_contains($clim, 'alta') ? 'badge-good' : (str_contains($clim, 'baixa') ? 'badge-bad' : 'badge-mid');
+                                                // O Controller salva o dado climático na coluna 'estabilidade' do DB
+                                                $clim = mb_strtolower($market->estabilidade ?? 'média');
+                                                
+                                                $classClim = 'badge-mid';
+                                                if(str_contains($clim, 'alta')) $classClim = 'badge-good';
+                                                if(str_contains($clim, 'baixa')) $classClim = 'badge-bad';
                                             @endphp
-                                            <span class="badge {{ $classClim }}">{{ $market->estabilidade_climatica }}</span>
+                                            <span class="badge {{ $classClim }}">{{ ucfirst($market->estabilidade ?? 'Média') }}</span>
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="5" class="text-center">Nenhuma recomendação disponível. Gere uma nova análise.</td>
+                                        <td colspan="5" class="text-center" style="padding: 2rem; color: #6b7280;">
+                                            Nenhuma recomendação disponível. Gere uma nova análise para atualizar os dados.
+                                        </td>
                                     </tr>
                                 @endforelse
                             </tbody>

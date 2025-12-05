@@ -116,7 +116,7 @@ class FormsController extends Controller
                     'updated_at' => $now,
                 ]);
 
-                // Atualiza Mercados (CORREÇÃO AQUI: Loop para salvar múltiplos locais)
+                // Atualiza Mercados
                 if ($aiStatus === 'completed' && !empty($structured['mercados'])) {
                     $this->persistRegionalMarkets($commodityObj->nome, $structured['mercados'], $now);
                 }
@@ -140,14 +140,12 @@ class FormsController extends Controller
 
     private function ensureCommodityExists(string $nome, float $price): object
     {
-        // Busca se já existe essa commodity (pelo nome)
         $dbCommodity = DB::table('commodity_entrada')->where('nome', $nome)->where('source', 'User')->first();
         if ($dbCommodity) return (object) ['id' => $dbCommodity->commodity_id, 'nome' => $dbCommodity->nome];
 
         $maxId = DB::table('commodity_entrada')->max('commodity_id') ?? 0;
         $newId = $maxId + 1;
 
-        // Garante uma localização padrão para o User Input se não existir
         $loc = DB::table('locations')->where('nome', 'LIKE', '%São Paulo%')->first();
         $locId = $loc ? $loc->id : DB::table('locations')->insertGetId([
             'nome' => 'São Paulo (Auto)', 'estado' => 'SP', 'regiao' => 'Sudeste', 'created_at' => now(), 'updated_at' => now()
@@ -164,13 +162,13 @@ class FormsController extends Controller
 
     private function montarPrompt(string $materia, float $volume, float $precoAlvo, string $cep, string $locationsList): string
     {
-        // CORREÇÃO: Exemplo JSON agora pede explicitamente 3 mercados na lista
+        // Alterado para exigir cálculo real e penalizar distâncias internacionais
         return <<<EOT
 Atue como um Especialista Sênior em Commodities. Gere uma análise de mercado real para: {$materia}.
 DADOS DO USUÁRIO: 
 - Volume: {$volume} kg
 - Preço Alvo: R$ {$precoAlvo}
-- CEP: {$cep}
+- CEP de Entrega: {$cep}
 
 TAREFA 1: PREÇO DE MERCADO
 Identifique o PREÇO MÉDIO REAL de mercado (BRL/kg) hoje.
@@ -178,7 +176,14 @@ Identifique o PREÇO MÉDIO REAL de mercado (BRL/kg) hoje.
 TAREFA 2: TIMELINE (3 meses atrás, atual, 4 meses futuro)
 
 TAREFA 3: RANKING
-Escolha as 3 melhores origens da lista: [{$locationsList}]. Se a lista for vazia ou insuficiente, sugira as principais globais.
+Escolha as 3 melhores origens da lista: [{$locationsList}].
+
+TAREFA 4: LOGÍSTICA (CRÍTICO)
+Calcule a estimativa percentual do Custo Logístico (Frete + Seguro) até o CEP {$cep}.
+- Se for nacional próximo: 5% a 10%.
+- Se for nacional distante: 10% a 18%.
+- Se for IMPORTAÇÃO (Ex: EUA, China): Deve ser ALTO (15% a 30%) devido ao frete marítimo e taxas.
+NÃO retorne 0.00. Use valores realistas.
 
 Retorne APENAS JSON válido:
 {
@@ -193,12 +198,12 @@ Retorne APENAS JSON válido:
     "preco_4_meses_depois": 0.00
   },
   "mercados": [
-    { "nome": "Cidade A", "preco": 0.00, "moeda": "BRL", "logistica_obs": "...", "estabilidade_economica": "Alta", "risco_geral": "Baixo" },
-    { "nome": "Cidade B", "preco": 0.00, "moeda": "BRL", "logistica_obs": "...", "estabilidade_economica": "Média", "risco_geral": "Médio" },
+    { "nome": "Cidade A", "preco": 0.00, "moeda": "BRL", "logistica_obs": "Frete rodoviário...", "estabilidade_economica": "Alta", "risco_geral": "Baixo" },
+    { "nome": "Cidade B", "preco": 0.00, "moeda": "BRL", "logistica_obs": "Frete marítimo...", "estabilidade_economica": "Média", "risco_geral": "Médio" },
     { "nome": "Cidade C", "preco": 0.00, "moeda": "BRL", "logistica_obs": "...", "estabilidade_economica": "Alta", "risco_geral": "Baixo" }
   ],
   "indicadores": { "media_brasil": 0.00, "media_global": 0.00, "risco": "Baixo", "estabilidade": "Alta" },
-  "logistica": { "custo_estimado": 0.00, "melhor_rota": "...", "observacoes": "..." },
+  "logistica": { "custo_estimado": 12.50, "melhor_rota": "Rodoviário/Marítimo", "observacoes": "Cálculo base..." },
   "recomendacao": "Texto..."
 }
 EOT;
@@ -225,7 +230,7 @@ EOT;
                 'estabilidade' => 'Média'
             ],
             'logistica' => [
-                'custo_estimado' => 10.0,
+                'custo_estimado' => 12.5,
                 'melhor_rota' => 'Rodoviário Padrão',
                 'observacoes' => 'Cálculo de contingência (IA Indisponível).'
             ],
@@ -233,27 +238,21 @@ EOT;
         ];
     }
 
-    // CORREÇÃO: Modificado para iterar sobre múltiplos mercados e usar updateOrInsert
     private function persistRegionalMarkets($commodityName, $markets, $timestamp) 
     {
         if (empty($markets) || !is_array($markets)) return;
 
-        // Pega os top 3 mercados retornados pela IA
         $top3 = array_slice($markets, 0, 3);
 
         foreach ($top3 as $m) {
             $price = $this->toFloat($m['preco'] ?? 0);
             if ($price <= 0) continue;
 
-            $nomeCidade = trim(explode('(', $m['nome'])[0]); // Ex: "Sorriso"
-            
-            // Tenta localizar a cidade no banco
+            $nomeCidade = trim(explode('(', $m['nome'])[0]); 
             $location = DB::table('locations')->where('nome', 'LIKE', "%{$nomeCidade}%")->first();
             
-            // Se não temos a location, pulamos (para evitar erro de FK ou location null)
             if (!$location) continue;
 
-            // 1. Verifica se já existe o registro dessa commodity nesta cidade
             $existingEntry = DB::table('commodity_entrada')
                 ->where('nome', $commodityName)
                 ->where('location_id', $location->id)
@@ -269,18 +268,15 @@ EOT;
             ];
 
             if ($existingEntry) {
-                // --- UPDATE ---
                 DB::table('commodity_entrada')
                     ->where('commodity_id', $existingEntry->commodity_id)
                     ->update($dadosComuns);
             } else {
-                // --- INSERT (Com cálculo manual do ID) ---
-                // Pega o maior ID atual para gerar o próximo
                 $maxId = DB::table('commodity_entrada')->max('commodity_id') ?? 0;
                 $newId = $maxId + 1;
 
                 DB::table('commodity_entrada')->insert(array_merge([
-                    'commodity_id' => $newId, // Aqui resolvemos o erro 1364
+                    'commodity_id' => $newId, 
                     'nome' => $commodityName,
                     'location_id' => $location->id,
                     'created_at' => $timestamp
@@ -304,6 +300,12 @@ EOT;
         $avg = array_filter([$pAtual, $this->toFloat($timeline['preco_1_mes_depois']??0)]);
         $media = count($avg) ? round(array_sum($avg)/count($avg), 2) : $pAtual;
 
+        // Recupera o custo logístico da IA. Se falhar e vier 0, usa 10.0 como fallback de segurança.
+        $custoLogistico = $this->toFloat($logistica['custo_estimado'] ?? 0);
+        if ($custoLogistico <= 0) {
+            $custoLogistico = 10.0; 
+        }
+
         $payload = [
             'commodity_id' => $commodity->id,
             'referencia_mes' => $referencia,
@@ -322,7 +324,7 @@ EOT;
             'preco_medio_brasil' => $this->toFloat($ind['media_brasil'] ?? 0),
             'preco_medio_global' => $this->toFloat($ind['media_global'] ?? 0),
             'variacao_perc' => $variacao,
-            'logistica_perc' => $this->toFloat($logistica['custo_estimado'] ?? 0),
+            'logistica_perc' => $custoLogistico,
             'risco' => $ind['risco'] ?? 'N/A',
             'estabilidade' => $ind['estabilidade'] ?? 'N/A',
             'ranking' => 1,
