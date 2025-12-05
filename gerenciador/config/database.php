@@ -1,5 +1,7 @@
 <?php
 
+//by Nicolas Duran
+
 use Illuminate\Support\Str;
 
 return [

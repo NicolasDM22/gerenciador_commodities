@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Middleware;
-
+//by Matias Amma e Nicolas Duran
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;

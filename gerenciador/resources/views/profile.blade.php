@@ -1,3 +1,5 @@
+<!--by Gustavo e Nicolas-->
+
 <div class="modal" id="profileModal">
     <div class="modal-dialog">
         <div class="modal-header">
