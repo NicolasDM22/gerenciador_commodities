@@ -159,42 +159,6 @@
             @endif
         </div>
 
-        @if(!empty($aiAnalyses) && count($aiAnalyses) > 0)
-        <div class="card">
-            <h2>Últimas análises automáticas</h2>
-            <table class="simple-table">
-                <thead>
-                    <tr>
-                        <th>Matéria-prima</th>
-                        <th>Mercado recomendado</th>
-                        <th>Preço estimado</th>
-                        <th>Gerada em</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($aiAnalyses as $log)
-                        @php
-                            $parsed = is_array($log->parsed) ? $log->parsed : [];
-                            $mercado = $parsed['mercados'][0] ?? null;
-                        @endphp
-                        <tr>
-                            <td>{{ $log->materia_prima ?? 'N/D' }}</td>
-                            <td>{{ $mercado['nome'] ?? 'N/D' }}</td>
-                            <td>
-                                @if($mercado)
-                                    {{ $mercado['moeda'] ?? 'BRL' }} {{ number_format($mercado['preco'] ?? 0, 2, ',', '.') }}
-                                @else
-                                    N/D
-                                @endif
-                            </td>
-                            <td>{{ $log->created_at_formatted }}</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-        @endif
-
         @if($isAdmin)
         <div class="card" id="javaWsCard">
             <h2>Servidor Java (WebSocket)</h2>
