@@ -17,7 +17,7 @@
                     <option value="" disabled selected hidden>Selecione uma matéria-prima</option>
                     <option value="soja">Soja</option>
                     <option value="acucar">Açúcar</option>
-                    <option value="trigo">Trigo</option>
+                    <option value="milho">Milho</option>
                     <option value="cacau">Cacau</option>
                 </select>
 
@@ -33,6 +33,12 @@
     </div>
 </div>
 
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <p class="loading-text">Processando análise...</p>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     // ==========================================================
@@ -40,7 +46,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================================
     const formsModal = document.getElementById('formsModal');
     const closeFormsModalBtn = document.getElementById('closeFormsModal');
-    const openFormsModalBtn = document.getElementById('btnOpenFormsModal'); // Botão que fica no layout pai
+    const openFormsModalBtn = document.getElementById('btnOpenFormsModal');
+    const loadingOverlay = document.getElementById('loadingOverlay');
 
     const closeForms = () => {
         if(formsModal) formsModal.classList.remove('active');
@@ -51,15 +58,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if(formsModal) formsModal.classList.add('active');
     };
 
+    const showLoading = () => {
+        if(loadingOverlay) loadingOverlay.classList.add('active');
+    };
+
+    const hideLoading = () => {
+        if(loadingOverlay) loadingOverlay.classList.remove('active');
+    };
+
     // Eventos
     closeFormsModalBtn?.addEventListener('click', closeForms);
     
     formsModal?.addEventListener('click', (e) => {
-        // Fecha se clicar no fundo escuro (fora do dialog)
         if (e.target === formsModal) closeForms();
     });
 
-    // Se o botão de abrir existir na página principal, atrela o evento
     openFormsModalBtn?.addEventListener('click', openForms);
 
 
@@ -75,7 +88,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- Máscara Volume (apenas números e vírgula) ---
         volumeInput?.addEventListener('input', (e) => {
             let value = e.target.value.replace(/[^0-9,]/g, '');
-            // Garante apenas uma vírgula
             if ((value.match(/,/g) || []).length > 1) {
                  value = value.substring(0, value.lastIndexOf(','));
             }
@@ -141,13 +153,14 @@ document.addEventListener('DOMContentLoaded', () => {
             // Se inválido, bloqueia e mostra Toast
             if (!valid) {
                 e.preventDefault();
-                // Verifica se a função showToast existe no escopo global
                 if (typeof showToast === 'function') {
-                    // \n aqui funcionará pois o CSS tem white-space: pre-line
                     showToast("Corrija os erros:\n- " + mensagens.join("\n- "), "error");
                 } else {
                     alert("Corrija os erros:\n- " + mensagens.join("\n- "));
                 }
+            } else {
+                // Se válido, mostra o loading
+                showLoading();
             }
         });
     }
@@ -179,6 +192,51 @@ document.addEventListener('DOMContentLoaded', () => {
 }
 
 /* ========================
+   LOADING OVERLAY
+   ======================== */
+.loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    z-index: 9999;
+}
+
+.loading-overlay.active {
+    display: flex;
+}
+
+.loading-spinner {
+    width: 60px;
+    height: 60px;
+    border: 5px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+.loading-text {
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin-top: 1.5rem;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+/* ========================
    HEADER & BOTÃO X
    ======================== */
 .modal-header {
@@ -191,13 +249,12 @@ document.addEventListener('DOMContentLoaded', () => {
     margin: 0;
     font-size: 1.25rem;
     font-weight: 600;
-    color: #374151; /* Cinza Escuro */
+    color: #374151;
 }
 
-/* Botão Fechar estilo Secondary */
 .button-secondary {
     background: #ffffff;
-    border: 1px solid #d1d5db; /* cinza claro */
+    border: 1px solid #d1d5db;
     color: #374151;
     border-radius: 12px;
     cursor: pointer;
@@ -239,13 +296,11 @@ document.addEventListener('DOMContentLoaded', () => {
     transition: border 0.2s;
 }
 
-/* Estilo do Select (Placeholder Fake) */
 select { color: #000; cursor: pointer; }
-select:invalid { color: #757575; } /* Cinza quando vazio */
+select:invalid { color: #757575; }
 option { color: #000; }
 option[value=""] { display: none; }
 
-/* Botão Principal */
 .center-btn { text-align: center; margin-top: 22px; }
 
 .button-primary {

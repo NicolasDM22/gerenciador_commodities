@@ -3,28 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gráficos - Previsão de Commodities</title>
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Gráficos - Análise de {{ $nomeCommodity ?? 'Commodities' }}</title>
     
-    {{-- Importação do Chart.js --}}
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     
     <style>
-        /* --- 1. ESTILOS GERAIS --- */
         :root {
-            --gray-50: #f9fafb;
-            --gray-100: #f3f4f6;
-            --gray-200: #e5e7eb;
-            --gray-300: #d1d5db;
-            --gray-400: #9ca3af;
-            --gray-500: #6b7280;
-            --gray-600: #4b5563;
-            --gray-700: #374151;
-            --gray-900: #111827;
-            --primary: #2563eb;
-            --primary-dark: #1d4ed8;
-            --success: #059669;
-            --danger: #dc2626;
+            --gray-50: #f9fafb; --gray-100: #f3f4f6; --gray-200: #e5e7eb;
+            --gray-300: #d1d5db; --gray-500: #6b7280; --gray-600: #4b5563;
+            --gray-700: #374151; --gray-900: #111827;
+            --primary: #2563eb; --primary-dark: #1d4ed8;
             --white: #ffffff;
         }
 
@@ -35,8 +23,8 @@
             background: var(--gray-100);
             font-family: "Segoe UI", Arial, sans-serif;
             color: var(--gray-900);
-            height: 100vh; /* Fixa altura do corpo */
-            overflow: hidden; /* Evita scroll na página inteira */
+            height: 100vh;
+            overflow: hidden;
         }
 
         .page {
@@ -45,486 +33,384 @@
             flex-direction: column;
         }
 
-        /* --- BOTÕES --- */
-        .button {
-            border: none; border-radius: 10px; padding: 0.6rem 1.2rem;
-            font-size: 0.9rem; font-weight: 600; cursor: pointer;
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
-            display: inline-flex; align-items: center; justify-content: center;
-            gap: 0.4rem; text-decoration: none;
-        }
-        .button:hover { transform: translateY(-1px); box-shadow: 0 8px 15px rgba(37, 99, 235, 0.15); }
-        .button-primary { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: var(--white); }
-        .button-secondary { background: var(--white); border: 1px solid var(--gray-300); color: var(--gray-700); }
-        .button-secondary:hover { background: var(--gray-50); box-shadow: none; transform: none; }
-        .button-icon { padding: 0.5rem 0.7rem; line-height: 1; }
-        .button[disabled] { opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none; background: var(--gray-100); }
-
-        /* --- LAYOUT PRINCIPAL --- */
-        main.content {
-            flex: 1; 
-            width: min(1280px, 100%); 
-            margin: 0 auto;
-            padding: 1.5rem clamp(1rem, 2vw, 2.5rem);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden; /* Segura o scroll */
-        }
-
-        .card {
-            background: var(--white); 
-            border-radius: 22px; 
-            padding: 1.5rem;
-            box-shadow: 0 22px 45px -30px rgba(15, 23, 42, 0.3);
-            display: flex; 
-            flex-direction: column;
-            height: 100%; /* Ocupa todo espaço disponível */
-            overflow: hidden; /* Garante que nada vaze */
-        }
-
-        .analysis-header {
-            display: flex; justify-content: space-between; align-items: center;
-            gap: 1rem; padding-bottom: 1rem; margin-bottom: 1rem;
-            border-bottom: 1px solid var(--gray-200);
-            flex-shrink: 0; /* Cabeçalho fixo */
-        }
-        .analysis-header h2 { margin: 0; font-size: 1.4rem; color: var(--gray-600); font-weight: 700; }
-        .analysis-header .nav-buttons { display: flex; gap: 0.5rem; }
-
-        /* --- DASHBOARD GRID LAYOUT --- */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 220px 1fr; 
-            gap: 1.5rem;
-            height: 100%; /* Ocupa altura restante */
-            overflow: hidden; /* Previne scroll no grid pai */
-        }
-
-        /* --- LEGENDA LATERAL --- */
-        .legend-sidebar {
-            background-color: #f8fafc;
-            border-radius: 16px;
-            padding: 1rem;
-            border: 1px solid var(--gray-200);
-            height: 100%; /* Altura total */
-            overflow-y: auto; /* Scroll se muitos países */
-        }
-
-        .legend-title {
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--gray-500);
-            font-weight: 700;
-            margin-bottom: 1rem;
-            padding-left: 0.2rem;
-        }
-
-        .legend-item {
-            display: flex; align-items: center; gap: 0.8rem;
-            font-weight: 600; font-size: 0.85rem; color: var(--gray-700);
-            cursor: pointer;
-            padding: 0.5rem 0.8rem;
-            border-radius: 8px;
-            transition: all 0.2s ease;
-            user-select: none;
-            margin-bottom: 0.4rem;
-        }
-
-        .legend-item:hover { background-color: #e2e8f0; }
-        .legend-item.hidden-item { opacity: 0.5; text-decoration: line-through; color: var(--gray-400); }
-        .legend-color { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 0 2px #fff; }
-
-        /* --- ÁREA DOS GRÁFICOS (SCROLLABLE) --- */
-        .charts-container {
-            display: flex;
-            flex-direction: column;
-            gap: 2.5rem;
-            height: 100%; /* Altura total */
-            overflow-y: auto; /* O SCROLL ACONTECE AQUI */
-            padding-right: 10px; /* Espaço para scrollbar */
-            padding-bottom: 2rem;
-        }
-        
-        /* --- TOP BAR --- */
-        .top-bar {
+        .topbar {
             background: var(--white);
-            padding: 1.5rem clamp(1.5rem, 3vw, 3rem);
+            border-bottom: 1px solid var(--gray-200);
+            padding: 0.75rem 1.5rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
+        }
+        .logo { font-weight: bold; font-size: 1.1rem; color: var(--primary); }
+
+        .button {
+            border: none; border-radius: 12px; padding: 0.6rem 1.2rem;
+            font-size: 0.9rem; font-weight: 600; cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            display: inline-flex; align-items: center; justify-content: center;
+            text-decoration: none; color: var(--gray-700); border: 1px solid var(--gray-300);
+            background: var(--white);
+        }
+        .button:hover { transform: translateY(-1px); background: var(--gray-50); }
+        .button-primary { border-color: var(--primary); color: var(--primary); }
+
+        main.content {
+            flex: 1;
+            width: min(1400px, 100%);
+            margin: 0 auto;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: 22px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+            position: relative; 
+        }
+
+        .header-row {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 1.5rem; padding-bottom: 1rem;
+            border-bottom: 1px solid var(--gray-200);
+            flex-shrink: 0;
+        }
+        .header-row h2 { margin: 0; color: var(--gray-700); font-size: 1.4rem; }
+        .nav-group { display: flex; gap: 10px; }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 240px 1fr;
             gap: 1.5rem;
-            box-shadow: 0 4px 22px rgba(15, 23, 42, 0.08);
-            flex-shrink: 0; /* Impede que o topo encolha */
-            z-index: 10;
+            height: 100%;
+            overflow: hidden;
         }
 
-        .profile { display: flex; align-items: center; gap: 1rem; }
-        
-        .avatar {
-            width: 64px; height: 64px; border-radius: 18px;
-            object-fit: cover; border: 3px solid var(--gray-200);
+        .legend-sidebar {
+            background: #f8fafc;
+            border: 1px solid var(--gray-200);
+            border-radius: 16px;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+        .legend-title {
+            font-size: 0.8rem; text-transform: uppercase; color: var(--gray-500);
+            font-weight: bold; margin-bottom: 1rem; letter-spacing: 0.5px;
+        }
+        .legend-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 12px; margin-bottom: 5px;
+            background: white; border-radius: 8px; border: 1px solid transparent;
+            cursor: pointer; transition: all 0.2s; font-size: 0.9rem; font-weight: 500;
+        }
+        .legend-item:hover { border-color: var(--gray-300); transform: translateX(2px); }
+        .legend-item.hidden-item { opacity: 0.5; text-decoration: line-through; filter: grayscale(1); }
+        .color-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+
+        .charts-scroll-area {
+            overflow-y: auto;
+            padding-right: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            padding-bottom: 2rem;
         }
         
-        .profile-info strong { font-size: 1.25rem; display: block; }
-        .profile-info span { color: var(--gray-500); font-size: 0.95rem; }
-        
-        .top-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+        .charts-scroll-area::-webkit-scrollbar { width: 8px; }
+        .charts-scroll-area::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
 
-        /* Estilizando a scrollbar para ficar bonita */
-        .charts-container::-webkit-scrollbar { width: 8px; }
-        .charts-container::-webkit-scrollbar-track { background: transparent; }
-        .charts-container::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
-        .charts-container::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
-
-        .chart-wrapper {
-            width: 100%;
-            position: relative;
-            height: 350px; /* Altura um pouco menor para caber melhor */
-            min-height: 350px;
-            padding: 15px;
+        .chart-box {
             background: #fff;
             border: 1px solid var(--gray-200);
             border-radius: 16px;
-            flex-shrink: 0; /* Impede achatamento */
+            padding: 15px;
+            height: 350px;
+            position: relative;
+            flex-shrink: 0;
+        }
+        .radar-box { height: 500px; }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--gray-500);
+            text-align: center;
+            width: 100%;
         }
 
-        .chart-wrapper.radar-wrapper {
-            height: 450px;
-            min-height: 450px;
-        }
-
-        /* Responsividade */
-        @media (max-width: 1000px) {
+        @media (max-width: 900px) {
             body { overflow: auto; height: auto; }
-            .page { height: auto; }
-            .card { height: auto; overflow: visible; }
-            .top-bar { flex-direction: column; align-items: flex-start; }
-            .dashboard-grid { grid-template-columns: 1fr; height: auto; overflow: visible; }
-            .charts-container { overflow-y: visible; height: auto; padding-right: 0; }
+            .dashboard-grid { grid-template-columns: 1fr; overflow: visible; height: auto; }
             .legend-sidebar { height: auto; display: flex; flex-wrap: wrap; gap: 0.5rem; }
-            .legend-title { width: 100%; }
+            .charts-scroll-area { overflow: visible; height: auto; }
         }
     </style>
 </head>
 <body>
 <div class="page">
-    <x-topbar :user="$user" />  
+    <div class="topbar">
+        <div class="logo">AgroAnalytics</div>
+        <div style="font-size: 0.9rem; color: var(--gray-600);">
+            Olá, {{ $user->name ?? 'Usuário' }}
+            <img src="{{ $avatarUrl }}" alt="Avatar" style="width:24px; height:24px; border-radius:50%; vertical-align:middle; margin-left:8px;">
+        </div>
+    </div>
 
     <main class="content">
-        @if (session('status'))
-            <div class="alert alert-success">{{ session('status') }}</div>
-        @endif
-
         <section class="card">
-            <div class="analysis-header">
-                <div class="nav-buttons">
-                    <a href="{{ route('previsoes.show', ['id' => $commodityId]) }}" 
-                       class="button button-secondary button-icon" title="Voltar">&larr;</a>
-                    <a href="{{ route('previsoes.conclusao.show', ['id' => $commodityId]) }}" 
-                       class="button button-secondary button-icon" title="Ir para Conclusão">&rarr;</a>
+            <div class="header-row">
+                <div class="nav-group">
+                    <a href="{{ route('previsoes.show', ['id' => $analysisId, 'commodity_id' => $commodityId]) }}" class="button" title="Voltar para Descritiva">&larr; Voltar</a>
+                    
+                    <a href="{{ route('previsoes.conclusao.show', ['id' => $analysisId, 'commodity_id' => $commodityId]) }}" class="button button-primary">Conclusão &rarr;</a>
                 </div>
                 
-                <h2>Análise Comparativa Detalhada</h2>
-
-                <a href="{{ route('home') }}" class="button button-secondary button-icon" style="font-size: 1.2rem; line-height: 0.8;" title="Fechar">&times;</a>
+                <h2 id="pageTitle">Gráficos: {{ $nomeCommodity }}</h2>
+                <a href="{{ route('home') }}" class="button" style="padding: 0.5rem 0.8rem;">&times;</a>
             </div>
 
+            @if(isset($chartData) && count($chartData) > 0)
             <div class="dashboard-grid">
                 
-                {{-- ASIDE: Legenda Fixa --}}
                 <aside class="legend-sidebar">
-                    <div class="legend-title">Países (Clique para filtrar)</div>
-                    <div id="dynamicLegend">
-                        <span style="font-size: 0.9rem; color: #666;">Carregando...</span>
+                    <div class="legend-title">Filtro de Países</div>
+                    <div id="legendContainer">
+                        <div style="color:#666; font-size:0.9rem;">Carregando...</div>
                     </div>
                 </aside>
 
-                {{-- MAIN: Gráficos (Scroll aqui dentro) --}}
-                <div class="charts-container">
-                    <!-- 1. Gráfico de Preços -->
-                    <div class="chart-wrapper">
+                <div class="charts-scroll-area">
+                    
+                    <div class="chart-box">
                         <canvas id="chartPrice"></canvas>
                     </div>
 
-                    <!-- 2. Gráfico de Logística -->
-                    <div class="chart-wrapper">
+                    <div class="chart-box">
                         <canvas id="chartLogistics"></canvas>
                     </div>
 
-                    <!-- 3. Gráfico de Estabilidade -->
-                    <div class="chart-wrapper">
+                    <div class="chart-box">
                         <canvas id="chartStability"></canvas>
                     </div>
 
-                    <!-- 4. Radar Geral -->
-                    <div class="chart-wrapper radar-wrapper">
+                    <div class="chart-box radar-box">
                         <canvas id="chartRadar"></canvas>
                     </div>
-                </div>
 
+                </div>
             </div>
+            @else
+            <div class="empty-state">
+                <h3>Ainda não existem análises disponíveis</h3>
+                <p>Não há dados suficientes para gerar os gráficos comparativos para esta commodity no momento.</p>
+            </div>
+            @endif
         </section>
     </main>
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        
-        // 1. Dados do Banco
-        const rawData = @json($chartData ?? []);
+    // Injeção de dados segura vinda do Controller
+    const SERVER_DATA = @json($chartData ?? []);
+    const COMMODITY_NAME = @json($nomeCommodity ?? 'Geral');
 
-        if (!rawData || rawData.length === 0) {
-            document.getElementById('dynamicLegend').innerHTML = '<span style="color:red; padding: 0.5rem;">Sem dados disponíveis.</span>';
-            return;
+    class ChartController {
+        constructor() {
+            this.commodityName = COMMODITY_NAME;
+            this.charts = {}; 
+            this.visibilityState = {}; 
+            
+            if(!SERVER_DATA || SERVER_DATA.length === 0) return;
+
+            this.chartData = SERVER_DATA; 
+            
+            this.init();
         }
 
-        // Estado de visibilidade
-        let visibilityState = {};
-        rawData.forEach(d => visibilityState[d.pais] = true);
+        init() {
+            this.chartData.forEach(d => this.visibilityState[d.pais] = true);
 
-        // 2. Cores
-        function getColor(country) {
-            if (country.toLowerCase().includes('brasil')) return '#10b981'; 
-            const palette = ['#3b82f6', '#ef4444', '#f97316', '#8b5cf6', '#ec4899', '#06b6d4', '#eab308', '#64748b', '#14b8a6', '#6366f1'];
+            this.renderLegend();
+            this.renderCharts();
+        }
+
+        getColor(country) {
+            const c = country.toLowerCase();
+            if(c.includes('brasil')) return '#10b981'; 
+            if(c.includes('china')) return '#ef4444'; 
+            if(c.includes('eua') || c.includes('usa')) return '#3b82f6'; 
+            if(c.includes('argentina')) return '#60a5fa'; 
+            
             let hash = 0;
             for (let i = 0; i < country.length; i++) hash = country.charCodeAt(i) + ((hash << 5) - hash);
-            return palette[Math.abs(hash) % palette.length];
+            const hex = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+            return '#' + "00000".substring(0, 6 - hex.length) + hex;
         }
 
-        function getStabilityScore(text) {
-            if (!text) return 0;
-            text = text.toLowerCase();
-            if (text.includes('alta')) return 3;
-            if (text.includes('média') || text.includes('media')) return 2;
-            if (text.includes('baixa')) return 1;
-            return 0;
+        getStabilityScore(text) {
+            if(!text) return 0;
+            const t = text.toLowerCase();
+            if(t.includes('alta')) return 3;
+            if(t.includes('média') || t.includes('media')) return 2;
+            return 1; 
         }
 
-        function getStabilityLabel(score) {
-            if (score === 3) return 'Alta';
-            if (score === 2) return 'Média';
-            if (score === 1) return 'Baixa';
-            return ''; 
+        renderLegend() {
+            const container = document.getElementById('legendContainer');
+            if(!container) return;
+            container.innerHTML = '';
+
+            this.chartData.forEach(d => {
+                const isVisible = this.visibilityState[d.pais];
+                const color = this.getColor(d.pais);
+
+                const item = document.createElement('div');
+                item.className = `legend-item ${!isVisible ? 'hidden-item' : ''}`;
+                item.innerHTML = `<div class="color-dot" style="background:${color}"></div> ${d.pais}`;
+                
+                item.onclick = () => {
+                    this.visibilityState[d.pais] = !isVisible;
+                    this.renderLegend();
+                    this.renderCharts();
+                };
+
+                container.appendChild(item);
+            });
         }
 
-        // 3. CÁLCULO DOS VALORES MÁXIMOS E MÍNIMOS GLOBAIS (BASE ESTÁTICA)
-        // Isso garante que a escala não mude quando filtramos países
-        const allPrices = rawData.map(d => parseFloat(d.preco_medio));
-        const allLogistics = rawData.map(d => parseFloat(d.logistica_perc));
-
-        // Se só houver 1 item, evita NaN/Zero
-        const globalMaxPrice = allPrices.length ? Math.max(...allPrices) : 1;
-        const globalMinPrice = allPrices.length ? Math.min(...allPrices) : 0;
-        
-        const globalMaxLogistics = allLogistics.length ? Math.max(...allLogistics) : 1;
-        const globalMinLogistics = allLogistics.length ? Math.min(...allLogistics) : 0;
-
-        // Inicialização
-        let chartPrice, chartLogistics, chartStability, chartRadar;
-
-        function initCharts() {
-            const activeData = rawData.filter(d => visibilityState[d.pais]);
-            
+        renderCharts() {
+            const activeData = this.chartData.filter(d => this.visibilityState[d.pais]);
             const labels = activeData.map(d => d.pais);
-            const prices = activeData.map(d => parseFloat(d.preco_medio));
-            const logistics = activeData.map(d => parseFloat(d.logistica_perc));
-            const stability = activeData.map(d => getStabilityScore(d.estabilidade));
-            const bgColors = labels.map(l => getColor(l));
+            const bgColors = labels.map(l => this.getColor(l));
 
-            const commonOptions = {
-                responsive: true, maintainAspectRatio: false,
+            const commonConfig = {
+                responsive: true,
+                maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
-                scales: {
-                    y: { beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { font: { weight: 'bold' }, color: '#6b7280' } },
-                    x: { grid: { display: false }, ticks: { font: { weight: 'bold' }, color: '#374151' } }
+                scales: { 
+                    y: { beginAtZero: true, grid: { color: '#f3f4f6' } },
+                    x: { grid: { display: false } }
                 }
             };
 
-            const barOptions = { maxBarThickness: 40, borderRadius: 4 };
-
-            // --- 1. PREÇO ---
-            const ctxPrice = document.getElementById('chartPrice').getContext('2d');
-            if(chartPrice) chartPrice.destroy();
-            
-            const optPrice = JSON.parse(JSON.stringify(commonOptions));
-            optPrice.plugins.title = { display: true, text: '1. Comparativo de Preços (R$/kg)', font: {size: 16, weight: '700'} };
-            
-            chartPrice = new Chart(ctxPrice, {
+            // 1. CHART PREÇO
+            if(this.charts.price) this.charts.price.destroy();
+            this.charts.price = new Chart(document.getElementById('chartPrice'), {
                 type: 'bar',
                 data: {
                     labels: labels,
-                    datasets: [{ label: 'Preço', data: prices, backgroundColor: bgColors, ...barOptions }]
+                    datasets: [{
+                        label: 'Preço Médio (Convertido)',
+                        data: activeData.map(d => d.preco_medio),
+                        backgroundColor: bgColors,
+                        borderRadius: 6,
+                        barPercentage: 0.6
+                    }]
                 },
-                options: optPrice
+                options: { 
+                    ...commonConfig, 
+                    plugins: { title: { display: true, text: 'Comparativo de Preços (Base BRL)', font: {size:16} }, legend: {display:false} }
+                }
             });
 
-            // --- 2. LOGÍSTICA ---
-            const ctxLog = document.getElementById('chartLogistics').getContext('2d');
-            if(chartLogistics) chartLogistics.destroy();
-
-            const optLog = JSON.parse(JSON.stringify(commonOptions));
-            optLog.plugins.title = { display: true, text: '2. Custo Logístico (%)', font: {size: 16, weight: '700'} };
-
-            chartLogistics = new Chart(ctxLog, {
+            // 2. CHART LOGÍSTICA
+            if(this.charts.logistics) this.charts.logistics.destroy();
+            this.charts.logistics = new Chart(document.getElementById('chartLogistics'), {
                 type: 'bar',
                 data: {
                     labels: labels,
-                    datasets: [{ label: 'Logística', data: logistics, backgroundColor: bgColors, ...barOptions }]
+                    datasets: [{
+                        label: 'Custo Logístico (%)',
+                        data: activeData.map(d => d.logistica_perc),
+                        backgroundColor: bgColors.map(c => c + 'AA'),
+                        borderRadius: 6,
+                        barPercentage: 0.6
+                    }]
                 },
-                options: optLog
+                options: { 
+                    ...commonConfig, 
+                    plugins: { title: { display: true, text: 'Custo Logístico Estimado (%)', font: {size:16} }, legend: {display:false} }
+                }
             });
 
-            // --- 3. ESTABILIDADE ---
-            const ctxStab = document.getElementById('chartStability').getContext('2d');
-            if(chartStability) chartStability.destroy();
+            // 3. CHART ESTABILIDADE
+            if(this.charts.stability) this.charts.stability.destroy();
+            this.charts.stability = new Chart(document.getElementById('chartStability'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Score Estabilidade (1-3)',
+                        data: activeData.map(d => this.getStabilityScore(d.estabilidade)),
+                        backgroundColor: bgColors,
+                        borderRadius: 6,
+                        barPercentage: 0.6
+                    }]
+                },
+                options: { 
+                    ...commonConfig, 
+                    scales: { y: { min:0, max:4, ticks: { stepSize: 1, callback: v => ['','Baixa','Média','Alta'][v] || '' } }, x: {grid:{display:false}} },
+                    plugins: { title: { display: true, text: 'Nível de Estabilidade', font: {size:16} }, legend: {display:false} }
+                }
+            });
 
-            const optStab = JSON.parse(JSON.stringify(commonOptions));
-            optStab.plugins.title = { display: true, text: '3. Estabilidade Política/Econômica', font: {size: 16, weight: '700'} };
+            // 4. CHART RADAR
+            if(this.charts.radar) this.charts.radar.destroy();
             
-            optStab.scales.y.min = 0; 
-            optStab.scales.y.max = 4; 
-            optStab.scales.y.ticks.stepSize = 0.5; 
-            optStab.scales.y.ticks.callback = val => getStabilityLabel(val);
-
-            chartStability = new Chart(ctxStab, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{ label: 'Estabilidade', data: stability, backgroundColor: bgColors, ...barOptions }]
-                },
-                options: optStab
-            });
-
-            // --- 4. RADAR (COM BASE GLOBAL ESTÁTICA E PISO MÍNIMO) ---
-            const ctxRadar = document.getElementById('chartRadar').getContext('2d');
-            if(chartRadar) chartRadar.destroy();
-
             const radarDatasets = activeData.map(d => {
-                const c = getColor(d.pais);
+                const color = this.getColor(d.pais);
                 
-                const valPrice = parseFloat(d.preco_medio);
-                const valLog = parseFloat(d.logistica_perc);
-                const valStab = getStabilityScore(d.estabilidade);
-
-                // FUNÇÃO DE NORMALIZAÇÃO COM PISO (FLOOR)
-                // Mapeia o intervalo [min, max] para [20, 100]
-                // Evita que o triângulo colapse para 0
-                const normalizeWithFloor = (val, min, max, invert) => {
-                    if (max === min) return 100;
-                    let ratio = 0;
-                    if (invert) {
-                        ratio = (max - val) / (max - min);
-                    } else {
-                        ratio = (val - min) / (max - min);
-                    }
-                    // Escala de 20 a 100
-                    return 20 + (ratio * 80);
-                };
-
-                // 1. Preço (Menor é Melhor, Invertido)
-                const sPrice = normalizeWithFloor(valPrice, globalMinPrice, globalMaxPrice, true);
-
-                // 2. Logística (Menor é Melhor, Invertido)
-                const sLog = normalizeWithFloor(valLog, globalMinLogistics, globalMaxLogistics, true);
-
-                // 3. Estabilidade (Maior é Melhor) - Base fixa 3
-                // 1=33%, 2=66%, 3=100%. 
-                // Para o pior caso (1), o valor é 33, que já é um "piso" seguro.
-                const sStab = (valStab / 3) * 100;
+                // Normalização simples para Radar 0-100
+                const priceMax = Math.max(...this.chartData.map(i => i.preco_medio)) || 1;
+                const priceScore = d.preco_medio > 0 ? ((priceMax / d.preco_medio) * 80) : 50; 
+                const logScore = Math.max(0, 100 - (d.logistica_perc * 4));
+                const stabScore = this.getStabilityScore(d.estabilidade) * 33;
 
                 return {
                     label: d.pais,
-                    // GUARDA OS VALORES ORIGINAIS PARA EXIBIR NO TOOLTIP
-                    rawValues: {
-                        price: valPrice,
-                        logistics: valLog,
-                        stability: d.estabilidade
-                    },
-                    data: [sPrice, sLog, sStab],
-                    fill: true,
-                    backgroundColor: c + '20',
-                    borderColor: c,
-                    pointBackgroundColor: c,
-                    pointBorderColor: '#fff',
-                    pointHoverBackgroundColor: '#fff',
-                    pointHoverBorderColor: c
+                    data: [Math.min(100, priceScore), Math.min(100, logScore), stabScore],
+                    borderColor: color,
+                    backgroundColor: color + '20',
+                    pointBackgroundColor: color,
+                    borderWidth: 2
                 };
             });
 
-            chartRadar = new Chart(ctxRadar, {
+            this.charts.radar = new Chart(document.getElementById('chartRadar'), {
                 type: 'radar',
                 data: {
-                    // ALTERADO: Labels mais diretos conforme pedido
-                    labels: ['Preço (R$/kg)', 'Logística (%)', 'Estabilidade'],
+                    labels: ['Competitividade Preço', 'Eficiência Logística', 'Segurança/Estabilidade'],
                     datasets: radarDatasets
                 },
                 options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: {
-                        title: { display: true, text: '4. Síntese de Atratividade (Base Comparativa Global)', font: {size: 16, weight: '700'} },
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                // TOOLTIP PERSONALIZADO PARA MOSTRAR VALOR REAL
-                                label: function(context) {
-                                    const dataset = context.dataset;
-                                    const index = context.dataIndex; // 0=Preço, 1=Logistica, 2=Estabilidade
-                                    const values = dataset.rawValues;
-                                    
-                                    let label = dataset.label || '';
-                                    if (label) { label += ': '; }
-
-                                    if (index === 0) { // Preço
-                                        return label + 'R$ ' + values.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-                                    } else if (index === 1) { // Logística
-                                        return label + values.logistics + '%';
-                                    } else if (index === 2) { // Estabilidade
-                                        return label + values.stability;
-                                    }
-                                    
-                                    return label + Math.round(context.raw);
-                                }
-                            }
-                        }
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        title: { display: true, text: 'Radar de Oportunidade (Score)', font: {size:16} }
                     },
                     scales: {
                         r: {
-                            angleLines: { display: true },
-                            suggestedMin: 0,
-                            suggestedMax: 100,
-                            ticks: { display: false, backdropColor: 'transparent' },
-                            pointLabels: { font: { size: 12, weight: 'bold' }, color: '#4b5563' }
+                            suggestedMin: 0, suggestedMax: 100,
+                            pointLabels: { font: {size: 12, weight:'bold'}, color: '#374151' }
                         }
                     }
                 }
             });
         }
+    }
 
-        function renderLegend() {
-            const container = document.getElementById('dynamicLegend');
-            container.innerHTML = '';
-
-            rawData.forEach(item => {
-                const color = getColor(item.pais);
-                const isVisible = visibilityState[item.pais];
-                
-                const itemDiv = document.createElement('div');
-                itemDiv.className = `legend-item ${!isVisible ? 'hidden-item' : ''}`;
-                itemDiv.innerHTML = `<div class="legend-color" style="background-color: ${color}"></div> ${item.pais}`;
-                
-                itemDiv.addEventListener('click', () => {
-                    visibilityState[item.pais] = !visibilityState[item.pais];
-                    renderLegend();
-                    initCharts(); 
-                });
-
-                container.appendChild(itemDiv);
-            });
-        }
-
-        renderLegend();
-        initCharts();
+    document.addEventListener('DOMContentLoaded', () => {
+        new ChartController();
     });
 </script>
 </body>

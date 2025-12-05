@@ -9,188 +9,257 @@ use Illuminate\Support\Str;
 
 class PrevisoesController extends Controller
 {
-    /**
-     * Método principal (Dashboard/Descritivo)
-     * Rota: /previsoes ou /previsoes/{id}
-     */
+    private $commodityMap = [1 => 'Soja', 2 => 'Milho', 3 => 'Açúcar', 4 => 'Cacau'];
+
     public function index(Request $request, $id = null)
     {
-        // 1. Autenticação
         $user = $this->getAuthenticatedUser($request);
-        if (!$user) {
-            return redirect()->route('login');
-        }
+        if (!$user) return redirect()->route('login');
+        
         $avatarUrl = $this->resolveAvatarUrl($user);
 
-        $commodity = null;
-
-        // 2. Lógica de Seleção da Commodity (Hierarquia Rígida)
-
-        // CASO 1: ID veio na Rota (/previsoes/2)
-        if ($id) {
-            $commodity = DB::table('commodities')
-                ->select('id', 'nome', 'categoria', 'unidade')
-                ->where('id', $id)
-                ->first();
-        }
-
-        // CASO 2: ID veio na Query String (/previsoes?commodity_id=2)
-        // Só tenta se não achou no CASO 1
-        if (!$commodity && $request->query('commodity_id')) {
-             $commodity = DB::table('commodities')
-                ->select('id', 'nome', 'categoria', 'unidade')
-                ->where('id', $request->query('commodity_id'))
-                ->first();
-        }
-
-        // CASO 3: Fallback (Modo Padrão - Última atualizada)
-        // Só tenta se não achou nem no CASO 1 nem no CASO 2
-        if (!$commodity) {
-            $latestMetrics = DB::table('commodity_descriptive_metrics as metrics')
-                ->select('metrics.commodity_id')
-                ->orderByDesc('metrics.referencia_mes')
-                ->orderByDesc('metrics.updated_at')
-                ->orderByDesc('metrics.created_at')
-                ->first();
-
-            if ($latestMetrics) {
-                $commodity = DB::table('commodities')
-                    ->select('id', 'nome', 'categoria', 'unidade')
-                    ->where('id', $latestMetrics->commodity_id)
-                    ->first();
-            }
-        }
-
-        // CASO 4: Último recurso (Primeira alfabética)
-        if (!$commodity) {
-            $commodity = DB::table('commodities')
-                ->select('id', 'nome', 'categoria', 'unidade')
-                ->orderBy('nome')
-                ->first();
-        }
-
-        // Erro fatal se banco estiver vazio
-        if (!$commodity) {
-            return redirect()->route('home')->withErrors('Nenhuma commodity cadastrada.');
-        }
-
-        // 3. Buscar Dados Descritivos
-        $descriptiveData = DB::table('commodity_descriptive_metrics as metrics')
-            ->select(
-                'metrics.volume_compra_ton',
-                'metrics.preco_medio_global',
-                'metrics.preco_medio_brasil',
-                'metrics.preco_alvo',
-                'metrics.referencia_mes',
-                'commodities.nome as materia_prima'
-            )
-            ->join('commodities', 'commodities.id', '=', 'metrics.commodity_id')
-            ->where('metrics.commodity_id', $commodity->id)
-            ->orderByDesc('metrics.referencia_mes')
-            ->first();
-
-        if (!$descriptiveData) {
-            $descriptiveData = (object) [
-                'materia_prima' => $commodity->nome,
-                'volume_compra_ton' => 0, 'preco_medio_global' => 0,
-                'preco_medio_brasil' => 0, 'preco_alvo' => 0, 'referencia_mes' => null,
-            ];
-        }
-
-        // 4. Previsões Nacionais
-        $nationalForecasts = DB::table('commodity_national_forecasts')
-            ->select('referencia_mes', 'preco_medio', 'variacao_perc')
-            ->where('commodity_id', $commodity->id)
-            ->orderBy('referencia_mes')
-            ->get()
-            ->map(function ($forecast) {
-                $forecast->mes_ano = $forecast->referencia_mes 
-                    ? Str::ucfirst(Carbon::parse($forecast->referencia_mes)->locale('pt_BR')->translatedFormat('F/Y')) 
-                    : '-';
-                return $forecast;
-            });
-
-        // 5. Comparativos Regionais
-        $regionalComparisons = DB::table('commodity_regional_comparisons')
-            ->select('pais', 'preco_medio', 'logistica_perc', 'risco', 'estabilidade', 'ranking')
-            ->where('commodity_id', $commodity->id)
-            ->orderBy('ranking')
-            ->get();
+        $payload = $this->buildAnalysisPayload($id, $request->query('commodity_id'));
+        if (!$payload) return redirect()->route('home')->withErrors('Nenhuma análise disponível.');
 
         return view('previ', [
             'user' => $user,
             'avatarUrl' => $avatarUrl,
-            'descriptiveData' => $descriptiveData,
-            'nationalForecasts' => $nationalForecasts,
-            'regionalComparisons' => $regionalComparisons,
-            'selectedCommodity' => $commodity, // AQUI GARANTIMOS O ID CORRETO NA VIEW
+            'descriptiveData' => $payload['descriptiveData'],
+            'nationalForecasts' => $payload['nationalForecasts'],
+            'regionalComparisons' => $payload['regionalComparisons'],
+            'selectedCommodity' => $payload['commodity'],
+            'aiSummary' => $payload['aiSummary'],
+            'analysisId' => $payload['analysis']->id,
         ]);
     }
 
-    /**
-     * Tela de Gráficos
-     */
     public function graficos(Request $request, $id = null)
     {
         $user = $this->getAuthenticatedUser($request);
         if (!$user) return redirect()->route('login');
         $avatarUrl = $this->resolveAvatarUrl($user);
 
-        // Define o ID
-        $commodityId = $id ?? $request->query('commodity_id');
-        if (!$commodityId) {
-            $commodityId = DB::table('commodities')->latest('id')->value('id');
-        }
-
-        // --- BUSCA DADOS REAIS DO BANCO PARA OS GRÁFICOS ---
-        // Vamos usar a tabela de comparativos regionais para gerar os gráficos de barra
-        $chartData = DB::table('commodity_regional_comparisons')
-            ->select('pais', 'preco_medio', 'logistica_perc', 'risco', 'estabilidade')
-            ->where('commodity_id', $commodityId)
-            ->orderBy('preco_medio', 'desc') // Ordenar para ficar bonito no gráfico
-            ->get();
+        $payload = $this->buildAnalysisPayload($id ?? $request->query('analysis_id'), $request->query('commodity_id'));
+        if (!$payload) return redirect()->route('home');
 
         return view('graficos', [
             'user' => $user,
             'avatarUrl' => $avatarUrl,
-            'commodityId' => $commodityId,
-            'chartData' => $chartData, // Passando os dados para a View
+            'commodityId' => $payload['analysis']->commodity_id,
+            'nomeCommodity' => $payload['commodity']->nome ?? 'Commodity',
+            'analysisId' => $payload['analysis']->id,
+            'analise' => $payload['analysis'], 
+            'chartData' => $payload['regionalComparisons'],
+            'timelineSeries' => $payload['nationalForecasts'],
+            'locationComparison' => [],
+            'aiSummary' => $payload['aiSummary'],
         ]);
     }
 
-    /**
-     * Tela de Conclusão
-     */
     public function conclusao(Request $request, $id = null)
     {
         $user = $this->getAuthenticatedUser($request);
         if (!$user) return redirect()->route('login');
         $avatarUrl = $this->resolveAvatarUrl($user);
 
-        // Prioridade: ID da Rota -> ID da Query -> Último do Banco
-        $commodityId = $id ?? $request->query('commodity_id');
-
-        if (!$commodityId) {
-            $commodityId = DB::table('commodities')->latest('id')->value('id');
-        }
+        $payload = $this->buildAnalysisPayload($id ?? $request->query('analysis_id'), $request->query('commodity_id'));
+        if (!$payload) return redirect()->route('home');
 
         return view('conclusao', [
             'user' => $user,
             'avatarUrl' => $avatarUrl,
-            'commodityId' => $commodityId, 
+            'commodityId' => $payload['analysis']->commodity_id,
+            'analysisId' => $payload['analysis']->id,
+            'aiSummary' => $payload['aiSummary'],
+            'timelineSeries' => $payload['nationalForecasts'],
         ]);
     }
 
-    // --- MÉTODOS AUXILIARES ---
-
-    private function getAuthenticatedUser(Request $request)
+    public function exportarPdf($id)
     {
-        $userId = $request->session()->get('auth_user_id');
-        if (!$userId) return null;
+        $payload = $this->buildAnalysisPayload($id, null);
+        if (!$payload) abort(404);
+        return view('pdfs.relatorio_completo', [
+            'commodity' => $payload['commodity'],
+            'descriptiveData' => $payload['descriptiveData'],
+            'nationalForecasts' => $payload['nationalForecasts'],
+            'regionalComparisons' => $payload['regionalComparisons'],
+            'conclusionText' => $payload['aiSummary']['recomendacao'] ?? '',
+            'date' => date('d/m/Y H:i')
+        ]);
+    }
 
-        return DB::table('users')
-            ->select('id', 'usuario', 'nome', 'email', 'foto_blob', 'foto_mime', 'is_admin')
-            ->where('id', $userId)
+    private function getAuthenticatedUser(Request $request) {
+        $userId = $request->session()->get('auth_user_id');
+        return $userId ? DB::table('users')->where('id', $userId)->first() : null;
+    }
+
+    private function buildAnalysisPayload(?int $analysisId, ?int $commodityId): ?array
+    {
+        $analysis = $this->resolveAnalysis($analysisId, $commodityId);
+        if (!$analysis) return null;
+
+        $commodity = DB::table('commodity_entrada')
+            ->where('commodity_id', $analysis->commodity_id)
+            ->orderByDesc('last_updated')
             ->first();
+            
+        if (!$commodity) {
+            $commodity = (object)[
+                'nome' => $this->commodityMap[$analysis->commodity_id] ?? 'Produto #' . $analysis->commodity_id,
+                'commodity_id' => $analysis->commodity_id
+            ];
+        }
+
+        $aiLog = $this->fetchAiLogForAnalysis($analysis);
+
+        return [
+            'analysis' => $analysis,
+            'commodity' => $commodity,
+            'descriptiveData' => (object)[
+                'materia_prima' => $commodity->nome,
+                'referencia_mes' => $analysis->referencia_mes,
+                'volume_compra_ton' => $analysis->volume_compra_ton,
+                'preco_medio_brasil' => $analysis->preco_medio_brasil,
+                'preco_alvo' => $analysis->preco_alvo,
+                'logistica_perc' => $analysis->logistica_perc,
+                'risco' => $analysis->risco,
+                'estabilidade' => $analysis->estabilidade
+            ],
+            'nationalForecasts' => $this->buildTimelineSeries($analysis),
+            'aiSummary' => $this->buildAiSummary($analysis, $commodity, $aiLog),
+            'regionalComparisons' => $this->buildRegionalComparisons($analysis)
+        ];
+    }
+
+    private function resolveAnalysis(?int $analysisId, ?int $commodityId)
+    {
+        $q = DB::table('commodity_saida')->orderByDesc('updated_at');
+        if ($analysisId) $q->where('id', $analysisId);
+        elseif ($commodityId) $q->where('commodity_id', $commodityId);
+        return $q->first();
+    }
+
+    private function fetchAiLogForAnalysis(object $analysis): ?object
+    {
+        if ($analysis->updated_at) {
+            $exactLog = DB::table('ai_analysis_logs')
+                ->where('commodity_id', $analysis->commodity_id)
+                ->where('updated_at', $analysis->updated_at)
+                ->first();
+            
+            if ($exactLog) return $exactLog;
+        }
+
+        $log = DB::table('ai_analysis_logs')
+            ->where('commodity_id', $analysis->commodity_id)
+            ->whereBetween('updated_at', [
+                Carbon::parse($analysis->updated_at)->subMinutes(1),
+                Carbon::parse($analysis->updated_at)->addMinutes(1)
+            ])
+            ->orderByDesc('id')
+            ->first();
+
+        return $log ?? DB::table('ai_analysis_logs')
+            ->where('commodity_id', $analysis->commodity_id)
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    private function buildTimelineSeries(object $analysis)
+    {
+        $offsetMap = [
+            -3 => 'preco_3_meses_anterior', -2 => 'preco_2_meses_anterior', -1 => 'preco_1_mes_anterior',
+             0 => 'preco_mes_atual',
+             1 => 'preco_1_mes_depois', 2 => 'preco_2_meses_depois', 3 => 'preco_3_meses_depois', 4 => 'preco_4_meses_depois',
+        ];
+        $series = [];
+        $ref = Carbon::parse($analysis->referencia_mes);
+        $ultimaReferencia = null;
+
+        foreach ($offsetMap as $offset => $field) {
+            $valor = $analysis->{$field} ?? null;
+            if ($valor === null) continue;
+            $mes = Str::ucfirst($ref->copy()->addMonths($offset)->locale('pt_BR')->translatedFormat('M/Y'));
+            $variacao = ($ultimaReferencia && $ultimaReferencia > 0) ? round((($valor - $ultimaReferencia) / $ultimaReferencia) * 100, 2) : 0;
+            $series[] = (object) ['mes_ano' => $mes, 'preco_medio' => (float) $valor, 'variacao_perc' => $variacao];
+            $ultimaReferencia = $valor;
+        }
+        return collect($series);
+    }
+
+    private function buildAiSummary(object $analysis, object $commodity, ?object $aiLog): array
+    {
+        $parsed = ($aiLog && $aiLog->response) ? json_decode($aiLog->response, true) : [];
+        return [
+            'materia_prima' => $commodity->nome,
+            'recomendacao' => $parsed['recomendacao'] ?? 'Sem recomendação disponível.',
+            'mercados' => $parsed['mercados'] ?? [],
+            'logistica' => array_merge(['custo_estimado' => $analysis->logistica_perc], $parsed['logistica'] ?? []),
+            'indicadores' => array_merge(['risco' => $analysis->risco], $parsed['indicadores'] ?? [])
+        ];
+    }
+
+    private function buildRegionalComparisons(object $analysis)
+    {
+        $nomeReferencia = DB::table('commodity_entrada')
+            ->where('commodity_id', $analysis->commodity_id)
+            ->value('nome');
+
+        if (!$nomeReferencia) return collect([]);
+
+        $dados = DB::table('commodity_entrada')
+            ->join('locations', 'locations.id', '=', 'commodity_entrada.location_id')
+            ->where('commodity_entrada.nome', $nomeReferencia)
+            ->where('commodity_entrada.source', 'AI_RANKING') // Filtra para mostrar apenas sugestões da IA
+            ->orderByDesc('commodity_entrada.last_updated')
+            ->select(
+                'locations.nome as local',
+                'locations.regiao',
+                'commodity_entrada.price',
+                'commodity_entrada.currency',
+                'commodity_entrada.last_updated'
+            )
+            ->get()
+            ->unique('local')
+            ->take(3); // Garante pegar apenas as top 3
+
+        return $dados->map(function ($item) use ($analysis) {
+            // Remove "(Auto)" do nome para exibição (limpeza de segurança)
+            $nomeLocal = str_replace(' (Auto)', '', $item->local);
+
+            $priceBrl = $item->price;
+            switch($item->currency) {
+                case 'USD': $priceBrl *= 5.00; break;
+                case 'CNY': $priceBrl *= 0.70; break;
+                case 'EUR': $priceBrl *= 5.40; break;
+                case 'GBP': $priceBrl *= 6.30; break;
+            }
+
+            $logistica = $analysis->logistica_perc ?? 10;
+            if ($item->regiao === 'Centro-Oeste') $logistica += 5;
+            if ($item->regiao === 'Sul' || $item->regiao === 'Sudeste') $logistica -= 2;
+            if ($item->regiao === 'EUA') $logistica -= 3;
+            if ($item->regiao === 'China') $logistica += 4;
+
+            $estabilidade = $analysis->estabilidade ?? 'Média';
+            if (in_array($item->local, ['EUA', 'Brasil', 'Santos', 'Chicago'])) $estabilidade = 'Alta';
+            if (in_array($item->local, ['Ucrânia', 'Rússia'])) $estabilidade = 'Baixa';
+
+            return (object) [
+                'pais' => $nomeLocal, 
+                'preco_medio' => round($priceBrl, 2),
+                'moeda' => $item->currency,
+                'currency_orig' => $item->currency,
+                'logistica_perc' => max(0, $logistica),
+                'estabilidade' => $estabilidade,
+                'risco' => $analysis->risco ?? 'Médio',
+                
+                'logistica_obs' => 'Estimativa regional',
+                'estabilidade_economica' => $estabilidade,
+                'estabilidade_climatica' => '-',
+                'risco_geral' => $analysis->risco
+            ];
+        });
     }
 }
