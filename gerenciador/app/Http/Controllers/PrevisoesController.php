@@ -1,5 +1,7 @@
 <?php
-
+/**
+ * PrevisoesController.php by Nicolas Duran Munhos & Matias Amma
+ */
 namespace App\Http\Controllers;
 
 use Carbon\Carbon;

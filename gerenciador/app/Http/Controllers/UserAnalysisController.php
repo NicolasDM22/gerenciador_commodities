@@ -1,5 +1,7 @@
 <?php
-
+/**
+ * UserAnalysisController.php by Nicolas Duran Munhos & Matias Amma
+ */
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;

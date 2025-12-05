@@ -1,5 +1,7 @@
 <?php
-
+/**
+ * Controller.php by Nicolas Duran Munhos
+ */
 namespace App\Http\Controllers;
 
 abstract class Controller

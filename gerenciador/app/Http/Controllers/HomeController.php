@@ -1,5 +1,7 @@
 <?php
-
+/**
+ * HomeController.php by Nicolas Duran Munhos
+ */
 namespace App\Http\Controllers;
 
 use Carbon\Carbon;
