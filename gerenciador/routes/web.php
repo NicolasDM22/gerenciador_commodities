@@ -11,8 +11,8 @@ use App\Http\Controllers\UserAnalysisController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/login');
-
-// Rotas públicas (login/registro)
+// by Nicolas Duran Munhos & Matias Amma 
+// // Rotas públicas (login/registro)
 Route::controller(LoginController::class)->group(function () {
     Route::get('/login', 'show')->name('login');
     Route::post('/login', 'authenticate')->name('login.authenticate');

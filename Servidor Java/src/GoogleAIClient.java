@@ -12,7 +12,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+/**
+ * GoogleAIClient.java by Nicolas Duran Munhos & Matias Amma & João Pedro de Moura
+ */
 /**
  * Cliente simples para consumir a API Gemini (Google AI).
  */

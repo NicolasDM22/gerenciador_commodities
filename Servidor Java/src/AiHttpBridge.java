@@ -10,7 +10,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
-
+/**
+ * AiHttpBridge.java by Nicolas Duran Munhos
+ */
 /**
  * Ponte HTTP simples para que o PHP consiga disparar analises sem precisar implementar um cliente WebSocket.
  */

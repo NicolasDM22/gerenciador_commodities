@@ -8,7 +8,9 @@ import org.java_websocket.server.WebSocketServer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-
+/**
+ * ServidorWebSocket.java by Nicolas Duran Munhos & Matias Amma & João Pedro de Moura
+ */
 /**
  * Servidor WebSocket que expõe integração com a API Gemini (Google AI).
  */
