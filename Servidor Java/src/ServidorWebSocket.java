@@ -129,7 +129,7 @@ public class ServidorWebSocket extends WebSocketServer {
             porta = 3000;
         }
 
-        String apiKey = System.getenv("GOOGLE_AI_KEY");
+        String apiKey = "AIzaSyB9Hzwo3av53_eggMXcXU7sUcXymFNU38M";
         if (apiKey == null || apiKey.trim().isEmpty()) {
             System.err.println("ERRO: defina GOOGLE_AI_KEY para usar o Gemini.");
             return;
