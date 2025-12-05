@@ -24,7 +24,7 @@ public class ServidorWebSocket extends WebSocketServer {
     public ServidorWebSocket(int porta) {
         super(new InetSocketAddress(porta));
 
-        String apiKey = "AIzaSyBKrgR78u1FgwIp7C6NOAfjIG3pmvJuvsk";
+        String apiKey = "";
         if (apiKey == null || apiKey.isEmpty()) {
             System.err.println("ERRO: variável de ambiente GOOGLE_AI_KEY não definida!");
         } else {
