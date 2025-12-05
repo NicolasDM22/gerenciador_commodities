@@ -185,6 +185,9 @@ Calcule a estimativa percentual do Custo Logístico (Frete + Seguro) até o CEP 
 - Se for IMPORTAÇÃO (Ex: EUA, China): Deve ser ALTO (15% a 30%) devido ao frete marítimo e taxas.
 NÃO retorne 0.00. Use valores realistas.
 
+TAREFA 5: RECOMENDAÇÃO (RESUMO EXECUTIVO)
+Gere uma recomendação estratégica e concisa (MÁXIMO 3 SENTENÇAS), focando na decisão de compra (momento/preço/local) e justificando o preço alvo do usuário vs. o preço de mercado.
+
 Retorne APENAS JSON válido:
 {
   "timeline": {
@@ -204,7 +207,7 @@ Retorne APENAS JSON válido:
   ],
   "indicadores": { "media_brasil": 0.00, "media_global": 0.00, "risco": "Baixo", "estabilidade": "Alta" },
   "logistica": { "custo_estimado": 12.50, "melhor_rota": "Rodoviário/Marítimo", "observacoes": "Cálculo base..." },
-  "recomendacao": "Texto..."
+  "recomendacao": "RESUMO EXECUTIVO CONCISO AQUI (Máximo 3 frases)."
 }
 EOT;
     }

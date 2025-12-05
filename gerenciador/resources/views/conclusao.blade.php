@@ -206,32 +206,6 @@
                 
                 <div class="text-block">
                     <p>{{ $recomendacao }}</p>
-
-                    @if(!empty($logistica['melhor_rota']) || isset($logistica['custo_estimado']) || !empty($logistica['observacoes']))
-                        <div class="highlight-box">
-                            <h4>Resumo Logístico</h4>
-                            @if(!empty($logistica['melhor_rota']))
-                                <p><strong>Melhor rota:</strong> {{ $logistica['melhor_rota'] }}</p>
-                            @endif
-                            @if(isset($logistica['custo_estimado']))
-                                <p><strong>Custo estimado:</strong> {{ number_format($logistica['custo_estimado'], 2, ',', '.') }}% (do valor do produto)</p>
-                            @endif
-                            @if(!empty($logistica['observacoes']))
-                                <p>{{ $logistica['observacoes'] }}</p>
-                            @endif
-                        </div>
-                    @endif
-
-                    <p style="margin-top: 2rem;">
-                        <span style="font-size: 0.9rem; color: var(--gray-500);">
-                        Indicadores de Contexto: Média Brasil 
-                        <strong>R${{ number_format($indicadores['media_brasil'] ?? 0, 2, ',', '.') }}/kg</strong>,
-                        Média Global 
-                        <strong>R${{ number_format($indicadores['media_global'] ?? 0, 2, ',', '.') }}/kg</strong>.
-                        Risco <strong>{{ $indicadores['risco'] ?? '-' }}</strong> e
-                        Estabilidade <strong>{{ $indicadores['estabilidade'] ?? '-' }}</strong>.
-                        </span>
-                    </p>
                 </div>
 
                 <div class="chart-container">
