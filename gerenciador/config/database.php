@@ -18,6 +18,7 @@ return [
     |
     */
 
+    // Conexao de banco padrao usada se nenhuma outra for especificada.
     'default' => env('DB_CONNECTION', 'mysql'),
 
     /*
@@ -33,6 +34,7 @@ return [
 
     'connections' => [
 
+        // SQLite local (arquivo).
         'sqlite' => [
             'driver' => 'sqlite',
             'url' => env('DB_URL'),
@@ -45,6 +47,7 @@ return [
             'transaction_mode' => 'DEFERRED',
         ],
 
+        // MySQL padrao.
         'mysql' => [
             'driver' => 'mysql',
             'url' => env('DB_URL'),
@@ -65,6 +68,7 @@ return [
             ]) : [],
         ],
 
+        // MariaDB (compatibilidade com MySQL).
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),
@@ -85,6 +89,7 @@ return [
             ]) : [],
         ],
 
+        // PostgreSQL.
         'pgsql' => [
             'driver' => 'pgsql',
             'url' => env('DB_URL'),
@@ -100,6 +105,7 @@ return [
             'sslmode' => 'prefer',
         ],
 
+        // SQL Server.
         'sqlsrv' => [
             'driver' => 'sqlsrv',
             'url' => env('DB_URL'),
@@ -128,6 +134,7 @@ return [
     |
     */
 
+    // Tabela de controle das migrations e opcao de atualizar data no publish.
     'migrations' => [
         'table' => 'migrations',
         'update_date_on_publish' => true,
@@ -146,14 +153,17 @@ return [
 
     'redis' => [
 
+        // Cliente Redis (phpredis ou predis).
         'client' => env('REDIS_CLIENT', 'phpredis'),
 
         'options' => [
+            // Modo cluster e prefixo para chaves Redis.
             'cluster' => env('REDIS_CLUSTER', 'redis'),
             'prefix' => env('REDIS_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')).'-database-'),
             'persistent' => env('REDIS_PERSISTENT', false),
         ],
 
+        // Conexao Redis principal.
         'default' => [
             'url' => env('REDIS_URL'),
             'host' => env('REDIS_HOST', '127.0.0.1'),
@@ -167,6 +177,7 @@ return [
             'backoff_cap' => env('REDIS_BACKOFF_CAP', 1000),
         ],
 
+        // Conexao Redis para cache.
         'cache' => [
             'url' => env('REDIS_URL'),
             'host' => env('REDIS_HOST', '127.0.0.1'),

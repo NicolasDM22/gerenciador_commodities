@@ -20,6 +20,7 @@ return [
     |
     */
 
+    // Driver padrao de sessao.
     'driver' => env('SESSION_DRIVER', 'database'),
 
     /*
@@ -34,8 +35,10 @@ return [
     |
     */
 
+    // Tempo de vida da sessao em minutos.
     'lifetime' => (int) env('SESSION_LIFETIME', 120),
 
+    // Expira ao fechar o navegador.
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 
     /*
@@ -49,6 +52,7 @@ return [
     |
     */
 
+    // Criptografa os dados da sessao em repouso.
     'encrypt' => env('SESSION_ENCRYPT', false),
 
     /*
@@ -62,6 +66,7 @@ return [
     |
     */
 
+    // Caminho dos arquivos de sessao quando driver=file.
     'files' => storage_path('framework/sessions'),
 
     /*
@@ -75,6 +80,7 @@ return [
     |
     */
 
+    // Conexao de banco/redis usada pelo driver da sessao.
     'connection' => env('SESSION_CONNECTION'),
 
     /*
@@ -88,6 +94,7 @@ return [
     |
     */
 
+    // Tabela usada para armazenar sessoes (driver database).
     'table' => env('SESSION_TABLE', 'sessions'),
 
     /*
@@ -103,6 +110,7 @@ return [
     |
     */
 
+    // Store de cache usado por backends de sessao baseados em cache.
     'store' => env('SESSION_STORE'),
 
     /*
@@ -116,6 +124,7 @@ return [
     |
     */
 
+    // Probabilidade de limpar sessoes expiradas [numerador, denominador].
     'lottery' => [2, 100],
 
     /*
@@ -129,6 +138,7 @@ return [
     |
     */
 
+    // Nome do cookie de sessao.
     'cookie' => env(
         'SESSION_COOKIE',
         Str::slug((string) env('APP_NAME', 'laravel')).'-session'
@@ -145,6 +155,7 @@ return [
     |
     */
 
+    // Caminho valido para o cookie.
     'path' => env('SESSION_PATH', '/'),
 
     /*
@@ -158,6 +169,7 @@ return [
     |
     */
 
+    // Dominio do cookie (permite subdominios).
     'domain' => env('SESSION_DOMAIN'),
 
     /*
@@ -171,6 +183,7 @@ return [
     |
     */
 
+    // Define se o cookie so vai por HTTPS.
     'secure' => env('SESSION_SECURE_COOKIE'),
 
     /*
@@ -184,6 +197,7 @@ return [
     |
     */
 
+    // Impede acesso via JavaScript (HttpOnly).
     'http_only' => env('SESSION_HTTP_ONLY', true),
 
     /*
@@ -201,6 +215,7 @@ return [
     |
     */
 
+    // Politica SameSite do cookie.
     'same_site' => env('SESSION_SAME_SITE', 'lax'),
 
     /*
@@ -214,6 +229,7 @@ return [
     |
     */
 
+    // Marca cookie como partitioned em contexto cross-site.
     'partitioned' => env('SESSION_PARTITIONED_COOKIE', false),
 
 ];

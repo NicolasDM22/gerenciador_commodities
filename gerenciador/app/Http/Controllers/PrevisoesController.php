@@ -13,6 +13,9 @@ class PrevisoesController extends Controller
 {
     private $commodityMap = [1 => 'Soja', 2 => 'Milho', 3 => 'Açúcar', 4 => 'Cacau'];
 
+    /**
+     * Tela principal de previsoes: valida usuario, monta payload da analise selecionada e renderiza view.
+     */
     public function index(Request $request, $id = null)
     {
         $user = $this->getAuthenticatedUser($request);
@@ -35,6 +38,9 @@ class PrevisoesController extends Controller
         ]);
     }
 
+    /**
+     * Mostra graficos detalhados da analise (timeline e ranking regional) para o usuario autenticado.
+     */
     public function graficos(Request $request, $id = null)
     {
         $user = $this->getAuthenticatedUser($request);
@@ -58,6 +64,9 @@ class PrevisoesController extends Controller
         ]);
     }
 
+    /**
+     * Exibe tela de conclusao com resumo da IA e timeline para analise escolhida.
+     */
     public function conclusao(Request $request, $id = null)
     {
         $user = $this->getAuthenticatedUser($request);
@@ -95,6 +104,9 @@ class PrevisoesController extends Controller
         return redirect()->route('home')->with('status', 'AnA­lise removida com sucesso.');
     }
 
+    /**
+     * Gera conteudo do relatorio completo em view para exportacao em PDF.
+     */
     public function exportarPdf($id)
     {
         $payload = $this->buildAnalysisPayload($id, null);
@@ -109,11 +121,17 @@ class PrevisoesController extends Controller
         ]);
     }
 
+    /**
+     * Recupera usuario autenticado a partir da sessao ou retorna null.
+     */
     private function getAuthenticatedUser(Request $request) {
         $userId = $request->session()->get('auth_user_id');
         return $userId ? DB::table('users')->where('id', $userId)->first() : null;
     }
 
+    /**
+     * Consolida analise selecionada com dados de commodity, timeline, resumo IA e comparacoes regionais.
+     */
     private function buildAnalysisPayload(?int $analysisId, ?int $commodityId): ?array
     {
         $analysis = $this->resolveAnalysis($analysisId, $commodityId);
@@ -152,6 +170,9 @@ class PrevisoesController extends Controller
         ];
     }
 
+    /**
+     * Decide qual analise carregar: por id fornecido ou ultima referente a commodity.
+     */
     private function resolveAnalysis(?int $analysisId, ?int $commodityId)
     {
         $q = DB::table('commodity_saida')->orderByDesc('updated_at');
@@ -160,6 +181,9 @@ class PrevisoesController extends Controller
         return $q->first();
     }
 
+    /**
+     * Tenta encontrar o log da IA correspondente a analise (matching exato por timestamp ou mais proximo).
+     */
     private function fetchAiLogForAnalysis(object $analysis): ?object
     {
         if ($analysis->updated_at) {
@@ -186,6 +210,9 @@ class PrevisoesController extends Controller
             ->first();
     }
 
+    /**
+     * Gera serie temporal com meses relativos e variacao percentual entre pontos.
+     */
     private function buildTimelineSeries(object $analysis)
     {
         $offsetMap = [
@@ -208,6 +235,9 @@ class PrevisoesController extends Controller
         return collect($series);
     }
 
+    /**
+     * Monta resumo textual/estruturado da IA mesclando dados persistidos e resposta original.
+     */
     private function buildAiSummary(object $analysis, object $commodity, ?object $aiLog): array
     {
         $parsed = ($aiLog && $aiLog->response) ? json_decode($aiLog->response, true) : [];
@@ -220,6 +250,9 @@ class PrevisoesController extends Controller
         ];
     }
 
+    /**
+     * Monta comparativo regional (top 3) convertendo moeda, ajustando logistica e estabilidade por local.
+     */
     private function buildRegionalComparisons(object $analysis)
     {
         $nomeReferencia = DB::table('commodity_entrada')

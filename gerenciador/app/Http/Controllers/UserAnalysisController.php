@@ -10,6 +10,10 @@ use Carbon\Carbon;
 
 class UserAnalysisController extends Controller
 {
+    /**
+     * Exibe uma analise da IA para o usuario: valida sessao/permissao,
+     * busca log especifico, decodifica resposta e renderiza view com dados parseados.
+     */
     public function show(Request $request, int $id)
     {
         $userId = $request->session()->get('auth_user_id');

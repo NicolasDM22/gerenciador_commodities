@@ -1,13 +1,17 @@
 <?php
 /**
  * Controller.php by Nicolas Duran Munhos
+ *
+ * Controlador base com helpers reutilizados pelos demais controladores.
  */
 namespace App\Http\Controllers;
 
 abstract class Controller
 {
     /**
-     * Build a usable avatar URL for the given user record.
+     * Monta a URL de avatar para um usuario:
+     * - Se houver blob de foto + mime type, devolve um data URL convertendo o blob em base64.
+     * - Caso contrario, usa o servico ui-avatars com o nome/usuario ou "User" como fallback.
      */
     protected function resolveAvatarUrl(object $user): string
     {
@@ -21,7 +25,7 @@ abstract class Controller
     }
 
     /**
-     * Remove caracteres nao numericos do telefone.
+     * Remove tudo que nao for numero para padronizar o armazenamento do telefone.
      */
     protected function normalizePhone(string $value): string
     {
@@ -29,7 +33,7 @@ abstract class Controller
     }
 
     /**
-     * Normaliza endereco removendo espacos redundantes.
+     * Normaliza endereco eliminando espacos duplicados e aparando o inicio/fim.
      */
     protected function normalizeAddress(string $value): string
     {

@@ -15,6 +15,7 @@ return [
     |
     */
 
+    // Guard e broker padrao usados pela autenticacao.
     'defaults' => [
         'guard' => env('AUTH_GUARD', 'web'),
         'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),
@@ -37,6 +38,7 @@ return [
     |
     */
 
+    // Definicao dos guards de autenticacao (driver + provider).
     'guards' => [
         'web' => [
             'driver' => 'session',
@@ -61,6 +63,7 @@ return [
     |
     */
 
+    // Providers indicam como carregar usuarios (Eloquent ou database).
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
@@ -92,6 +95,7 @@ return [
     |
     */
 
+    // Configuracao de reset de senha: provider, tabela de tokens, expiracao e throttle.
     'passwords' => [
         'users' => [
             'provider' => 'users',
@@ -112,6 +116,7 @@ return [
     |
     */
 
+    // Timeout (segundos) para exigir re-confirmacao de senha.
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
 ];

@@ -15,6 +15,7 @@ return [
     |
     */
 
+    // Conexao de fila padrao usada quando nenhuma especificada.
     'default' => env('QUEUE_CONNECTION', 'database'),
 
     /*
@@ -32,10 +33,12 @@ return [
 
     'connections' => [
 
+        // Execucao sincrona (sem fila real).
         'sync' => [
             'driver' => 'sync',
         ],
 
+        // Fila em tabela de banco.
         'database' => [
             'driver' => 'database',
             'connection' => env('DB_QUEUE_CONNECTION'),
@@ -45,6 +48,7 @@ return [
             'after_commit' => false,
         ],
 
+        // Beanstalkd.
         'beanstalkd' => [
             'driver' => 'beanstalkd',
             'host' => env('BEANSTALKD_QUEUE_HOST', 'localhost'),
@@ -54,6 +58,7 @@ return [
             'after_commit' => false,
         ],
 
+        // Amazon SQS.
         'sqs' => [
             'driver' => 'sqs',
             'key' => env('AWS_ACCESS_KEY_ID'),
@@ -65,6 +70,7 @@ return [
             'after_commit' => false,
         ],
 
+        // Redis como backend de fila.
         'redis' => [
             'driver' => 'redis',
             'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
@@ -87,6 +93,7 @@ return [
     |
     */
 
+    // Configuracao para batches de jobs (DB/tabela).
     'batching' => [
         'database' => env('DB_CONNECTION', 'sqlite'),
         'table' => 'job_batches',
@@ -105,6 +112,7 @@ return [
     |
     */
 
+    // Onde e como registrar jobs que falharam.
     'failed' => [
         'driver' => env('QUEUE_FAILED_DRIVER', 'database-uuids'),
         'database' => env('DB_CONNECTION', 'sqlite'),

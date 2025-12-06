@@ -9,6 +9,10 @@ use Illuminate\Support\Facades\Hash;
 
 class ProfileModalController extends Controller
 {
+    /**
+     * Atualiza dados de perfil (usuario, email, telefone, endereco, senha e foto) do usuario autenticado,
+     * validando entradas, normalizando formatos e aplicando hash/base64 quando necessario.
+     */
     public function update(Request $request)
     {
         $userId = $request->session()->get('auth_user_id');
@@ -80,11 +84,17 @@ class ProfileModalController extends Controller
         return redirect()->route('home')->with('status', 'Perfil atualizado com sucesso!');
     }
 
+    /**
+     * Remove caracteres nao numericos do telefone para padronizar armazenamento.
+     */
     private function limparTelefone($phone)
     {
         return preg_replace('/[^0-9]/', '', $phone);
     }
 
+    /**
+     * Normaliza endereco: transforma em maiusculas e remove espacos extras nas extremidades.
+     */
     private function limparEndereco($address)
     {
         return trim(mb_strtoupper($address, 'UTF-8'));

@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\DB;
 class SupportChatController extends Controller
 {
     /**
-     * Start a new support chat for the authenticated user.
-     * Removes any previous thread and returns the fresh conversation payload.
+     * Abre um novo chamado de suporte para o usuario logado: remove threads antigas,
+     * cria chat limpo e devolve o payload inicial da conversa.
      */
     public function open(Request $request): JsonResponse
     {
@@ -64,7 +64,7 @@ class SupportChatController extends Controller
     }
 
     /**
-     * Store a new user message in the active chat.
+     * Armazena uma nova mensagem do usuario no chat ativo, validando sessao e conteudo.
      */
     public function send(Request $request): JsonResponse
     {
@@ -113,7 +113,7 @@ class SupportChatController extends Controller
     }
 
     /**
-     * Close the active chat for the user and purge stored messages.
+     * Encerra o chat ativo do usuario e limpa historico de mensagens.
      */
     public function close(Request $request): JsonResponse
     {
@@ -152,7 +152,7 @@ class SupportChatController extends Controller
     }
 
     /**
-     * Build a normalized chat payload with existing messages.
+     * Monta payload normalizado do chat (status, horario e mensagens formatadas).
      */
     private function formatChatPayload(int $chatId): array
     {
