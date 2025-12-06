@@ -117,9 +117,9 @@
 
     <main class="content">
         <div class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
-                <h2 style="margin:0">Visualizar análises</h2>
-                <button class="button button-outline" type="button" id="deleteAnalysisButton" disabled>Excluir selecionada</button>
+            <h2>Visualizar análises</h2>
+            <div style="text-align: left; margin-bottom: 1rem;">
+                <button class="button button-outline" type="button" id="deleteAnalysisButton" disabled>Excluir análise selecionada</button>
             </div>
             <form id="deleteAnalysisForm" method="POST" style="display:none;">
                 @csrf
