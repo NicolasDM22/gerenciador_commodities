@@ -94,14 +94,14 @@ class PrevisoesController extends Controller
         try {
             $deleted = DB::table('commodity_saida')->where('id', $id)->delete();
         } catch (\Throwable $e) {
-            return back()->withErrors('Erro ao excluir a anA­lise: ' . $e->getMessage());
+            return back()->withErrors('Erro ao excluir a análise: ' . $e->getMessage());
         }
 
         if (!$deleted) {
-            return back()->withErrors('AnA­lise nA�o encontrada ou jA¡ removida.');
+            return back()->withErrors('Análise não encontrada ou já removida.');
         }
 
-        return redirect()->route('home')->with('status', 'AnA­lise removida com sucesso.');
+        return redirect()->route('home')->with('status', 'Análise removida com sucesso.');
     }
 
     /**
@@ -139,7 +139,7 @@ class PrevisoesController extends Controller
 
         $commodity = DB::table('commodity_entrada')
             ->where('commodity_id', $analysis->commodity_id)
-            ->orderByDesc('last_updated')
+            ->where('source', 'User')
             ->first();
             
         if (!$commodity) {
@@ -166,7 +166,7 @@ class PrevisoesController extends Controller
             ],
             'nationalForecasts' => $this->buildTimelineSeries($analysis),
             'aiSummary' => $this->buildAiSummary($analysis, $commodity, $aiLog),
-            'regionalComparisons' => $this->buildRegionalComparisons($analysis)
+            'regionalComparisons' => $this->buildRegionalComparisonsFromLog($analysis, $aiLog)
         ];
     }
 
@@ -187,24 +187,18 @@ class PrevisoesController extends Controller
     private function fetchAiLogForAnalysis(object $analysis): ?object
     {
         if ($analysis->updated_at) {
-            $exactLog = DB::table('ai_analysis_logs')
+            $time = Carbon::parse($analysis->updated_at);
+            
+            $log = DB::table('ai_analysis_logs')
                 ->where('commodity_id', $analysis->commodity_id)
-                ->where('updated_at', $analysis->updated_at)
+                ->whereBetween('created_at', [$time->copy()->subSeconds(15), $time->copy()->addSeconds(15)])
+                ->orderByDesc('id')
                 ->first();
             
-            if ($exactLog) return $exactLog;
+            if ($log) return $log;
         }
 
-        $log = DB::table('ai_analysis_logs')
-            ->where('commodity_id', $analysis->commodity_id)
-            ->whereBetween('updated_at', [
-                Carbon::parse($analysis->updated_at)->subMinutes(1),
-                Carbon::parse($analysis->updated_at)->addMinutes(1)
-            ])
-            ->orderByDesc('id')
-            ->first();
-
-        return $log ?? DB::table('ai_analysis_logs')
+        return DB::table('ai_analysis_logs')
             ->where('commodity_id', $analysis->commodity_id)
             ->orderByDesc('id')
             ->first();
@@ -251,68 +245,55 @@ class PrevisoesController extends Controller
     }
 
     /**
-     * Monta comparativo regional (top 3) convertendo moeda, ajustando logistica e estabilidade por local.
+     * Monta comparativo regional lendo diretamente do JSON histórico (Log) para garantir integridade dos dados.
      */
-    private function buildRegionalComparisons(object $analysis)
+    private function buildRegionalComparisonsFromLog(object $analysis, ?object $aiLog)
     {
-        $nomeReferencia = DB::table('commodity_entrada')
-            ->where('commodity_id', $analysis->commodity_id)
-            ->value('nome');
+        if (!$aiLog || empty($aiLog->response)) {
+            return collect([]);
+        }
 
-        if (!$nomeReferencia) return collect([]);
+        $dadosJson = json_decode($aiLog->response, true);
+        $mercados = $dadosJson['mercados'] ?? [];
 
-        $dados = DB::table('commodity_entrada')
-            ->join('locations', 'locations.id', '=', 'commodity_entrada.location_id')
-            ->where('commodity_entrada.nome', $nomeReferencia)
-            ->where('commodity_entrada.source', 'AI_RANKING') // Filtra para mostrar apenas sugestões da IA
-            ->orderByDesc('commodity_entrada.last_updated')
-            ->select(
-                'locations.nome as local',
-                'locations.regiao',
-                'commodity_entrada.price',
-                'commodity_entrada.currency',
-                'commodity_entrada.last_updated'
-            )
-            ->get()
-            ->unique('local')
-            ->take(3); // Garante pegar apenas as top 3
+        return collect($mercados)->take(3)->map(function ($item) use ($analysis) {
+            
+            $nomeLocal = isset($item['nome']) ? trim(explode('(', $item['nome'])[0]) : 'Desconhecido';
+            $moeda = $item['moeda'] ?? 'BRL';
+            $precoOriginal = $this->toFloat($item['preco'] ?? 0);
 
-        return $dados->map(function ($item) use ($analysis) {
-            // Remove "(Auto)" do nome para exibição (limpeza de segurança)
-            $nomeLocal = str_replace(' (Auto)', '', $item->local);
-
-            $priceBrl = $item->price;
-            switch($item->currency) {
-                case 'USD': $priceBrl *= 5.00; break;
-                case 'CNY': $priceBrl *= 0.70; break;
-                case 'EUR': $priceBrl *= 5.40; break;
-                case 'GBP': $priceBrl *= 6.30; break;
+            $priceBrl = $precoOriginal;
+            if ($moeda !== 'BRL') {
+                switch($moeda) {
+                    case 'USD': $priceBrl *= 5.00; break;
+                    case 'CNY': $priceBrl *= 0.70; break;
+                    case 'EUR': $priceBrl *= 5.40; break;
+                    case 'GBP': $priceBrl *= 6.30; break;
+                }
             }
 
             $logistica = $analysis->logistica_perc ?? 10;
-            if ($item->regiao === 'Centro-Oeste') $logistica += 5;
-            if ($item->regiao === 'Sul' || $item->regiao === 'Sudeste') $logistica -= 2;
-            if ($item->regiao === 'EUA') $logistica -= 3;
-            if ($item->regiao === 'China') $logistica += 4;
+            if (str_contains($nomeLocal, 'China') || str_contains($nomeLocal, 'EUA')) $logistica += 5;
+            if (str_contains($nomeLocal, 'Paraná') || str_contains($nomeLocal, 'Santos')) $logistica -= 2;
 
-            $estabilidade = $analysis->estabilidade ?? 'Média';
-            if (in_array($item->local, ['EUA', 'Brasil', 'Santos', 'Chicago'])) $estabilidade = 'Alta';
-            if (in_array($item->local, ['Ucrânia', 'Rússia'])) $estabilidade = 'Baixa';
+            $estabilidade = $item['estabilidade_economica'] ?? ($analysis->estabilidade ?? 'Média');
 
             return (object) [
                 'pais' => $nomeLocal, 
                 'preco_medio' => round($priceBrl, 2),
-                'moeda' => $item->currency,
-                'currency_orig' => $item->currency,
+                'price' => round($priceBrl, 2),
+                'moeda' => $moeda,
+                'currency' => $moeda,
                 'logistica_perc' => max(0, $logistica),
-                'estabilidade' => $estabilidade,
-                'risco' => $analysis->risco ?? 'Médio',
-                
-                'logistica_obs' => 'Estimativa regional',
+                'estabilidade' => $item['estabilidade_climatica'] ?? '-',
                 'estabilidade_economica' => $estabilidade,
-                'estabilidade_climatica' => '-',
-                'risco_geral' => $analysis->risco
+                'risco' => $item['risco_geral'] ?? 'Médio'
             ];
         });
+    }
+
+    private function toFloat($v) { 
+        if (is_numeric($v)) return (float)$v;
+        return (float) preg_replace('/[^0-9.]/', '', str_replace(['.',','], ['','.'], (string)$v)); 
     }
 }

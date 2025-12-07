@@ -112,8 +112,12 @@ class HomeController extends Controller
                 }
 
                 // E. Lista de Histórico (Para a tabela abaixo do gráfico)
+                // CORREÇÃO APLICADA: Join filtrado para pegar apenas source='User'
                 $analysis = DB::table('commodity_saida')
-                    ->join('commodity_entrada', 'commodity_saida.commodity_id', '=', 'commodity_entrada.commodity_id')
+                    ->join('commodity_entrada', function($join) {
+                        $join->on('commodity_saida.commodity_id', '=', 'commodity_entrada.commodity_id')
+                             ->where('commodity_entrada.source', '=', 'User');
+                    })
                     ->where('commodity_saida.tipo_analise', 'PREVISAO_MENSAL')
                     ->orderByDesc('commodity_saida.updated_at')
                     ->select(

@@ -135,7 +135,7 @@
                         </div>
                         <div>
                             <p><strong>Preço Brasil (Atual):</strong> <span>R$ {{ number_format($descriptiveData->preco_medio_brasil, 2, ',', '.') }}</span></p>
-                            <p><strong>Preço Alvo:</strong> <span>R$ {{ number_format($descriptiveData->preco_alvo, 2, ',', '.') }}</span></p>
+                            <p><strong>Custo atual de compra:</strong> <span>R$ {{ number_format($descriptiveData->preco_alvo, 2, ',', '.') }}</span></p>
                             <p><strong>Gap / Variação:</strong> <span class="{{ $variacao > 0 ? 'text-danger' : 'text-success' }}">R$ {{ number_format($variacao, 2, ',', '.') }}</span></p>
                         </div>
                     </div>

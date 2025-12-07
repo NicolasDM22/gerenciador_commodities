@@ -1,4 +1,3 @@
-<!--by Nicolas Duran, Matias Amma e Gustavo Cavalheiro-->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -48,7 +47,7 @@
 
         /* CARD */
         .card { background: var(--white); border-radius: 16px; padding: 1.5rem; box-shadow: 0 10px 25px -10px rgba(15, 23, 42, 0.1); position: relative; }
-        .card h2 { margin: 0 0 1.5rem 0; font-size: 1.15rem; font-weight: 600; color: var(--gray-700); }
+        .card h2 { margin: 0; font-size: 1.15rem; font-weight: 600; color: var(--gray-700); }
 
         /* TABLES */
         .simple-table { width: 100%; border-collapse: collapse; }
@@ -117,18 +116,23 @@
 
     <main class="content">
         <div class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; min-height: 40px;">
                 <h2 style="margin:0">Visualizar análises</h2>
-                <button class="button button-outline" type="button" id="deleteAnalysisButton" disabled>Excluir selecionada</button>
+                
+                <button class="button button-outline" type="button" id="deleteAnalysisButton" style="display: none; padding: 0.5rem 1rem; font-size: 0.85rem;">
+                    Excluir selecionada
+                </button>
             </div>
+
             <form id="deleteAnalysisForm" method="POST" style="display:none;">
                 @csrf
                 @method('DELETE')
             </form>
+
             <table id="commoditiesTable" class="display" style="width:100%">
                 <thead>
                     <tr>
-                        <th>Selecionar</th>
+                        <th style="width: 50px; text-align: center;">Selecionar</th>
                         <th>ID</th>
                         <th>Commodity</th>
                         <th>Data/Hora Registro</th>
@@ -138,9 +142,9 @@
                 <tbody>
                     @foreach($previousAnalyses ?? [] as $analysis)
                         <tr>
-                            <td>
+                            <td style="text-align: center;">
                                 @if(!empty($analysis->id))
-                                    <input type="radio" name="selected_analysis" value="{{ $analysis->id }}" data-name="{{ $analysis->commodity_nome ?? '' }}">
+                                    <input type="radio" name="selected_analysis" value="{{ $analysis->id }}" data-name="{{ $analysis->commodity_nome ?? '' }}" style="cursor: pointer;">
                                 @endif
                             </td>
                             <td>{{ $analysis->id ?? '-' }}</td>
@@ -161,12 +165,12 @@
 
         <div class="card">
             @if(empty($chartData['labels']))
-                <h2>Ainda não existem análises</h2>
+                <h2 style="margin-bottom: 1.5rem;">Ainda não existem análises</h2>
                 <div style="display: flex; justify-content: center; align-items: center; height: 350px; color: #6b7280; background-color: #f9fafb; border-radius: 12px; border: 1px dashed #d1d5db;">
                     <p style="font-size: 1rem; font-weight: 500;">Nenhum dado disponível para exibir o gráfico.</p>
                 </div>
             @else
-                <h2>{{ $chartData['commodityName'] ?? 'Histórico de Preços (Geral)' }}</h2>
+                <h2 style="margin-bottom: 1.5rem;">{{ $chartData['commodityName'] ?? 'Histórico de Preços (Geral)' }}</h2>
                 <div class="chart-wrapper">
                     <canvas id="priceHistoryChart"></canvas>
                 </div>
@@ -175,7 +179,7 @@
 
         @if($isAdmin)
         <div class="card" id="javaWsCard">
-            <h2>Servidor Java (WebSocket)</h2>
+            <h2 style="margin-bottom: 1.5rem;">Servidor Java (WebSocket)</h2>
             <p class="ws-status">
                 <span class="ws-indicator" id="javaWsIndicator"></span>
                 <span id="javaWsStatus">Desconectado</span>
@@ -195,7 +199,6 @@
     </main>
 </div>
 
-<!-- MODAL PERFIL -->
 <div class="modal" id="profileModal">
     <div class="modal-dialog">
         <div class="modal-header">
@@ -254,13 +257,22 @@
         let selectedAnalysisId = null;
         let selectedAnalysisName = '';
 
-        const analysisRadios = document.querySelectorAll('input[name="selected_analysis"]');
-        analysisRadios.forEach(radio => {
-            radio.addEventListener('change', () => {
-                selectedAnalysisId = radio.value;
-                selectedAnalysisName = radio.dataset.name || '';
-                if (deleteButton) deleteButton.disabled = !selectedAnalysisId;
-            });
+        // Delegação de evento para capturar clicks no radio button,
+        // mesmo que o DataTables tenha paginado a tabela e recriado o DOM.
+        document.querySelector('body').addEventListener('change', function(e) {
+            if (e.target && e.target.name === 'selected_analysis') {
+                selectedAnalysisId = e.target.value;
+                selectedAnalysisName = e.target.dataset.name || '';
+                
+                // LÓGICA DE VISIBILIDADE DO BOTÃO
+                if (deleteButton) {
+                    if (selectedAnalysisId) {
+                        deleteButton.style.display = 'inline-flex';
+                    } else {
+                        deleteButton.style.display = 'none';
+                    }
+                }
+            }
         });
 
         deleteButton?.addEventListener('click', () => {
@@ -290,12 +302,11 @@
             });
         }
 
-        // --- CORREÇÃO DO GRÁFICO: Removemos o Mock Data ---
+        // --- GRÁFICO ---
         const chartCanvas = document.getElementById('priceHistoryChart');
         if (chartCanvas && typeof Chart !== 'undefined') {
             let dataToUse = chartRawData;
             
-            // Se não houver dados, limpamos o objeto para o gráfico ficar vazio/zerado
             if (!dataToUse || !dataToUse.labels || dataToUse.labels.length === 0) {
                 dataToUse = { labels: [], prices: [] };
             }

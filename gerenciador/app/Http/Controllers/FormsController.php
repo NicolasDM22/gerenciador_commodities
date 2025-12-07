@@ -1,5 +1,5 @@
 <?php
- //By Gustavo, Otávio e Matias
+//By Gustavo, Otávio e Matias
 namespace App\Http\Controllers;
 
 use Carbon\Carbon;
@@ -120,9 +120,9 @@ class FormsController extends Controller
                     'updated_at' => $now,
                 ]);
 
-                // Atualiza Mercados
+                // Atualiza Mercados - AGORA PASSANDO O commodityObj->id CORRETAMENTE
                 if ($aiStatus === 'completed' && !empty($structured['mercados'])) {
-                    $this->persistRegionalMarkets($commodityObj->nome, $structured['mercados'], $now);
+                    $this->persistRegionalMarkets($commodityObj->id, $commodityObj->nome, $structured['mercados'], $now);
                 }
 
                 // Salva/Atualiza Análise de Saída (Timeline e Indicadores)
@@ -175,7 +175,7 @@ class FormsController extends Controller
 Atue como um Especialista Sênior em Commodities. Gere uma análise de mercado real para: {$materia}.
 DADOS DO USUÁRIO: 
 - Volume: {$volume} kg
-- Preço Alvo: R$ {$precoAlvo}
+- Custo de compra atual: R$ {$precoAlvo}
 - CEP de Entrega: {$cep}
 
 TAREFA 1: PREÇO DE MERCADO
@@ -194,7 +194,7 @@ Calcule a estimativa percentual do Custo Logístico (Frete + Seguro) até o CEP 
 NÃO retorne 0.00. Use valores realistas.
 
 TAREFA 5: RECOMENDAÇÃO (RESUMO EXECUTIVO)
-Gere uma recomendação estratégica e concisa (MÁXIMO 3 SENTENÇAS), focando na decisão de compra (momento/preço/local) e justificando o preço alvo do usuário vs. o preço de mercado.
+Gere uma recomendação de compra estratégica (MÁXIMO 3 SENTENÇAS), focando em citar o melhor mês atual (DEZEMBRO) e o mês para a compra . Compare os possíveis locais de compra (caso os valores de logistica e estabilidade sejam parecidos, *MENCIONE ISSO*) mencionando as principais informações da análise.
 
 Retorne APENAS JSON válido:
 {
@@ -249,7 +249,11 @@ EOT;
         ];
     }
 
-    private function persistRegionalMarkets($commodityName, $markets, $timestamp) 
+    /**
+     * Persiste/Atualiza os 3 melhores mercados no DB, vinculando-os ao mesmo commodity_id do usuário.
+     * @param int $commodityGroupId O ID do grupo da commodity (o ID gerado ou encontrado para o input do usuário).
+     */
+    private function persistRegionalMarkets(int $commodityGroupId, string $commodityName, $markets, $timestamp) 
     {
         if (empty($markets) || !is_array($markets)) return;
 
@@ -264,9 +268,11 @@ EOT;
             
             if (!$location) continue;
 
+            // Tenta encontrar um registro de ranking existente (AI_RANKING) para este grupo/local.
             $existingEntry = DB::table('commodity_entrada')
-                ->where('nome', $commodityName)
+                ->where('commodity_id', $commodityGroupId) 
                 ->where('location_id', $location->id)
+                ->where('source', 'AI_RANKING') 
                 ->first();
 
             $dadosComuns = [
@@ -279,15 +285,14 @@ EOT;
             ];
 
             if ($existingEntry) {
+                // Atualiza o registro de ranking existente usando a chave primária 'id'.
                 DB::table('commodity_entrada')
-                    ->where('commodity_id', $existingEntry->commodity_id)
+                    ->where('id', $existingEntry->id)
                     ->update($dadosComuns);
             } else {
-                $maxId = DB::table('commodity_entrada')->max('commodity_id') ?? 0;
-                $newId = $maxId + 1;
-
+                // Insere um NOVO registro de ranking, usando o commodityGroupId
                 DB::table('commodity_entrada')->insert(array_merge([
-                    'commodity_id' => $newId, 
+                    'commodity_id' => $commodityGroupId, 
                     'nome' => $commodityName,
                     'location_id' => $location->id,
                     'created_at' => $timestamp

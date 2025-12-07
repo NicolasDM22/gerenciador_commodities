@@ -46,7 +46,7 @@
                     {{ number_format($analysis->volume_kg ?? 0, 2, ',', '.') }} kg
                 </div>
                 <div class="pill">
-                    <strong>Preço alvo</strong><br>
+                    <strong>Custo de compra</strong><br>
                     R$ {{ number_format($analysis->preco_alvo ?? 0, 2, ',', '.') }}
                 </div>
                 <div class="pill">

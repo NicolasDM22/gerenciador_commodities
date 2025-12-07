@@ -18,13 +18,13 @@
                 <select name="materia_prima" required>
                     <option value="" disabled selected hidden>Selecione uma matéria-prima</option>
                     <option value="soja">Soja</option>
-                    <option value="acucar">Açúcar</option>
+                    <option value="açúcar">Açúcar</option>
                     <option value="milho">Milho</option>
                     <option value="cacau">Cacau</option>
                 </select>
 
                 <input type="text" id="volume" name="volume" placeholder="Volume (em kg)" required>
-                <input type="text" id="preco_alvo" name="preco_alvo" placeholder="Preço alvo (em R$)" required>
+                <input type="text" id="preco_alvo" name="preco_alvo" placeholder="Custo atual de compra (em R$)" required>
                 <input type="text" id="cep" name="cep" placeholder="CEP de entrega" maxlength="9" required>
             </div>
 
@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!precoRaw || parseFloat(precoRaw) <= 0) {
                 valid = false;
                 precoInput.classList.add('input-error');
-                mensagens.push("O preço alvo deve ser maior que zero.");
+                mensagens.push("O custo atual de compra deve ser maior que zero.");
             } else {
                 precoInput.classList.remove('input-error');
             }
