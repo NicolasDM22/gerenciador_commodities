@@ -20,8 +20,17 @@ Tecnologias Utilizadas: PHP, Laravel, MYSQL e JAVA
 Como rodar/requisitos de sistema: gerenciador/documentação.md
 
 Comandos principais: 
+
+Terminal 1:
+dentro da pasta servidor Java rodar:
 java -cp ".;lib/*;bin" ServidorWebSocket 3000
+
+Terminal 2:
+dentro da pasta gerenciador rodar:
 npm run dev:full
+
+Terminal 3:
+dentro da pasta gerenciador rodar:
 php artisan serve
 
 
