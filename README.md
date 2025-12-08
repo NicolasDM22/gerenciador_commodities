@@ -18,6 +18,7 @@ O objetivo é oferecer uma solução completa para empresas que trabalham com ne
 Tecnologias Utilizadas: PHP, Laravel, MYSQL e JAVA
 
 Como rodar/requisitos de sistema: gerenciador/documentação.md
+
 Comandos principais: 
 java -cp ".;lib/*;bin" ServidorWebSocket 3000
 npm run dev:full
